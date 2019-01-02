@@ -17,7 +17,7 @@ namespace linq
         public:
             constexpr enumerator(Iter&& begin, Iter&& end) : m_begin(std::forward<Iter>(begin)), m_end(std::forward<Iter>(end)) {}
 
-            inline operator bool() const { return m_begin != m_end; }
+            constexpr operator bool() const { return m_begin != m_end; }
             constexpr enumerator& operator++()
             {
                 ++m_begin;
@@ -110,8 +110,8 @@ namespace linq
                 return *this;
             }
 
-            friend inline bool operator==(const enumerator_iterator& it1, const enumerator_iterator& it2) { return !operator!=(it1, it2); }
-            friend inline bool operator!=(const enumerator_iterator& it1, const enumerator_iterator& it2) { return (it1.m_eter && *it1.m_eter) || (it2.m_eter && *it2.m_eter); }
+            friend constexpr bool operator==(const enumerator_iterator& it1, const enumerator_iterator& it2) { return !operator!=(it1, it2); }
+            friend constexpr bool operator!=(const enumerator_iterator& it1, const enumerator_iterator& it2) { return (it1.m_eter && *it1.m_eter) || (it2.m_eter && *it2.m_eter); }
         };
     } // namespace impl
 
