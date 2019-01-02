@@ -23,7 +23,6 @@ namespace linq
                 ++m_begin;
                 return *this;
             }
-
             constexpr decltype(auto) operator*() { return *m_begin; }
         };
 
@@ -73,6 +72,48 @@ namespace linq
                 return *this;
             }
             constexpr decltype(auto) operator*() { return m_selector(*m_eter); }
+        };
+
+        template <typename Eter>
+        class skip_enumerator
+        {
+        private:
+            Eter m_eter;
+
+        public:
+            constexpr skip_enumerator(Eter&& eter, std::size_t skipn) : m_eter(eter)
+            {
+                for (; m_eter && skipn; ++m_eter, --skipn)
+                    ;
+            }
+
+            constexpr operator bool() const { return m_eter; }
+            constexpr skip_enumerator& operator++()
+            {
+                ++m_eter;
+                return *this;
+            }
+            constexpr decltype(auto) operator*() { return *m_eter; }
+        };
+
+        template <typename Eter>
+        class take_enumerator
+        {
+        private:
+            Eter m_eter;
+            std::size_t m_taken;
+
+        public:
+            constexpr take_enumerator(Eter&& eter, std::size_t taken) : m_eter(eter), m_taken(taken) {}
+
+            constexpr operator bool() const { return m_eter && m_taken; }
+            constexpr take_enumerator& operator++()
+            {
+                ++m_eter;
+                --m_taken;
+                return *this;
+            }
+            constexpr decltype(auto) operator*() { return *m_eter; }
         };
 
         template <typename Int>
@@ -148,6 +189,14 @@ namespace linq
         constexpr auto select(Selector&& selector)
         {
             return enumerable<impl::select_enumerator<Eter, Selector>>(impl::select_enumerator<Eter, Selector>(std::forward<Eter>(m_eter), std::forward<Selector>(selector)));
+        }
+        constexpr auto skip(std::size_t skipn)
+        {
+            return enumerable<impl::skip_enumerator<Eter>>(impl::skip_enumerator<Eter>(std::forward<Eter>(m_eter), skipn));
+        }
+        constexpr auto take(std::size_t taken)
+        {
+            return enumerable<impl::take_enumerator<Eter>>(impl::take_enumerator<Eter>(std::forward<Eter>(m_eter), taken));
         }
     };
 

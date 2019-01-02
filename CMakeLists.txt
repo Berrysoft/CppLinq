@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.1)
 project(CppLinq)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 include_directories(include)
@@ -16,3 +16,25 @@ endfunction()
 add_headers(SF_HEADERS core.hpp)
 
 install(FILES ${SF_HEADERS} DESTINATION include/linq)
+
+enable_testing()
+
+add_executable(where test/where.cpp)
+add_test(where_test where)
+set_tests_properties(where_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
+
+add_executable(select test/select.cpp)
+add_test(select_test select)
+set_tests_properties(select_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
+
+add_executable(range test/range.cpp)
+add_test(range_test range)
+set_tests_properties(range_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
+
+add_executable(skip test/skip.cpp)
+add_test(skip_test skip)
+set_tests_properties(skip_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
+
+add_executable(take test/take.cpp)
+add_test(take_test take)
+set_tests_properties(take_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
