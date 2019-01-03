@@ -113,6 +113,41 @@ namespace linq
     namespace impl
     {
         template <typename Eter>
+        class skip_while_enumerator
+        {
+        private:
+            Eter m_eter;
+
+        public:
+            template <typename Pred>
+            constexpr skip_while_enumerator(Eter&& eter, Pred&& pred) : m_eter(eter)
+            {
+                for (; m_eter && pred(*m_eter); ++m_eter)
+                    ;
+            }
+
+            constexpr operator bool() const { return m_eter; }
+            constexpr skip_while_enumerator& operator++()
+            {
+                ++m_eter;
+                return *this;
+            }
+            constexpr decltype(auto) operator*() { return *m_eter; }
+        };
+    } // namespace impl
+
+    template <typename Pred>
+    constexpr auto skip_while(Pred&& pred)
+    {
+        return [&](auto e) {
+            using Eter = decltype(e.enumerator());
+            return enumerable<impl::skip_while_enumerator<Eter>>(impl::skip_while_enumerator<Eter>(e.enumerator(), std::forward<Pred>(pred)));
+        };
+    }
+
+    namespace impl
+    {
+        template <typename Eter>
         class take_enumerator
         {
         private:
@@ -138,6 +173,37 @@ namespace linq
         return [=](auto e) {
             using Eter = decltype(e.enumerator());
             return enumerable<impl::take_enumerator<Eter>>(impl::take_enumerator<Eter>(e.enumerator(), taken));
+        };
+    }
+
+    namespace impl
+    {
+        template <typename Eter, typename Pred>
+        class take_while_enumerator
+        {
+        private:
+            Eter m_eter;
+            Pred m_pred;
+
+        public:
+            constexpr take_while_enumerator(Eter&& eter, Pred&& pred) : m_eter(eter), m_pred(pred) {}
+
+            constexpr operator bool() { return m_eter && m_pred(*m_eter); }
+            constexpr take_while_enumerator& operator++()
+            {
+                ++m_eter;
+                return *this;
+            }
+            constexpr decltype(auto) operator*() { return *m_eter; }
+        };
+    } // namespace impl
+
+    template <typename Pred>
+    constexpr auto take_while(Pred&& pred)
+    {
+        return [&](auto e) {
+            using Eter = decltype(e.enumerator());
+            return enumerable<impl::take_while_enumerator<Eter, Pred>>(impl::take_while_enumerator<Eter, Pred>(e.enumerator(), std::forward<Pred>(pred)));
         };
     }
 

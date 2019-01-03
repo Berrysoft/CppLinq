@@ -44,8 +44,8 @@ namespace linq
             return *this;
         }
 
-        friend constexpr bool operator==(const enumerator_iterator& it1, const enumerator_iterator& it2) { return !operator!=(it1, it2); }
-        friend constexpr bool operator!=(const enumerator_iterator& it1, const enumerator_iterator& it2) { return (it1.m_eter && *it1.m_eter) || (it2.m_eter && *it2.m_eter); }
+        friend constexpr bool operator==(enumerator_iterator& it1, enumerator_iterator& it2) { return !operator!=(it1, it2); }
+        friend constexpr bool operator!=(enumerator_iterator& it1, enumerator_iterator& it2) { return (it1.m_eter && *it1.m_eter) || (it2.m_eter && *it2.m_eter); }
     };
 
     template <typename Eter>

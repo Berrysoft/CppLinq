@@ -22,7 +22,9 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * concat
 * select
 * skip
+* skip_while
 * take
+* take_while
 * where
 * zip
 ### Aggregate
