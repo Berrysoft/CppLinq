@@ -25,7 +25,7 @@ bool to_set_test()
     int a2[]{ 2, 4, 6 };
     auto s = a1 >> to_set<int>();
     auto e = s >> where([](int a) { return a % 2 == 0; });
-    if (test::equal(e.begin(), e.end(), a2, a2 + 3))
+    if (test::equal(e, a2))
     {
         return true;
     }
@@ -44,9 +44,23 @@ bool to_vector_test()
     return false;
 }
 
+bool to_map_test()
+{
+    int a1[]{ 1, 2, 3 };
+    map<int, int> a2{
+        { 1, 1 }, { 2, 4 }, { 3, 9 }
+    };
+    auto e = a1 >> to_map([](int i) { return i; }, [](int i) { return i * i; });
+    if (equal(e.begin(), e.end(), a2.begin(), a2.end()))
+    {
+        return true;
+    }
+    return false;
+}
+
 int main()
 {
-    if (to_list_test() && to_set_test() && to_vector_test())
+    if (to_list_test() && to_set_test() && to_vector_test() && to_map_test())
     {
         cout << "Success." << endl;
     }

@@ -25,24 +25,6 @@ namespace linq
             }
             constexpr decltype(auto) operator*() { return *m_begin; }
         };
-
-        template <typename Int>
-        class range_enumerator
-        {
-        private:
-            Int m_begin, m_end;
-
-        public:
-            constexpr range_enumerator(Int&& begin, Int&& end) : m_begin(begin), m_end(end) {}
-
-            constexpr operator bool() const { return m_begin != m_end; }
-            constexpr range_enumerator& operator++()
-            {
-                ++m_begin;
-                return *this;
-            }
-            constexpr Int operator*() { return m_begin; }
-        };
     } // namespace impl
 
     template <typename Eter>
@@ -100,10 +82,10 @@ namespace linq
     enumerable(Iter&& begin, Iter&& end)->enumerable<impl::enumerator<Iter>>;
 
     template <typename T, typename = void>
-    inline constexpr bool is_enumerable_v = false;
+    inline constexpr bool is_enumerable_v{ false };
 
     template <typename T>
-    inline constexpr bool is_enumerable_v<T, std::void_t<decltype(std::declval<T>().enumerator())>> = true;
+    inline constexpr bool is_enumerable_v<T, std::void_t<decltype(std::declval<T>().enumerator())>>{ true };
 
     template <typename Enumerable, typename Query, typename = std::enable_if_t<is_enumerable_v<Enumerable>>>
     constexpr decltype(auto) operator>>(Enumerable&& e, Query&& q)
@@ -117,10 +99,59 @@ namespace linq
         return q(enumerable(std::forward<Container>(c)));
     }
 
+    namespace impl
+    {
+        template <typename Int>
+        class range_enumerator
+        {
+        private:
+            Int m_begin, m_end;
+
+        public:
+            constexpr range_enumerator(Int&& begin, Int&& end) : m_begin(begin), m_end(end) {}
+
+            constexpr operator bool() const { return m_begin != m_end; }
+            constexpr range_enumerator& operator++()
+            {
+                ++m_begin;
+                return *this;
+            }
+            constexpr Int operator*() { return m_begin; }
+        };
+    } // namespace impl
+
     template <typename Int>
     constexpr auto range(Int begin, Int end)
     {
         return enumerable<impl::range_enumerator<Int>>(impl::range_enumerator<Int>(std::move(begin), std::move(end)));
+    }
+
+    namespace impl
+    {
+        template <typename T>
+        class repeat_enumerator
+        {
+        private:
+            T m_element;
+            std::size_t m_num;
+
+        public:
+            repeat_enumerator(T&& element, std::size_t num) : m_element(element), m_num(num) {}
+
+            constexpr operator bool() const { return m_num; }
+            constexpr repeat_enumerator& operator++()
+            {
+                --m_num;
+                return *this;
+            }
+            constexpr T operator*() { return m_element; }
+        };
+    } // namespace impl
+
+    template <typename T>
+    constexpr auto repeat(T&& element, std::size_t num)
+    {
+        return enumerable<impl::repeat_enumerator<T>>(impl::repeat_enumerator<T>(std::forward<T>(element), num));
     }
 } // namespace linq
 

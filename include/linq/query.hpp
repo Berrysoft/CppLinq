@@ -176,6 +176,40 @@ namespace linq
             return enumerable<impl::concat_enumerator<Eter1, Eter2>>(impl::concat_enumerator<Eter1, Eter2>(e.enumerator(), e2.enumerator()));
         };
     }
+
+    namespace impl
+    {
+        template <typename Eter1, typename Eter2, typename Selector>
+        class zip_enumerator
+        {
+        private:
+            Eter1 m_eter1;
+            Eter2 m_eter2;
+            Selector m_selector;
+
+        public:
+            constexpr zip_enumerator(Eter1&& eter1, Eter2&& eter2, Selector&& selector) : m_eter1(eter1), m_eter2(eter2), m_selector(selector) {}
+
+            constexpr operator bool() const { return m_eter1 && m_eter2; }
+            constexpr zip_enumerator& operator++()
+            {
+                ++m_eter1;
+                ++m_eter2;
+                return *this;
+            }
+            constexpr decltype(auto) operator*() { return m_selector(*m_eter1, *m_eter2); }
+        };
+    } // namespace impl
+
+    template <typename E2, typename Selector>
+    constexpr auto zip(E2&& e2, Selector&& selector)
+    {
+        return [&](auto e) {
+            using Eter1 = decltype(e.enumerator());
+            using Eter2 = decltype(e2.enumerator());
+            return enumerable<impl::zip_enumerator<Eter1, Eter2, Selector>>(impl::zip_enumerator<Eter1, Eter2, Selector>(e.enumerator(), e2.enumerator(), std::forward<Selector>(selector)));
+        };
+    }
 } // namespace linq
 
 #endif // !LINQ_QUERY_HPP

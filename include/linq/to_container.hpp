@@ -3,6 +3,7 @@
 
 #include <linq/core.hpp>
 #include <list>
+#include <map>
 #include <set>
 #include <vector>
 
@@ -42,6 +43,22 @@ namespace linq
             for (auto item : e)
             {
                 result.emplace_back(item);
+            }
+            return result;
+        };
+    }
+
+    template <typename KeySelector, typename ElementSelector>
+    constexpr auto to_map(KeySelector&& keysel, ElementSelector&& elesel)
+    {
+        return [&](auto e) {
+            using TItem = decltype(*e.enumerator());
+            using TKey = decltype(keysel(std::declval<TItem>()));
+            using TElement = decltype(elesel(std::declval<TItem>()));
+            std::map<TKey, TElement> result;
+            for (auto item : e)
+            {
+                result.emplace(keysel(item), elesel(item));
             }
             return result;
         };

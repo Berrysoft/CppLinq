@@ -1,6 +1,6 @@
 #include "test_utility.hpp"
 #include <iostream>
-#include <linq/query.hpp>
+#include <linq/aggregate.hpp>
 
 using namespace std;
 using namespace linq;
@@ -8,9 +8,9 @@ using namespace linq;
 int main()
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
-    int a2[]{ 1, 2, 3 };
-    auto e = a1 >> take(3);
-    if (test::equal(e, a2))
+    bool b1 = a1 >> any([](int& a) { return a % 2 == 0; });
+    bool b2 = a1 >> all([](int& a) { return a < 7; });
+    if (b1 && b2)
     {
         cout << "Success." << endl;
     }

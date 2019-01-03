@@ -12,19 +12,28 @@ for (auto i : range(0, 10)
     cout << i << endl;
 }
 ```
-
 Here we use `operator>>` to make it extensible.
 For extension sample, see [extension.cpp](test/extension.cpp).
 ## Supported methods
-* all
-* any
-* concat
-* count
+### Core
 * range
+* repeat
+### Query
+* concat
 * select
 * skip
 * take
+* where
+* zip
+### Aggregate
+* aggregate
+* all
+* any
+* average
+* count
+* sum
+### ToContainer
 * to_list
+* to_map
 * to_set
 * to_vector
-* where

@@ -17,7 +17,7 @@ namespace linq
     constexpr auto count(Pred&& pred = impl::_allways_true())
     {
         return [&](auto e) {
-            std::size_t result = 0;
+            std::size_t result{ 0 };
             for (auto item : e)
             {
                 if (pred(item))
@@ -50,6 +50,47 @@ namespace linq
                     return true;
             }
             return false;
+        };
+    }
+
+    template <typename T, typename Func>
+    constexpr auto aggregate(T&& seed, Func&& func)
+    {
+        return [&](auto e) {
+            T result{ seed };
+            for (auto item : e)
+            {
+                result = func(result, item);
+            }
+            return result;
+        };
+    }
+
+    template <typename T>
+    constexpr auto average()
+    {
+        return [](auto e) {
+            T sum{ 0 };
+            std::size_t num{ 0 };
+            for (auto item : e)
+            {
+                sum += item;
+                ++num;
+            }
+            return sum / num;
+        };
+    }
+
+    template <typename T>
+    constexpr auto sum()
+    {
+        return [](auto e) {
+            T sum{ 0 };
+            for (auto item : e)
+            {
+                sum += item;
+            }
+            return sum;
         };
     }
 } // namespace linq

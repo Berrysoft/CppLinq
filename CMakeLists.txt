@@ -43,9 +43,17 @@ add_executable(concat test/concat.cpp)
 add_test(concat_test concat)
 set_tests_properties(concat_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
 
+add_executable(zip test/zip.cpp)
+add_test(zip_test zip)
+set_tests_properties(zip_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
+
 add_executable(count test/count.cpp)
 add_test(count_test count)
 set_tests_properties(count_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
+
+add_executable(anyall test/anyall.cpp)
+add_test(anyall_test anyall)
+set_tests_properties(anyall_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
 
 add_executable(to_container test/to_container.cpp)
 add_test(to_container_test to_container)

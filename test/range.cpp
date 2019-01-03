@@ -9,7 +9,7 @@ int main()
 {
     int a2[]{ 1, 2, 3, 4 };
     auto e = range(1, 5);
-    if (test::equal(e.begin(), e.end(), a2, a2 + 4))
+    if (test::equal(e, a2))
     {
         cout << "Success." << endl;
     }

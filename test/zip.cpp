@@ -8,9 +8,10 @@ using namespace linq;
 int main()
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
-    int a2[]{ 1, 3, 5, 2, 4, 6 };
-    auto e = a1 >> where([](int& a) { return a % 2 != 0; }) >> concat(a1 >> where([](int& a) { return a % 2 == 0; }));
-    if (test::equal(e, a2))
+    int a2[]{ 100, 200, 300, 400, 500, 600 };
+    int a3[]{ 101, 202, 303, 404, 505, 606 };
+    auto e = a1 >> zip(enumerable(a2), [](int i1, int i2) { return i1 + i2; });
+    if (test::equal(e, a3))
     {
         cout << "Success." << endl;
     }

@@ -11,7 +11,7 @@ int main()
     int a1[]{ 1, 4, 9, 16, 25 };
     double a2[]{ 1, 2, 3, 4, 5 };
     auto e = a1 >> select([](int& a) { return sqrt(a); });
-    if (test::equal(e.begin(), e.end(), a2, a2 + 5))
+    if (test::equal(e, a2))
     {
         cout << "Success." << endl;
     }

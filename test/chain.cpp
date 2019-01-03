@@ -9,7 +9,7 @@ int main()
 {
     int a2[]{ 1, 2, 3 };
     auto e = range(1, 7) >> where([](int a) { return a % 2 == 0; }) >> select([](int a) { return a / 2; });
-    if (test::equal(e.begin(), e.end(), a2, a2 + 3))
+    if (test::equal(e, a2))
     {
         cout << "Success." << endl;
     }
