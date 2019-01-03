@@ -48,6 +48,24 @@ namespace linq
         friend constexpr bool operator!=(enumerator_iterator& it1, enumerator_iterator& it2) { return (it1.m_eter && *it1.m_eter) || (it2.m_eter && *it2.m_eter); }
     };
 
+    template <typename Container>
+    class container_enumerable
+    {
+    private:
+        Container m_container;
+
+    public:
+        constexpr auto enumerator() const { return impl::enumerator(begin(), end()); }
+
+        constexpr auto begin() const { return std::begin(m_container); }
+        constexpr auto end() const { return std::end(m_container); }
+
+        constexpr container_enumerable(Container&& container) : m_container(std::forward<Container>(container)) {}
+    };
+
+	template<typename Container>
+    container_enumerable(Container &&)->container_enumerable<Container>;
+
     template <typename Eter>
     class enumerable
     {
@@ -64,19 +82,11 @@ namespace linq
 
         constexpr enumerable(Eter&& eter) : m_eter(eter) {}
 
-        template <typename Container>
-        constexpr enumerable(Container&& c) : m_eter(std::begin(c), std::end(c))
-        {
-        }
-
         template <typename Iter>
         constexpr enumerable(Iter&& begin, Iter&& end) : m_eter(std::forward<Iter>(begin), std::forward<Iter>(end))
         {
         }
     };
-
-    template <typename Container>
-    enumerable(Container&& c)->enumerable<impl::enumerator<decltype(std::begin(c))>>;
 
     template <typename Iter>
     enumerable(Iter&& begin, Iter&& end)->enumerable<impl::enumerator<Iter>>;
@@ -96,7 +106,7 @@ namespace linq
     template <typename Container, typename Query, typename = std::enable_if_t<!is_enumerable_v<Container>>, typename = decltype(std::begin(std::declval<Container>())), typename = decltype(std::end(std::declval<Container>()))>
     constexpr decltype(auto) operator>>(Container&& c, Query&& q)
     {
-        return q(enumerable(std::forward<Container>(c)));
+        return q(container_enumerable(std::forward<Container>(c)));
     }
 
     namespace impl

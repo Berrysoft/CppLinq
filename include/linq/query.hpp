@@ -2,6 +2,7 @@
 #define LINQ_QUERY_HPP
 
 #include <linq/core.hpp>
+#include <vector>
 
 namespace linq
 {
@@ -74,6 +75,59 @@ namespace linq
         return [&](auto e) {
             using Eter = decltype(e.enumerator());
             return enumerable<impl::select_enumerator<Eter, Selector>>(impl::select_enumerator<Eter, Selector>(e.enumerator(), std::forward<Selector>(selector)));
+        };
+    }
+
+    namespace impl
+    {
+        template <typename Eter, typename Eter2, typename CSelector, typename RSelector>
+        class select_many_enumerator
+        {
+        private:
+            Eter m_eter;
+            std::vector<std::remove_const_t<std::remove_reference_t<decltype(*std::declval<Eter2>())>>> m_e2;
+            std::size_t m_index;
+            CSelector m_cselector;
+            RSelector m_rselector;
+
+            void move_next()
+            {
+                m_e2.clear();
+                m_index = 0;
+                if (m_eter)
+                {
+                    for (auto item : m_cselector(*m_eter))
+                    {
+                        m_e2.emplace_back(item);
+                    }
+                    ++m_eter;
+                }
+            }
+
+        public:
+            constexpr select_many_enumerator(Eter&& eter, CSelector&& cselector, RSelector&& rselector) : m_eter(eter), m_cselector(cselector), m_rselector(rselector)
+            {
+                move_next();
+            }
+
+            constexpr operator bool() const { return m_eter || !m_e2.empty(); }
+            constexpr select_many_enumerator& operator++()
+            {
+                if (++m_index >= m_e2.size())
+                    move_next();
+                return *this;
+            }
+            constexpr decltype(auto) operator*() { return m_rselector(m_e2[m_index]); }
+        };
+    } // namespace impl
+
+    template <typename CSelector, typename RSelector>
+    constexpr auto select_many(CSelector&& cselector, RSelector&& rselector)
+    {
+        return [&](auto e) {
+            using Eter = decltype(e.enumerator());
+            using Eter2 = decltype(cselector(*e.enumerator()).enumerator());
+            return enumerable<impl::select_many_enumerator<Eter, Eter2, CSelector, RSelector>>(impl::select_many_enumerator<Eter, Eter2, CSelector, RSelector>(e.enumerator(), std::forward<CSelector>(cselector), std::forward<RSelector>(rselector)));
         };
     }
 

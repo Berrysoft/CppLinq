@@ -21,6 +21,7 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 ### Query
 * concat
 * select
+* select_many
 * skip
 * skip_while
 * take

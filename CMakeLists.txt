@@ -27,6 +27,10 @@ add_executable(select test/select.cpp)
 add_test(select_test select)
 set_tests_properties(select_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
 
+add_executable(select_many test/select_many.cpp)
+add_test(select_many_test select_many)
+set_tests_properties(select_many_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
+
 add_executable(range test/range.cpp)
 add_test(range_test range)
 set_tests_properties(range_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")

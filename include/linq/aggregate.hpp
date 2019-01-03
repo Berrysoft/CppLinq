@@ -8,14 +8,14 @@ namespace linq
 {
     namespace impl
     {
-        constexpr auto _allways_true()
+        constexpr auto allways_true()
         {
             return [](auto) { return true; };
         }
     } // namespace impl
 
-    template <typename Pred = decltype(impl::_allways_true())>
-    constexpr auto count(Pred&& pred = impl::_allways_true())
+    template <typename Pred = decltype(impl::allways_true())>
+    constexpr auto count(Pred&& pred = impl::allways_true())
     {
         return [&](auto e) {
             std::size_t result{ 0 };
