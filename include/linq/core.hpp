@@ -43,28 +43,28 @@ namespace linq
             }
             constexpr Int operator*() { return m_begin; }
         };
-
-        template <typename Eter>
-        class enumerator_iterator
-        {
-        private:
-            std::optional<Eter> m_eter;
-
-        public:
-            constexpr enumerator_iterator() : m_eter(std::nullopt) {}
-            constexpr enumerator_iterator(Eter eter) : m_eter(eter) {}
-
-            constexpr decltype(auto) operator*() { return **m_eter; }
-            constexpr enumerator_iterator& operator++()
-            {
-                ++(*m_eter);
-                return *this;
-            }
-
-            friend constexpr bool operator==(const enumerator_iterator& it1, const enumerator_iterator& it2) { return !operator!=(it1, it2); }
-            friend constexpr bool operator!=(const enumerator_iterator& it1, const enumerator_iterator& it2) { return (it1.m_eter && *it1.m_eter) || (it2.m_eter && *it2.m_eter); }
-        };
     } // namespace impl
+
+    template <typename Eter>
+    class enumerator_iterator
+    {
+    private:
+        std::optional<Eter> m_eter;
+
+    public:
+        constexpr enumerator_iterator() : m_eter(std::nullopt) {}
+        constexpr enumerator_iterator(Eter eter) : m_eter(eter) {}
+
+        constexpr decltype(auto) operator*() { return **m_eter; }
+        constexpr enumerator_iterator& operator++()
+        {
+            ++(*m_eter);
+            return *this;
+        }
+
+        friend constexpr bool operator==(const enumerator_iterator& it1, const enumerator_iterator& it2) { return !operator!=(it1, it2); }
+        friend constexpr bool operator!=(const enumerator_iterator& it1, const enumerator_iterator& it2) { return (it1.m_eter && *it1.m_eter) || (it2.m_eter && *it2.m_eter); }
+    };
 
     template <typename Eter>
     class enumerable
@@ -75,8 +75,8 @@ namespace linq
     public:
         constexpr Eter enumerator() const { return m_eter; }
 
-        constexpr auto begin() { return impl::enumerator_iterator(m_eter); }
-        constexpr auto end() { return impl::enumerator_iterator<Eter>(); }
+        constexpr auto begin() const { return enumerator_iterator(m_eter); }
+        constexpr auto end() const { return enumerator_iterator<Eter>(); }
 
         constexpr enumerable() = default;
 

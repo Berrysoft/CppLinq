@@ -102,7 +102,7 @@ namespace linq
         };
     } // namespace impl
 
-    inline auto skip(std::size_t skipn)
+    constexpr auto skip(std::size_t skipn)
     {
         return [=](auto e) {
             using Eter = decltype(e.enumerator());
@@ -133,30 +133,11 @@ namespace linq
         };
     } // namespace impl
 
-    inline auto take(std::size_t taken)
+    constexpr auto take(std::size_t taken)
     {
         return [=](auto e) {
             using Eter = decltype(e.enumerator());
             return enumerable<impl::take_enumerator<Eter>>(impl::take_enumerator<Eter>(e.enumerator(), taken));
-        };
-    }
-
-    inline auto _allways_true()
-    {
-        return [](auto) { return true; };
-    }
-
-    template <typename Pred = decltype(_allways_true())>
-    constexpr auto count(Pred&& pred = _allways_true())
-    {
-        return [&](auto e) {
-            std::size_t result = 0;
-            for (auto item : e)
-            {
-                if (pred(item))
-                    ++result;
-            }
-            return result;
         };
     }
 } // namespace linq

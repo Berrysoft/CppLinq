@@ -36,10 +36,9 @@ public:
     template <typename Eter>
     constexpr random_enumerator(Eter&& eter) : rnd((unsigned int)time(nullptr))
     {
-        while (eter)
+        for (; eter; ++eter)
         {
             m_vec.emplace_back(*eter);
-            ++eter;
         }
         move_next();
     }

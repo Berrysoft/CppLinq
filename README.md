@@ -13,11 +13,17 @@ for (auto i : range(0, 10)
 }
 ```
 
-Here we use `operator>>` to make it extensible. For extension sample, see [extension.cpp](test/extension.cpp).
+Here we use `operator>>` to make it extensible.
+For extension sample, see [extension.cpp](test/extension.cpp).
 ## Supported methods
+* all
+* any
 * count
 * range
 * select
 * skip
 * take
+* to_list
+* to_set
+* to_vector
 * where

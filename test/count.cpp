@@ -1,6 +1,6 @@
 #include "test_utility.hpp"
 #include <iostream>
-#include <linq/query.hpp>
+#include <linq/aggregate.hpp>
 
 using namespace std;
 using namespace linq;
