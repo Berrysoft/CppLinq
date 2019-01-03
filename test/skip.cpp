@@ -9,7 +9,7 @@ int main()
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     int a2[]{ 4, 5, 6 };
-    auto e = enumerable(a1) >> skip(3);
+    auto e = a1 >> skip(3);
     if (test::equal(e.begin(), e.end(), a2, a2 + 3))
     {
         cout << "Success." << endl;

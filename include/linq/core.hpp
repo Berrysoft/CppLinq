@@ -99,10 +99,22 @@ namespace linq
     template <typename Iter>
     enumerable(Iter&& begin, Iter&& end)->enumerable<impl::enumerator<Iter>>;
 
-    template <typename Eter, typename Query>
-    constexpr decltype(auto) operator>>(const enumerable<Eter>& e, Query&& q)
+    template <typename T, typename = void>
+    inline constexpr bool is_enumerable_v = false;
+
+    template <typename T>
+    inline constexpr bool is_enumerable_v<T, std::void_t<decltype(std::declval<T>().enumerator())>> = true;
+
+    template <typename Enumerable, typename Query, typename = std::enable_if_t<is_enumerable_v<Enumerable>>>
+    constexpr decltype(auto) operator>>(Enumerable&& e, Query&& q)
     {
-        return q(e);
+        return q(std::forward<Enumerable>(e));
+    }
+
+    template <typename Container, typename Query, typename = std::enable_if_t<!is_enumerable_v<Container>>, typename = decltype(std::begin(std::declval<Container>())), typename = decltype(std::end(std::declval<Container>()))>
+    constexpr decltype(auto) operator>>(Container&& c, Query&& q)
+    {
+        return q(enumerable(std::forward<Container>(c)));
     }
 
     template <typename Int>
