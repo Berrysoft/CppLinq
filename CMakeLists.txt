@@ -39,6 +39,10 @@ add_executable(take test/take.cpp)
 add_test(take_test take)
 set_tests_properties(take_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
 
+add_executable(concat test/concat.cpp)
+add_test(concat_test concat)
+set_tests_properties(concat_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
+
 add_executable(count test/count.cpp)
 add_test(count_test count)
 set_tests_properties(count_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")

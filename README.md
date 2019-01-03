@@ -18,6 +18,7 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 ## Supported methods
 * all
 * any
+* concat
 * count
 * range
 * select

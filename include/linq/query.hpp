@@ -140,6 +140,42 @@ namespace linq
             return enumerable<impl::take_enumerator<Eter>>(impl::take_enumerator<Eter>(e.enumerator(), taken));
         };
     }
+
+    namespace impl
+    {
+        template <typename Eter1, typename Eter2>
+        class concat_enumerator
+        {
+        private:
+            Eter1 m_eter1;
+            Eter2 m_eter2;
+
+        public:
+            constexpr concat_enumerator(Eter1&& eter1, Eter2&& eter2) : m_eter1(eter1), m_eter2(eter2) {}
+
+            constexpr operator bool() const { return m_eter1 || m_eter2; }
+            constexpr concat_enumerator& operator++()
+            {
+                if (m_eter1)
+                    ++m_eter1;
+                else
+                    ++m_eter2;
+                return *this;
+            }
+            constexpr decltype(auto) operator*() { return m_eter1 ? *m_eter1 : *m_eter2; }
+        };
+    } // namespace impl
+
+    template <typename E2>
+    constexpr auto concat(E2&& e2)
+    {
+        return [&](auto e) {
+            using Eter1 = decltype(e.enumerator());
+            using Eter2 = decltype(e2.enumerator());
+            static_assert(std::is_same_v<decltype(*e.enumerator()), decltype(*e2.enumerator())>, "The return type of the two enumerable should be the same.");
+            return enumerable<impl::concat_enumerator<Eter1, Eter2>>(impl::concat_enumerator<Eter1, Eter2>(e.enumerator(), e2.enumerator()));
+        };
+    }
 } // namespace linq
 
 #endif // !LINQ_QUERY_HPP
