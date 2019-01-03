@@ -12,3 +12,12 @@ for (auto i : range(0, 10)
     cout << i << endl;
 }
 ```
+
+Here we use `operator>>` to make it extensible. For extension sample, see [extension.cpp](test/extension.cpp).
+## Supported methods
+* count
+* range
+* select
+* skip
+* take
+* where

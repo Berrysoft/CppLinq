@@ -46,3 +46,7 @@ set_tests_properties(count_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
 add_executable(chain test/chain.cpp)
 add_test(chain_test chain)
 set_tests_properties(chain_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
+
+add_executable(extension test/extension.cpp)
+add_test(extension_test extension)
+set_tests_properties(extension_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
