@@ -1,16 +1,15 @@
 #include "test_utility.hpp"
-#include <cmath>
 #include <iostream>
-#include <linq/query.hpp>
+#include <linq/aggregate.hpp>
 
 using namespace std;
 using namespace linq;
 
 int main()
 {
-    int a1[]{ 1, 4, 9, 16, 25 };
-    double a2[]{ 1, 2, 3, 4, 5 };
-    auto e{ a1 >> select([](int& a) { return sqrt(a); }) };
+    int a1[]{ 1, 2, 3, 4, 5, 6 };
+    int a2[]{ 6, 5, 4, 3, 2, 1 };
+    auto e{ a1 >> reverse() };
     if (test::equal(e, a2))
     {
         cout << "Success." << endl;

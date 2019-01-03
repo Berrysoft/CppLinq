@@ -31,6 +31,7 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * any
 * average
 * count
+* reverse
 * sum
 ### ToContainer
 * to_list

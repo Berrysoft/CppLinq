@@ -39,6 +39,10 @@ add_executable(take test/take.cpp)
 add_test(take_test take)
 set_tests_properties(take_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
 
+add_executable(reverse test/reverse.cpp)
+add_test(reverse_test reverse)
+set_tests_properties(reverse_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
+
 add_executable(concat test/concat.cpp)
 add_test(concat_test concat)
 set_tests_properties(concat_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
@@ -54,6 +58,10 @@ set_tests_properties(count_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
 add_executable(anyall test/anyall.cpp)
 add_test(anyall_test anyall)
 set_tests_properties(anyall_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
+
+add_executable(aggregate test/aggregate.cpp)
+add_test(aggregate_test aggregate)
+set_tests_properties(aggregate_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
 
 add_executable(to_container test/to_container.cpp)
 add_test(to_container_test to_container)

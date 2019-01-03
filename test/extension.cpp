@@ -26,7 +26,7 @@ private:
         else
         {
             uniform_int_distribution<size_t> d{ 0, m_vec.size() - 1 };
-            size_t index = d(rnd);
+            size_t index{ d(rnd) };
             m_current = m_vec[index];
             m_vec.erase(m_vec.begin() + index);
         }
@@ -62,7 +62,7 @@ inline auto as_random()
 
 int main()
 {
-    auto e = range(0, 10) >> as_random();
+    auto e{ range(0, 10) >> as_random() };
     for (auto a : e)
     {
         cout << a << endl;
