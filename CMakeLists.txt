@@ -19,6 +19,10 @@ install(FILES ${SF_HEADERS} DESTINATION include/linq)
 
 enable_testing()
 
+add_executable(enumerable test/enumerable.cpp)
+add_test(enumerable_test enumerable)
+set_tests_properties(enumerable_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
+
 add_executable(where test/where.cpp)
 add_test(where_test where)
 set_tests_properties(where_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")

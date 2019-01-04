@@ -5,6 +5,7 @@
 
 namespace linq
 {
+    // where enumerator
     namespace impl
     {
         template <typename Eter, typename Pred>
@@ -46,6 +47,7 @@ namespace linq
         };
     }
 
+    // select enumerator
     namespace impl
     {
         template <typename Eter, typename Selector>
@@ -77,6 +79,7 @@ namespace linq
         };
     }
 
+    // select_many enumerator
     namespace impl
     {
         template <typename Eter, typename Eter2, typename CSelector, typename RSelector>
@@ -92,8 +95,8 @@ namespace linq
             {
                 if (m_eter)
                 {
-                    using E2 = decltype(m_cselector(*m_eter));
-                    m_eter2 = get_enumerator<E2>(m_cselector(*m_eter));
+                    // Use emplace to prevent some operator= bugs.
+                    m_eter2.emplace(get_enumerator(m_cselector(*m_eter)));
                     ++m_eter;
                 }
                 else
@@ -128,12 +131,12 @@ namespace linq
     {
         return [&](auto e) {
             using Eter = decltype(e.enumerator());
-            using E2 = decltype(cselector(*e.enumerator()));
-            using Eter2 = decltype(get_enumerator<E2>(std::declval<E2>()));
+            using Eter2 = decltype(get_enumerator(cselector(*e.enumerator())));
             return enumerable<impl::select_many_enumerator<Eter, Eter2, CSelector, RSelector>>(impl::select_many_enumerator<Eter, Eter2, CSelector, RSelector>(e.enumerator(), std::forward<CSelector>(cselector), std::forward<RSelector>(rselector)));
         };
     }
 
+    // skip enumerator
     namespace impl
     {
         template <typename Eter>
@@ -167,6 +170,7 @@ namespace linq
         };
     }
 
+    // skip_while enumerator
     namespace impl
     {
         template <typename Eter>
@@ -202,6 +206,7 @@ namespace linq
         };
     }
 
+    // take enumerator
     namespace impl
     {
         template <typename Eter>
@@ -209,6 +214,7 @@ namespace linq
         {
         private:
             Eter m_eter;
+            // skip doesn't need the number because it just skipped.
             std::size_t m_taken;
 
         public:
@@ -233,6 +239,7 @@ namespace linq
         };
     }
 
+    // take_while enumerator
     namespace impl
     {
         template <typename Eter, typename Pred>
@@ -264,6 +271,7 @@ namespace linq
         };
     }
 
+    // concat enumerator
     namespace impl
     {
         template <typename Eter1, typename Eter2>
@@ -300,6 +308,7 @@ namespace linq
         };
     }
 
+    // zip enumerator
     namespace impl
     {
         template <typename Eter1, typename Eter2, typename Selector>
