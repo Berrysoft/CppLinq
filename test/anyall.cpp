@@ -1,4 +1,3 @@
-#include "test_utility.hpp"
 #include <iostream>
 #include <linq/aggregate.hpp>
 

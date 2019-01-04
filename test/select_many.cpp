@@ -1,6 +1,6 @@
-#include "test_utility.hpp"
 #include <cmath>
 #include <iostream>
+#include <linq/aggregate.hpp>
 #include <linq/query.hpp>
 #include <vector>
 
@@ -17,7 +17,7 @@ int main()
     pack a1[]{ { 1, 1 }, { 2, 4 }, { 3, 9 } };
     int a2[]{ 1, 1, 4, 16, 9, 81 };
     auto e{ a1 >> select_many([](pack& a) { return vector<int>{ a.arr[0], a.arr[1] }; }, [](int a) { return a * a; }) };
-    if (test::equal(e, a2))
+    if (e >> equals(a2))
     {
         cout << "Success." << endl;
     }

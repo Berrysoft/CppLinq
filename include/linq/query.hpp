@@ -338,8 +338,8 @@ namespace linq
     {
         return [&](auto e) {
             using Eter1 = decltype(e.enumerator());
-            using Eter2 = decltype(get_enumerator<E2>(e2));
-            return enumerable(impl::zip_enumerator<Eter1, Eter2, Selector>(e.enumerator(), get_enumerator<E2>(e2), std::forward<Selector>(selector)));
+            using Eter2 = decltype(get_enumerator(std::forward<E2>(e2)));
+            return enumerable(impl::zip_enumerator<Eter1, Eter2, Selector>(e.enumerator(), get_enumerator(std::forward<E2>(e2)), std::forward<Selector>(selector)));
         };
     }
 

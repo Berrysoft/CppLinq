@@ -96,6 +96,21 @@ namespace linq
         };
     }
 
+    template <typename E2>
+    constexpr auto equals(E2&& e2)
+    {
+        return [&](auto e) {
+            auto eter1{ e.enumerator() };
+            auto eter2{ get_enumerator(std::forward<E2>(e2)) };
+            for (; eter1 && eter2; ++eter1, ++eter2)
+            {
+                if (*eter1 != *eter2)
+                    return false;
+            }
+            return !eter1 && !eter2;
+        };
+    }
+
     namespace impl
     {
         template <typename T>
@@ -106,6 +121,9 @@ namespace linq
             typename std::vector<T>::reverse_iterator m_begin, m_end;
 
         public:
+            // Prevent multi-reverse in copying.
+            constexpr reverse_enumerator(const reverse_enumerator& eter) : m_vec(eter.m_vec), m_begin(m_vec.rbegin()), m_end(m_vec.rend()) {}
+
             template <typename Eter>
             constexpr reverse_enumerator(Eter&& eter)
             {

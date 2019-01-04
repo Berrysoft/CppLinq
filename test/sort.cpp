@@ -1,4 +1,3 @@
-#include "test_utility.hpp"
 #include <iostream>
 #include <linq/aggregate.hpp>
 
@@ -10,7 +9,7 @@ bool test_sort()
     int a1[]{ 6, 5, 4, 3, 2, 1 };
     int a2[]{ 1, 2, 3, 4, 5, 6 };
     auto e{ a1 >> sort() };
-    return test::equal(e, a2);
+    return e >> equals(a2);
 }
 
 struct pack
@@ -34,7 +33,7 @@ bool test_sort_custom()
     pack a1[]{ { 1, 92 }, { 2, 78 }, { 3, 85 } };
     pack a2[]{ { 1, 92 }, { 3, 85 }, { 2, 78 } };
     auto e{ a1 >> sort([](pack& p) { return p.score; }, descending()) };
-    return test::equal(e, a2);
+    return e >> equals(a2);
 }
 
 int main()

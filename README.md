@@ -1,6 +1,7 @@
 # CppLinq
 A simple linq library for C++.
 ## Usage
+To find the square root of the non-negative even numbers less than 10:
 ``` c++
 using namespace std;
 using namespace linq;
@@ -35,6 +36,7 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * any
 * average
 * count
+* equals
 * reverse
 * sort
 * sum

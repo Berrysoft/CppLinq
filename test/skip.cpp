@@ -1,5 +1,5 @@
-#include "test_utility.hpp"
 #include <iostream>
+#include <linq/aggregate.hpp>
 #include <linq/query.hpp>
 
 using namespace std;
@@ -10,7 +10,7 @@ bool skip_test()
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     int a2[]{ 4, 5, 6 };
     auto e{ a1 >> skip(3) };
-    return test::equal(e, a2);
+    return e >> equals(a2);
 }
 
 bool skip_while_test()
@@ -18,7 +18,7 @@ bool skip_while_test()
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     int a2[]{ 4, 5, 6 };
     auto e{ a1 >> skip_while([](int& i) { return i < 4; }) };
-    return test::equal(e, a2);
+    return e >> equals(a2);
 }
 
 int main()

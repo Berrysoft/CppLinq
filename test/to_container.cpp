@@ -1,5 +1,5 @@
-#include "test_utility.hpp"
 #include <iostream>
+#include <linq/aggregate.hpp>
 #include <linq/query.hpp>
 #include <linq/to_container.hpp>
 
@@ -11,7 +11,7 @@ bool to_list_test()
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     list<int> a2{ 2, 4, 6 };
     auto e{ a1 >> where([](int& a) { return a % 2 == 0; }) >> to_list<int>() };
-    return test::equal(e, a2);
+    return e >> equals(a2);
 }
 
 bool to_set_test()
@@ -20,7 +20,7 @@ bool to_set_test()
     int a2[]{ 2, 4, 6 };
     auto s{ a1 >> to_set<int>() };
     auto e{ s >> where([](int a) { return a % 2 == 0; }) };
-    return test::equal(e, a2);
+    return e >> equals(a2);
 }
 
 bool to_vector_test()
@@ -28,7 +28,7 @@ bool to_vector_test()
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     vector<int> a2{ 2, 4, 6 };
     auto e{ a1 >> where([](int& a) { return a % 2 == 0; }) >> to_vector<int>() };
-    return test::equal(e, a2);
+    return e >> equals(a2);
 }
 
 bool to_map_test()
@@ -38,7 +38,7 @@ bool to_map_test()
         { 1, 1 }, { 2, 4 }, { 3, 9 }
     };
     auto e{ a1 >> to_map([](int i) { return i; }, [](int i) { return i * i; }) };
-    return test::equal(e, a2);
+    return e >> equals(a2);
 }
 
 int main()
