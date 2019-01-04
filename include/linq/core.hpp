@@ -48,24 +48,6 @@ namespace linq
         friend constexpr bool operator!=(enumerator_iterator& it1, enumerator_iterator& it2) { return (it1.m_eter && *it1.m_eter) || (it2.m_eter && *it2.m_eter); }
     };
 
-    template <typename Container>
-    class container_enumerable
-    {
-    private:
-        Container m_container;
-
-    public:
-        constexpr auto enumerator() const { return impl::enumerator(begin(), end()); }
-
-        constexpr auto begin() const { return std::begin(m_container); }
-        constexpr auto end() const { return std::end(m_container); }
-
-        constexpr container_enumerable(Container&& container) : m_container(std::forward<Container>(container)) {}
-    };
-
-	template<typename Container>
-    container_enumerable(Container &&)->container_enumerable<Container>;
-
     template <typename Eter>
     class enumerable
     {
@@ -97,16 +79,34 @@ namespace linq
     template <typename T>
     inline constexpr bool is_enumerable_v<T, std::void_t<decltype(std::declval<T>().enumerator())>>{ true };
 
+    template <typename Container>
+    constexpr auto get_enumerable(std::remove_reference_t<Container>& container)
+    {
+        return enumerable(impl::enumerator(std::begin(container), std::end(container)));
+    }
+
+    template <typename Enumerable, typename = std::enable_if_t<is_enumerable_v<Enumerable>>>
+    constexpr decltype(auto) get_enumerator(Enumerable&& e)
+    {
+        return e.enumerator();
+    }
+
+    template <typename Container, typename = std::enable_if_t<!is_enumerable_v<Container>>, typename = decltype(std::begin(std::declval<Container>())), typename = decltype(std::end(std::declval<Container>()))>
+    constexpr decltype(auto) get_enumerator(Container&& c)
+    {
+        return get_enumerable<Container>(std::forward<Container>(c)).enumerator();
+    }
+
     template <typename Enumerable, typename Query, typename = std::enable_if_t<is_enumerable_v<Enumerable>>>
     constexpr decltype(auto) operator>>(Enumerable&& e, Query&& q)
     {
-        return q(std::forward<Enumerable>(e));
+        return std::forward<Query>(q)(std::forward<Enumerable>(e));
     }
 
     template <typename Container, typename Query, typename = std::enable_if_t<!is_enumerable_v<Container>>, typename = decltype(std::begin(std::declval<Container>())), typename = decltype(std::end(std::declval<Container>()))>
     constexpr decltype(auto) operator>>(Container&& c, Query&& q)
     {
-        return q(container_enumerable(std::forward<Container>(c)));
+        return std::forward<Query>(q)(get_enumerable<Container>(std::forward<Container>(c)));
     }
 
     namespace impl

@@ -2,7 +2,6 @@
 #define LINQ_QUERY_HPP
 
 #include <linq/core.hpp>
-#include <vector>
 
 namespace linq
 {
@@ -85,39 +84,42 @@ namespace linq
         {
         private:
             Eter m_eter;
-            std::vector<std::remove_const_t<std::remove_reference_t<decltype(*std::declval<Eter2>())>>> m_e2;
-            std::size_t m_index;
+            std::optional<Eter2> m_eter2;
             CSelector m_cselector;
             RSelector m_rselector;
 
             void move_next()
             {
-                m_e2.clear();
-                m_index = 0;
                 if (m_eter)
                 {
-                    for (auto item : m_cselector(*m_eter))
-                    {
-                        m_e2.emplace_back(item);
-                    }
+                    using E2 = decltype(m_cselector(*m_eter));
+                    m_eter2 = get_enumerator<E2>(m_cselector(*m_eter));
                     ++m_eter;
+                }
+                else
+                {
+                    m_eter2 = std::nullopt;
                 }
             }
 
         public:
-            constexpr select_many_enumerator(Eter&& eter, CSelector&& cselector, RSelector&& rselector) : m_eter(eter), m_cselector(cselector), m_rselector(rselector)
+            constexpr select_many_enumerator(Eter&& eter, CSelector&& cselector, RSelector&& rselector)
+                : m_eter(eter), m_cselector(cselector), m_rselector(rselector)
             {
                 move_next();
             }
 
-            constexpr operator bool() const { return m_eter || !m_e2.empty(); }
+            constexpr operator bool() const { return *m_eter2 || m_eter; }
             constexpr select_many_enumerator& operator++()
             {
-                if (++m_index >= m_e2.size())
+                ++*m_eter2;
+                if (!*m_eter2)
+                {
                     move_next();
+                }
                 return *this;
             }
-            constexpr decltype(auto) operator*() { return m_rselector(m_e2[m_index]); }
+            constexpr decltype(auto) operator*() { return m_rselector(**m_eter2); }
         };
     } // namespace impl
 
@@ -126,7 +128,8 @@ namespace linq
     {
         return [&](auto e) {
             using Eter = decltype(e.enumerator());
-            using Eter2 = decltype(cselector(*e.enumerator()).enumerator());
+            using E2 = decltype(cselector(*e.enumerator()));
+            using Eter2 = decltype(get_enumerator<E2>(std::declval<E2>()));
             return enumerable<impl::select_many_enumerator<Eter, Eter2, CSelector, RSelector>>(impl::select_many_enumerator<Eter, Eter2, CSelector, RSelector>(e.enumerator(), std::forward<CSelector>(cselector), std::forward<RSelector>(rselector)));
         };
     }
@@ -291,9 +294,9 @@ namespace linq
     {
         return [&](auto e) {
             using Eter1 = decltype(e.enumerator());
-            using Eter2 = decltype(e2.enumerator());
-            static_assert(std::is_same_v<decltype(*e.enumerator()), decltype(*e2.enumerator())>, "The return type of the two enumerable should be the same.");
-            return enumerable<impl::concat_enumerator<Eter1, Eter2>>(impl::concat_enumerator<Eter1, Eter2>(e.enumerator(), e2.enumerator()));
+            using Eter2 = decltype(get_enumerator(e2));
+            static_assert(std::is_same_v<decltype(*e.enumerator()), decltype(*get_enumerator(e2))>, "The return type of the two enumerable should be the same.");
+            return enumerable<impl::concat_enumerator<Eter1, Eter2>>(impl::concat_enumerator<Eter1, Eter2>(e.enumerator(), get_enumerator(e2)));
         };
     }
 
@@ -326,8 +329,8 @@ namespace linq
     {
         return [&](auto e) {
             using Eter1 = decltype(e.enumerator());
-            using Eter2 = decltype(e2.enumerator());
-            return enumerable<impl::zip_enumerator<Eter1, Eter2, Selector>>(impl::zip_enumerator<Eter1, Eter2, Selector>(e.enumerator(), e2.enumerator(), std::forward<Selector>(selector)));
+            using Eter2 = decltype(get_enumerator<E2>(e2));
+            return enumerable<impl::zip_enumerator<Eter1, Eter2, Selector>>(impl::zip_enumerator<Eter1, Eter2, Selector>(e.enumerator(), get_enumerator<E2>(e2), std::forward<Selector>(selector)));
         };
     }
 } // namespace linq
