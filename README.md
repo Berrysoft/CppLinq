@@ -37,6 +37,7 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * average
 * count
 * equals
+* limit
 * reverse
 * sort
 * sum

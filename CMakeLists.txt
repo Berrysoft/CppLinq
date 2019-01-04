@@ -79,6 +79,10 @@ add_executable(sort test/sort.cpp)
 add_test(sort_test sort)
 set_tests_properties(sort_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
 
+add_executable(minmax test/minmax.cpp)
+add_test(minmax_test minmax)
+set_tests_properties(minmax_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
+
 add_executable(to_container test/to_container.cpp)
 add_test(to_container_test to_container)
 set_tests_properties(to_container_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")

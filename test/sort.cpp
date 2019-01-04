@@ -32,7 +32,7 @@ bool test_sort_custom()
 {
     pack a1[]{ { 1, 92 }, { 2, 78 }, { 3, 85 } };
     pack a2[]{ { 1, 92 }, { 3, 85 }, { 2, 78 } };
-    auto e{ a1 >> sort([](pack& p) { return p.score; }, descending()) };
+    auto e{ a1 >> sort([](pack& p) { return p.score; }, greater_than()) };
     return e >> equals(a2);
 }
 

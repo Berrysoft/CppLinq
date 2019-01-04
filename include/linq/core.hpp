@@ -117,6 +117,30 @@ namespace linq
         return std::forward<Query>(q)(get_enumerable<Container>(std::forward<Container>(c)));
     }
 
+    // Some help lambdas
+
+    // Only returns true.
+    constexpr auto allways_true()
+    {
+        return [](auto) { return true; };
+    }
+
+    // Only returns the parameter itself.
+    constexpr auto always_identity()
+    {
+        return [](auto i) { return i; };
+    }
+
+    constexpr auto less_than()
+    {
+        return [](auto l, auto r) { return l < r; };
+    }
+
+    constexpr auto greater_than()
+    {
+        return [](auto l, auto r) { return l > r; };
+    }
+
     // range enumerator
     namespace impl
     {

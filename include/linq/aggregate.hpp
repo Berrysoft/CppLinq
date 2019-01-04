@@ -7,16 +7,10 @@
 
 namespace linq
 {
-    namespace impl
-    {
-        constexpr auto allways_true()
-        {
-            return [](auto) { return true; };
-        }
-    } // namespace impl
-
-    template <typename Pred = decltype(impl::allways_true())>
-    constexpr auto count(Pred&& pred = impl::allways_true())
+    // The count of the enumerable.
+    // Returns the total count with the default parameter.
+    template <typename Pred = decltype(allways_true())>
+    constexpr auto count(Pred&& pred = allways_true())
     {
         return [&](auto e) {
             std::size_t result{ 0 };
@@ -29,6 +23,7 @@ namespace linq
         };
     }
 
+    // Determines whether all elements satisfy a condition.
     template <typename Pred>
     constexpr auto all(Pred&& pred)
     {
@@ -42,8 +37,10 @@ namespace linq
         };
     }
 
-    template <typename Pred = decltype(impl::allways_true())>
-    constexpr auto any(Pred&& pred = impl::allways_true())
+    // Determines if any elements satisfy a condition.
+    // empty() <=> !any(), therefore no empty().
+    template <typename Pred = decltype(allways_true())>
+    constexpr auto any(Pred&& pred = allways_true())
     {
         return [&](auto e) {
             for (auto item : e)
@@ -55,6 +52,7 @@ namespace linq
         };
     }
 
+    // Applies an accumulator function over an enumerable.
     template <typename T, typename Func>
     constexpr auto aggregate(T&& seed, Func&& func)
     {
@@ -68,6 +66,7 @@ namespace linq
         };
     }
 
+    // Calculates the average value of the elements.
     constexpr auto average()
     {
         return [](auto e) {
@@ -83,6 +82,7 @@ namespace linq
         };
     }
 
+    // Calculates the sum of the elements.
     constexpr auto sum()
     {
         return [](auto e) {
@@ -96,6 +96,7 @@ namespace linq
         };
     }
 
+    // Determines whether the two enumerable are equal.
     template <typename E2>
     constexpr auto equals(E2&& e2)
     {
@@ -111,6 +112,7 @@ namespace linq
         };
     }
 
+    // reverse enumerator
     namespace impl
     {
         template <typename T>
@@ -153,26 +155,9 @@ namespace linq
         };
     }
 
-    namespace impl
-    {
-        constexpr auto always_identity()
-        {
-            return [](auto i) { return i; };
-        }
-    } // namespace impl
-
-    constexpr auto ascending()
-    {
-        return [](auto l, auto r) { return l < r; };
-    }
-
-    constexpr auto descending()
-    {
-        return [](auto l, auto r) { return l > r; };
-    }
-
-    template <typename Selector = decltype(impl::always_identity()), typename Comparer = decltype(ascending())>
-    constexpr auto sort(Selector&& selector = impl::always_identity(), Comparer&& comparer = ascending())
+    // Sorts the enumerable by the specified selector and comparer.
+    template <typename Selector = decltype(always_identity()), typename Comparer = decltype(less_than())>
+    constexpr auto sort(Selector&& selector = always_identity(), Comparer&& comparer = less_than())
     {
         return [&](auto e) {
             using T = std::remove_const_t<std::remove_reference_t<decltype(*e.enumerator())>>;
@@ -183,6 +168,27 @@ namespace linq
             }
             std::sort(result.begin(), result.end(), [&](T& t1, T& t2) { return comparer(selector(t1), selector(t2)); });
             return get_enumerable(std::move(result));
+        };
+    }
+
+    // Gets the limit value of an enumerable.
+    // min <=> limit(less_than())
+    // max <=> limit(greater_than())
+    template <typename Comparer>
+    constexpr auto limit(Comparer&& comparer)
+    {
+        return [&](auto e) {
+            using T = std::remove_const_t<std::remove_reference_t<decltype(*e.enumerator())>>;
+            auto eter{ e.enumerator() };
+            if (!eter)
+                return T{};
+            T result = *eter;
+            for (++eter; eter; ++eter)
+            {
+                if (!comparer(result, *eter))
+                    result = *eter;
+            }
+            return result;
         };
     }
 } // namespace linq
