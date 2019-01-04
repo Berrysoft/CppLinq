@@ -142,7 +142,7 @@ namespace linq
     template <typename Int>
     constexpr auto range(Int begin, Int end)
     {
-        return enumerable<impl::range_enumerator<Int>>(impl::range_enumerator<Int>(std::move(begin), std::move(end)));
+        return enumerable(impl::range_enumerator<Int>(std::move(begin), std::move(end)));
     }
 
     // repeat enumerator
@@ -171,7 +171,7 @@ namespace linq
     template <typename T>
     constexpr auto repeat(T&& element, std::size_t num)
     {
-        return enumerable<impl::repeat_enumerator<T>>(impl::repeat_enumerator<T>(std::forward<T>(element), num));
+        return enumerable(impl::repeat_enumerator<T>(std::forward<T>(element), num));
     }
 } // namespace linq
 

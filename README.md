@@ -19,6 +19,7 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * range
 * repeat
 ### Query
+* cast
 * concat
 * select
 * select_many
@@ -35,6 +36,7 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * average
 * count
 * reverse
+* sort
 * sum
 ### ToContainer
 * to_list

@@ -56,7 +56,7 @@ inline auto as_random()
 {
     return [](auto e) {
         using T = remove_reference_t<decltype(*e.begin())>;
-        return enumerable<random_enumerator<T>>(random_enumerator<T>(e.enumerator()));
+        return enumerable(random_enumerator<T>(e.enumerator()));
     };
 }
 

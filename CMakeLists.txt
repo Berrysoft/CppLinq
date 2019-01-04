@@ -59,6 +59,10 @@ add_executable(zip test/zip.cpp)
 add_test(zip_test zip)
 set_tests_properties(zip_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
 
+add_executable(cast test/cast.cpp)
+add_test(cast_test cast)
+set_tests_properties(cast_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
+
 add_executable(count test/count.cpp)
 add_test(count_test count)
 set_tests_properties(count_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
@@ -70,6 +74,10 @@ set_tests_properties(anyall_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n"
 add_executable(aggregate test/aggregate.cpp)
 add_test(aggregate_test aggregate)
 set_tests_properties(aggregate_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
+
+add_executable(sort test/sort.cpp)
+add_test(sort_test sort)
+set_tests_properties(sort_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
 
 add_executable(to_container test/to_container.cpp)
 add_test(to_container_test to_container)

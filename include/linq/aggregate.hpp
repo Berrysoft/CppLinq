@@ -1,6 +1,7 @@
 #ifndef LINQ_AGGREGATE_HPP
 #define LINQ_AGGREGATE_HPP
 
+#include <algorithm>
 #include <linq/core.hpp>
 #include <vector>
 
@@ -41,8 +42,8 @@ namespace linq
         };
     }
 
-    template <typename Pred>
-    constexpr auto any(Pred&& pred)
+    template <typename Pred = decltype(impl::allways_true())>
+    constexpr auto any(Pred&& pred = impl::allways_true())
     {
         return [&](auto e) {
             for (auto item : e)
@@ -78,7 +79,7 @@ namespace linq
                 sum += item;
                 ++num;
             }
-            return sum / (T)num;
+            return (T)(sum / num);
         };
     }
 
@@ -130,7 +131,40 @@ namespace linq
     {
         return [](auto e) {
             using T = std::remove_const_t<std::remove_reference_t<decltype(*e.enumerator())>>;
-            return enumerable<impl::reverse_enumerator<T>>(impl::reverse_enumerator<T>(e.enumerator()));
+            return enumerable(impl::reverse_enumerator<T>(e.enumerator()));
+        };
+    }
+
+    namespace impl
+    {
+        constexpr auto always_identity()
+        {
+            return [](auto i) { return i; };
+        }
+    } // namespace impl
+
+    constexpr auto ascending()
+    {
+        return [](auto l, auto r) { return l < r; };
+    }
+
+    constexpr auto descending()
+    {
+        return [](auto l, auto r) { return l > r; };
+    }
+
+    template <typename Selector = decltype(impl::always_identity()), typename Comparer = decltype(ascending())>
+    constexpr auto sort(Selector&& selector = impl::always_identity(), Comparer&& comparer = ascending())
+    {
+        return [&](auto e) {
+            using T = std::remove_const_t<std::remove_reference_t<decltype(*e.enumerator())>>;
+            std::vector<T> result;
+            for (auto item : e)
+            {
+                result.emplace_back(item);
+            }
+            std::sort(result.begin(), result.end(), [&](T& t1, T& t2) { return comparer(selector(t1), selector(t2)); });
+            return get_enumerable(std::move(result));
         };
     }
 } // namespace linq

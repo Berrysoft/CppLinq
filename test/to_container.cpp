@@ -11,11 +11,7 @@ bool to_list_test()
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     list<int> a2{ 2, 4, 6 };
     auto e{ a1 >> where([](int& a) { return a % 2 == 0; }) >> to_list<int>() };
-    if (test::equal(e, a2))
-    {
-        return true;
-    }
-    return false;
+    return test::equal(e, a2);
 }
 
 bool to_set_test()
@@ -24,11 +20,7 @@ bool to_set_test()
     int a2[]{ 2, 4, 6 };
     auto s{ a1 >> to_set<int>() };
     auto e{ s >> where([](int a) { return a % 2 == 0; }) };
-    if (test::equal(e, a2))
-    {
-        return true;
-    }
-    return false;
+    return test::equal(e, a2);
 }
 
 bool to_vector_test()
@@ -36,11 +28,7 @@ bool to_vector_test()
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     vector<int> a2{ 2, 4, 6 };
     auto e{ a1 >> where([](int& a) { return a % 2 == 0; }) >> to_vector<int>() };
-    if (test::equal(e, a2))
-    {
-        return true;
-    }
-    return false;
+    return test::equal(e, a2);
 }
 
 bool to_map_test()
@@ -50,11 +38,7 @@ bool to_map_test()
         { 1, 1 }, { 2, 4 }, { 3, 9 }
     };
     auto e{ a1 >> to_map([](int i) { return i; }, [](int i) { return i * i; }) };
-    if (test::equal(e, a2))
-    {
-        return true;
-    }
-    return false;
+    return test::equal(e, a2);
 }
 
 int main()

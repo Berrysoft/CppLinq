@@ -10,11 +10,7 @@ bool take_test()
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     int a2[]{ 1, 2, 3 };
     auto e{ a1 >> take(3) };
-    if (test::equal(e, a2))
-    {
-        return true;
-    }
-    return false;
+    return test::equal(e, a2);
 }
 
 bool take_while_test()
@@ -22,11 +18,7 @@ bool take_while_test()
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     int a2[]{ 1, 2, 3 };
     auto e{ a1 >> take_while([](int& i) { return i < 4; }) };
-    if (test::equal(e, a2))
-    {
-        return true;
-    }
-    return false;
+    return test::equal(e, a2);
 }
 
 int main()
