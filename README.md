@@ -46,3 +46,5 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * to_map
 * to_set
 * to_vector
+### String
+* split

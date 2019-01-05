@@ -25,7 +25,7 @@ namespace linq
             }
 
         public:
-            constexpr where_enumerator(Eter&& eter, Pred&& pred) : m_eter(eter), m_pred(pred) { move_next(); }
+            constexpr where_enumerator(Eter&& eter, Pred&& pred) : m_eter(std::forward<Eter>(eter)), m_pred(pred) { move_next(); }
 
             constexpr operator bool() const { return m_eter; }
             constexpr where_enumerator& operator++()
@@ -58,7 +58,7 @@ namespace linq
             Selector m_selector;
 
         public:
-            constexpr select_enumerator(Eter&& eter, Selector&& selector) : m_eter(eter), m_selector(selector) {}
+            constexpr select_enumerator(Eter&& eter, Selector&& selector) : m_eter(std::forward<Eter>(eter)), m_selector(selector) {}
 
             constexpr operator bool() const { return m_eter; }
             constexpr select_enumerator& operator++()
@@ -107,7 +107,7 @@ namespace linq
 
         public:
             constexpr select_many_enumerator(Eter&& eter, CSelector&& cselector, RSelector&& rselector)
-                : m_eter(eter), m_cselector(cselector), m_rselector(rselector)
+                : m_eter(std::forward<Eter>(eter)), m_cselector(cselector), m_rselector(rselector)
             {
                 move_next();
             }
@@ -146,7 +146,7 @@ namespace linq
             Eter m_eter;
 
         public:
-            constexpr skip_enumerator(Eter&& eter, std::size_t skipn) : m_eter(eter)
+            constexpr skip_enumerator(Eter&& eter, std::size_t skipn) : m_eter(std::forward<Eter>(eter))
             {
                 for (; m_eter && skipn; ++m_eter, --skipn)
                     ;
@@ -181,7 +181,7 @@ namespace linq
 
         public:
             template <typename Pred>
-            constexpr skip_while_enumerator(Eter&& eter, Pred&& pred) : m_eter(eter)
+            constexpr skip_while_enumerator(Eter&& eter, Pred&& pred) : m_eter(std::forward<Eter>(eter))
             {
                 for (; m_eter && pred(*m_eter); ++m_eter)
                     ;
@@ -218,7 +218,7 @@ namespace linq
             std::size_t m_taken;
 
         public:
-            constexpr take_enumerator(Eter&& eter, std::size_t taken) : m_eter(eter), m_taken(taken) {}
+            constexpr take_enumerator(Eter&& eter, std::size_t taken) : m_eter(std::forward<Eter>(eter)), m_taken(taken) {}
 
             constexpr operator bool() const { return m_eter && m_taken; }
             constexpr take_enumerator& operator++()
@@ -250,7 +250,7 @@ namespace linq
             Pred m_pred;
 
         public:
-            constexpr take_while_enumerator(Eter&& eter, Pred&& pred) : m_eter(eter), m_pred(pred) {}
+            constexpr take_while_enumerator(Eter&& eter, Pred&& pred) : m_eter(std::forward<Eter>(eter)), m_pred(pred) {}
 
             constexpr operator bool() { return m_eter && m_pred(*m_eter); }
             constexpr take_while_enumerator& operator++()
@@ -282,7 +282,7 @@ namespace linq
             Eter2 m_eter2;
 
         public:
-            constexpr concat_enumerator(Eter1&& eter1, Eter2&& eter2) : m_eter1(eter1), m_eter2(eter2) {}
+            constexpr concat_enumerator(Eter1&& eter1, Eter2&& eter2) : m_eter1(std::forward<Eter1>(eter1)), m_eter2(std::forward<Eter2>(eter2)) {}
 
             constexpr operator bool() const { return m_eter1 || m_eter2; }
             constexpr concat_enumerator& operator++()
@@ -320,7 +320,7 @@ namespace linq
             Selector m_selector;
 
         public:
-            constexpr zip_enumerator(Eter1&& eter1, Eter2&& eter2, Selector&& selector) : m_eter1(eter1), m_eter2(eter2), m_selector(selector) {}
+            constexpr zip_enumerator(Eter1&& eter1, Eter2&& eter2, Selector&& selector) : m_eter1(std::forward<Eter1>(eter1)), m_eter2(std::forward<Eter2>(eter2)), m_selector(selector) {}
 
             constexpr operator bool() const { return m_eter1 && m_eter2; }
             constexpr zip_enumerator& operator++()
@@ -353,7 +353,7 @@ namespace linq
             Eter m_eter;
 
         public:
-            cast_enumerator(Eter&& eter) : m_eter(eter) {}
+            cast_enumerator(Eter&& eter) : m_eter(std::forward<Eter>(eter)) {}
 
             constexpr operator bool() const { return m_eter; }
             constexpr cast_enumerator& operator++()

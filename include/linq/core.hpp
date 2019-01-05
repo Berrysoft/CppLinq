@@ -25,6 +25,8 @@ namespace linq
         public:
             constexpr enumerator(Container&& container) : m_container(container), m_begin(std::begin(m_container)), m_end(std::end(m_container)) {}
 
+            constexpr Container container() { return m_container; }
+
             constexpr operator bool() const { return m_begin != m_end; }
             constexpr enumerator& operator++()
             {
@@ -114,7 +116,7 @@ namespace linq
     template <typename Container, typename Query, typename = std::enable_if_t<!is_enumerable_v<Container>>, typename = decltype(std::begin(std::declval<Container>())), typename = decltype(std::end(std::declval<Container>()))>
     constexpr decltype(auto) operator>>(Container&& c, Query&& q)
     {
-        return std::forward<Query>(q)(get_enumerable<Container>(std::forward<Container>(c)));
+        return std::forward<Query>(q)(get_enumerable(std::forward<Container>(c)));
     }
 
     // Some help lambdas
@@ -180,7 +182,7 @@ namespace linq
             std::size_t m_num;
 
         public:
-            repeat_enumerator(T&& element, std::size_t num) : m_element(element), m_num(num) {}
+            repeat_enumerator(T&& element, std::size_t num) : m_element(std::forward<T>(element)), m_num(num) {}
 
             constexpr operator bool() const { return m_num; }
             constexpr repeat_enumerator& operator++()

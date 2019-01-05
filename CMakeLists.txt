@@ -13,7 +13,7 @@ function(add_headers VAR)
   set(${VAR} ${headers} PARENT_SCOPE)
 endfunction()
 
-add_headers(SF_HEADERS core.hpp query.hpp aggregate.hpp to_container.hpp)
+add_headers(SF_HEADERS core.hpp query.hpp aggregate.hpp to_container.hpp string.hpp)
 
 install(FILES ${SF_HEADERS} DESTINATION include/linq)
 
@@ -86,6 +86,10 @@ set_tests_properties(minmax_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n"
 add_executable(to_container test/to_container.cpp)
 add_test(to_container_test to_container)
 set_tests_properties(to_container_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
+
+add_executable(split test/split.cpp)
+add_test(split_test split)
+set_tests_properties(split_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
 
 add_executable(chain test/chain.cpp)
 add_test(chain_test chain)
