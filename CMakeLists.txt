@@ -91,6 +91,14 @@ add_executable(split test/split.cpp)
 add_test(split_test split)
 set_tests_properties(split_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
 
+add_executable(join test/join.cpp)
+add_test(join_test join)
+set_tests_properties(join_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
+
+add_executable(instr test/instr.cpp)
+add_test(instr_test instr)
+set_tests_properties(instr_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")
+
 add_executable(chain test/chain.cpp)
 add_test(chain_test chain)
 set_tests_properties(chain_test PROPERTIES PASS_REGULAR_EXPRESSION "Success.\n")

@@ -47,4 +47,6 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * to_set
 * to_vector
 ### String
+* instr
+* join
 * split

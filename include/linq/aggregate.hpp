@@ -38,7 +38,8 @@ namespace linq
     }
 
     // Determines if any elements satisfy a condition.
-    // empty() <=> !any(), therefore no empty().
+    // empty() <=> !any()
+    // contains(x) <=> any([](auto a) { return a == x; })
     template <typename Pred = decltype(allways_true())>
     constexpr auto any(Pred&& pred = allways_true())
     {
