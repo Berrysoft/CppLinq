@@ -200,6 +200,74 @@ namespace linq
     {
         return enumerable(impl::repeat_enumerator<T>(std::forward<T>(element), num));
     }
+
+    namespace impl
+    {
+        template <typename T, typename Eter>
+        class append_enumerator
+        {
+        private:
+            std::optional<T> m_value;
+            Eter m_eter;
+
+        public:
+            constexpr append_enumerator(T&& value, Eter&& eter) : m_value(std::forward<T>(value)), m_eter(std::forward<Eter>(eter)) {}
+
+            constexpr operator bool() const { return m_eter || m_value; }
+            constexpr append_enumerator& operator++()
+            {
+                if (m_eter)
+                    ++m_eter;
+                else
+                    m_value = std::nullopt;
+                return *this;
+            }
+            constexpr decltype(auto) operator*() { return m_eter ? *m_eter : *m_value; }
+        };
+    } // namespace impl
+
+    template <typename T>
+    constexpr auto append(T&& value)
+    {
+        return [&](auto e) {
+            using Eter = decltype(e.enumerator());
+            return enumerable(impl::append_enumerator<T, Eter>(std::forward<T>(value), e.enumerator()));
+        };
+    }
+
+    namespace impl
+    {
+        template <typename T, typename Eter>
+        class prepend_enumerator
+        {
+        private:
+            std::optional<T> m_value;
+            Eter m_eter;
+
+        public:
+            constexpr prepend_enumerator(T&& value, Eter&& eter) : m_value(std::forward<T>(value)), m_eter(std::forward<Eter>(eter)) {}
+
+            constexpr operator bool() const { return m_value || m_eter; }
+            constexpr prepend_enumerator& operator++()
+            {
+                if (m_value)
+                    m_value = std::nullopt;
+                else
+                    ++m_eter;
+                return *this;
+            }
+            constexpr decltype(auto) operator*() { return m_value ? *m_value : *m_eter; }
+        };
+    } // namespace impl
+
+    template <typename T>
+    constexpr auto prepend(T&& value)
+    {
+        return [&](auto e) {
+            using Eter = decltype(e.enumerator());
+            return enumerable(impl::prepend_enumerator<T, Eter>(std::forward<T>(value), e.enumerator()));
+        };
+    }
 } // namespace linq
 
 #endif // !LINQ_CORE_HPP

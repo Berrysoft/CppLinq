@@ -17,6 +17,8 @@ Here we use `operator>>` to make it extensible.
 For extension sample, see [extension.cpp](test/extension.cpp).
 ## Supported methods
 ### Core
+* append
+* prepend
 * range
 * repeat
 ### Query
@@ -37,6 +39,7 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * average
 * count
 * equals
+* get_at
 * limit
 * reverse
 * sort
@@ -44,6 +47,7 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 ### ToContainer
 * to_list
 * to_map
+* to_multimap
 * to_set
 * to_vector
 ### String

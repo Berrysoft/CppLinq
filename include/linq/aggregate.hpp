@@ -200,7 +200,7 @@ namespace linq
     };
 
     // Sorts the enumerable by the specified selector and comparer.
-    template <typename T, typename Selector = identity, typename Comparer = less<T>>
+    template <typename T, typename Selector = identity, typename Comparer = std::less<T>>
     constexpr auto sort(Selector&& selector = {}, Comparer&& comparer = {})
     {
         return [&](auto e) {
@@ -231,6 +231,16 @@ namespace linq
                     result = *eter;
             }
             return result;
+        };
+    }
+
+    constexpr auto get_at(std::size_t index)
+    {
+        return [=](auto e) {
+            auto eter{ e.enumerator() };
+            for (std::size_t i{ 0 }; eter && i < index; ++eter, ++i)
+                ;
+            return *eter;
         };
     }
 } // namespace linq
