@@ -32,10 +32,19 @@
 
 namespace linq
 {
+    struct always_true
+    {
+        template <typename T>
+        constexpr bool operator()(T&&)
+        {
+            return true;
+        }
+    };
+
     // The count of the enumerable.
     // Returns the total count with the default parameter.
-    template <typename Pred = decltype(allways_true())>
-    constexpr auto count(Pred&& pred = allways_true())
+    template <typename Pred = always_true>
+    constexpr auto count(Pred&& pred = {})
     {
         return [&](auto e) {
             std::size_t result{ 0 };
@@ -65,8 +74,8 @@ namespace linq
     // Determines if any elements satisfy a condition.
     // empty() <=> !any()
     // contains(x) <=> any([](auto a) { return a == x; })
-    template <typename Pred = decltype(allways_true())>
-    constexpr auto any(Pred&& pred = allways_true())
+    template <typename Pred = always_true>
+    constexpr auto any(Pred&& pred = {})
     {
         return [&](auto e) {
             for (auto item : e)
@@ -173,20 +182,28 @@ namespace linq
         };
     } // namespace impl
 
+    template <typename T>
     constexpr auto reverse()
     {
         return [](auto e) {
-            using T = std::remove_const_t<std::remove_reference_t<decltype(*e.enumerator())>>;
             return enumerable(impl::reverse_enumerator<T>(e.enumerator()));
         };
     }
 
+    struct identity
+    {
+        template <typename T>
+        constexpr T&& operator()(T&& t)
+        {
+            return std::forward<T>(t);
+        }
+    };
+
     // Sorts the enumerable by the specified selector and comparer.
-    template <typename Selector = decltype(always_identity()), typename Comparer = decltype(less_than())>
-    constexpr auto sort(Selector&& selector = always_identity(), Comparer&& comparer = less_than())
+    template <typename T, typename Selector = identity, typename Comparer = less<T>>
+    constexpr auto sort(Selector&& selector = {}, Comparer&& comparer = {})
     {
         return [&](auto e) {
-            using T = std::remove_const_t<std::remove_reference_t<decltype(*e.enumerator())>>;
             std::vector<T> result;
             for (auto item : e)
             {
@@ -198,13 +215,12 @@ namespace linq
     }
 
     // Gets the limit value of an enumerable.
-    // min <=> limit(less_than())
-    // max <=> limit(greater_than())
-    template <typename Comparer>
+    // min <=> limit(less<T>{})
+    // max <=> limit(greater<T>{})
+    template <typename T, typename Comparer>
     constexpr auto limit(Comparer&& comparer)
     {
         return [&](auto e) {
-            using T = std::remove_const_t<std::remove_reference_t<decltype(*e.enumerator())>>;
             auto eter{ e.enumerator() };
             if (!eter)
                 return T{};

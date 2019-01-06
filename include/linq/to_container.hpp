@@ -34,11 +34,11 @@
 
 namespace linq
 {
-    template <typename T>
+    template <typename T, typename Allocator = std::allocator<T>>
     constexpr auto to_list()
     {
         return [](auto e) {
-            std::list<T> result;
+            std::list<T, Allocator> result;
             for (auto item : e)
             {
                 result.emplace_back(item);
@@ -47,11 +47,11 @@ namespace linq
         };
     }
 
-    template <typename T>
+    template <typename T, typename Comparer = std::less<T>, typename Allocator = std::allocator<T>>
     constexpr auto to_set()
     {
         return [](auto e) {
-            std::set<T> result;
+            std::set<T, Comparer, Allocator> result;
             for (auto item : e)
             {
                 result.emplace(item);
@@ -60,11 +60,11 @@ namespace linq
         };
     }
 
-    template <typename T>
+    template <typename T, typename Allocator = std::allocator<T>>
     constexpr auto to_vector()
     {
         return [](auto e) {
-            std::vector<T> result;
+            std::vector<T, Allocator> result;
             for (auto item : e)
             {
                 result.emplace_back(item);
@@ -73,14 +73,24 @@ namespace linq
         };
     }
 
-    template <typename KeySelector, typename ElementSelector>
+    template <typename TKey, typename TElem, typename KeySelector, typename ElementSelector, typename Comparer = std::less<TKey>, typename Allocator = std::allocator<std::pair<const TKey, TElem>>>
     constexpr auto to_map(KeySelector&& keysel, ElementSelector&& elesel)
     {
         return [&](auto e) {
-            using TItem = decltype(*e.enumerator());
-            using TKey = decltype(keysel(std::declval<TItem>()));
-            using TElement = decltype(elesel(std::declval<TItem>()));
-            std::map<TKey, TElement> result;
+            std::map<TKey, TElem, Comparer, Allocator> result;
+            for (auto item : e)
+            {
+                result.emplace(keysel(item), elesel(item));
+            }
+            return result;
+        };
+    }
+
+    template <typename TKey, typename TElem, typename KeySelector, typename ElementSelector, typename Comparer = std::less<TKey>, typename Allocator = std::allocator<std::pair<const TKey, TElem>>>
+    constexpr auto to_multimap(KeySelector&& keysel, ElementSelector&& elesel)
+    {
+        return [&](auto e) {
+            std::multimap<TKey, TElem, Comparer, Allocator> result;
             for (auto item : e)
             {
                 result.emplace(keysel(item), elesel(item));
