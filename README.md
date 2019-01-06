@@ -18,6 +18,7 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 ## Supported methods
 ### Core
 * append
+* equals
 * prepend
 * range
 * repeat
@@ -38,12 +39,15 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * any
 * average
 * count
-* equals
+* distinct
+* except
 * get_at
+* intersect
 * limit
 * reverse
 * sort
 * sum
+* union_set
 ### ToContainer
 * to_list
 * to_map

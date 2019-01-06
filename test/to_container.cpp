@@ -1,5 +1,4 @@
 #include <iostream>
-#include <linq/aggregate.hpp>
 #include <linq/query.hpp>
 #include <linq/to_container.hpp>
 

@@ -1,5 +1,5 @@
 #include <iostream>
-#include <linq/aggregate.hpp>
+#include <linq/core.hpp>
 
 using namespace std;
 using namespace linq;

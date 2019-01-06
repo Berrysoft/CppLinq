@@ -1,6 +1,5 @@
 #include <cmath>
 #include <iostream>
-#include <linq/aggregate.hpp>
 #include <linq/query.hpp>
 #include <vector>
 

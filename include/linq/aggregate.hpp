@@ -28,6 +28,7 @@
 
 #include <algorithm>
 #include <linq/core.hpp>
+#include <set>
 #include <vector>
 
 namespace linq
@@ -131,22 +132,6 @@ namespace linq
         };
     }
 
-    // Determines whether the two enumerable are equal.
-    template <typename E2>
-    constexpr auto equals(E2&& e2)
-    {
-        return [&](auto e) {
-            auto eter1{ e.enumerator() };
-            auto eter2{ get_enumerator(std::forward<E2>(e2)) };
-            for (; eter1 && eter2; ++eter1, ++eter2)
-            {
-                if (*eter1 != *eter2)
-                    return false;
-            }
-            return !eter1 && !eter2;
-        };
-    }
-
     // reverse enumerator
     namespace impl
     {
@@ -241,6 +226,198 @@ namespace linq
             for (std::size_t i{ 0 }; eter && i < index; ++eter, ++i)
                 ;
             return *eter;
+        };
+    }
+
+    namespace impl
+    {
+        template <typename T, typename Eter>
+        class distinct_enumerator
+        {
+        private:
+            std::set<T> m_set;
+            Eter m_eter;
+
+            constexpr void move_next()
+            {
+                for (; m_eter; ++m_eter)
+                {
+                    if (m_set.emplace(*m_eter).second)
+                        break;
+                }
+            }
+
+        public:
+            constexpr distinct_enumerator(Eter&& eter) : m_eter(std::forward<Eter>(eter))
+            {
+                move_next();
+            }
+
+            constexpr operator bool() const { return m_eter; }
+            constexpr distinct_enumerator& operator++()
+            {
+                move_next();
+                return *this;
+            }
+            constexpr decltype(auto) operator*() { return *m_eter; }
+        };
+    } // namespace impl
+
+    template <typename T>
+    constexpr auto distinct()
+    {
+        return [](auto e) {
+            using Eter = decltype(e.enumerator());
+            return enumerable(impl::distinct_enumerator<T, Eter>(e.enumerator()));
+        };
+    }
+
+    namespace impl
+    {
+        template <typename T, typename Eter1, typename Eter2>
+        class union_set_enumerator
+        {
+        private:
+            std::set<T> m_set;
+            Eter1 m_eter1;
+            Eter2 m_eter2;
+
+            template <typename Eter>
+            constexpr bool move_next(Eter& eter)
+            {
+                for (; eter; ++eter)
+                {
+                    if (m_set.emplace(*eter).second)
+                        return true;
+                }
+                return false;
+            }
+
+            constexpr void move_next()
+            {
+                if (!m_eter1 || (m_eter1 && !move_next(m_eter1)))
+                    move_next(m_eter2);
+            }
+
+        public:
+            constexpr union_set_enumerator(Eter1&& eter1, Eter2&& eter2) : m_eter1(std::forward<Eter1>(eter1)), m_eter2(std::forward<Eter2>(eter2))
+            {
+                move_next();
+            }
+
+            constexpr operator bool() const { return m_eter1 || m_eter2; }
+            constexpr union_set_enumerator& operator++()
+            {
+                move_next();
+                return *this;
+            }
+            constexpr decltype(auto) operator*() { return m_eter1 ? *m_eter1 : *m_eter2; }
+        };
+    } // namespace impl
+
+    template <typename T, typename E2>
+    constexpr auto union_set(E2&& e2)
+    {
+        return [&](auto e) {
+            using Eter1 = decltype(e.enumerator());
+            using Eter2 = decltype(get_enumerator(std::forward<E2>(e2)));
+            return enumerable(impl::union_set_enumerator<T, Eter1, Eter2>(e.enumerator(), get_enumerator(std::forward<E2>(e2))));
+        };
+    }
+
+    namespace impl
+    {
+        template <typename T, typename Eter1>
+        class intersect_enumerator
+        {
+        private:
+            std::set<T> m_set;
+            Eter1 m_eter1;
+
+            constexpr void move_next()
+            {
+                for (; m_eter1; ++m_eter1)
+                {
+                    if (m_set.erase(*m_eter1))
+                        break;
+                }
+            }
+
+        public:
+            template <typename Eter2>
+            constexpr intersect_enumerator(Eter1&& eter1, Eter2&& eter2) : m_eter1(std::forward<Eter1>(eter1))
+            {
+                for (; eter2; ++eter2)
+                {
+                    m_set.emplace(*eter2);
+                }
+                move_next();
+            }
+
+            constexpr operator bool() const { return m_eter1; }
+            constexpr intersect_enumerator& operator++()
+            {
+                move_next();
+                return *this;
+            }
+            constexpr decltype(auto) operator*() { return *m_eter1; }
+        };
+    } // namespace impl
+
+    template <typename T, typename E2>
+    constexpr auto intersect(E2&& e2)
+    {
+        return [&](auto e) {
+            using Eter1 = decltype(e.enumerator());
+            return enumerable(impl::intersect_enumerator<T, Eter1>(e.enumerator(), get_enumerator(std::forward<E2>(e2))));
+        };
+    }
+
+    namespace impl
+    {
+        template <typename T, typename Eter1>
+        class except_enumerator
+        {
+        private:
+            std::set<T> m_set;
+            Eter1 m_eter1;
+
+            constexpr void move_next()
+            {
+                for (; m_eter1; ++m_eter1)
+                {
+                    if (m_set.emplace(*m_eter1).second)
+                        break;
+                }
+            }
+
+        public:
+            template <typename Eter2>
+            constexpr except_enumerator(Eter1&& eter1, Eter2&& eter2) : m_eter1(std::forward<Eter1>(eter1))
+            {
+                for (; eter2; ++eter2)
+                {
+                    m_set.emplace(*eter2);
+                }
+                move_next();
+            }
+
+            constexpr operator bool() const { return m_eter1; }
+            constexpr except_enumerator& operator++()
+            {
+                move_next();
+                return *this;
+            }
+            constexpr decltype(auto) operator*() { return *m_eter1; }
+        };
+    } // namespace impl
+
+    template <typename T, typename E2>
+    constexpr auto except(E2&& e2)
+    {
+        return [&](auto e) {
+            using Eter1 = decltype(e.enumerator());
+            return enumerable(impl::except_enumerator<T, Eter1>(e.enumerator(), get_enumerator(std::forward<E2>(e2))));
         };
     }
 } // namespace linq

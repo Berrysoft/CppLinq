@@ -116,7 +116,7 @@ namespace linq
             CSelector m_cselector;
             RSelector m_rselector;
 
-            void move_next()
+            constexpr void move_next()
             {
                 if (m_eter)
                 {

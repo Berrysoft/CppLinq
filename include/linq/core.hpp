@@ -268,6 +268,22 @@ namespace linq
             return enumerable(impl::prepend_enumerator<T, Eter>(std::forward<T>(value), e.enumerator()));
         };
     }
+
+    // Determines whether the two enumerable are equal.
+    template <typename E2>
+    constexpr auto equals(E2&& e2)
+    {
+        return [&](auto e) {
+            auto eter1{ e.enumerator() };
+            auto eter2{ get_enumerator(std::forward<E2>(e2)) };
+            for (; eter1 && eter2; ++eter1, ++eter2)
+            {
+                if (*eter1 != *eter2)
+                    return false;
+            }
+            return !eter1 && !eter2;
+        };
+    }
 } // namespace linq
 
 #endif // !LINQ_CORE_HPP

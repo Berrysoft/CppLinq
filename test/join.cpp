@@ -1,5 +1,4 @@
 #include <iostream>
-#include <linq/aggregate.hpp>
 #include <linq/string.hpp>
 #include <string>
 
