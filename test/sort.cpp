@@ -18,12 +18,12 @@ struct pack
     int score;
 };
 
-bool operator==(const pack& p1, const pack& p2)
+constexpr bool operator==(const pack& p1, const pack& p2)
 {
     return p1.index == p2.index && p1.score == p2.score;
 }
 
-bool operator!=(const pack& p1, const pack& p2)
+constexpr bool operator!=(const pack& p1, const pack& p2)
 {
     return !(p1 == p2);
 }

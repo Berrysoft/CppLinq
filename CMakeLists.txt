@@ -47,6 +47,7 @@ add_exe_test(sort)
 add_exe_test(minmax)
 add_exe_test(get_at)
 add_exe_test(set)
+add_exe_test(group)
 
 add_exe_test(to_container)
 

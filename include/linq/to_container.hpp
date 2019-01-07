@@ -26,6 +26,7 @@
 #ifndef LINQ_TO_CONTAINER_HPP
 #define LINQ_TO_CONTAINER_HPP
 
+#include <deque>
 #include <linq/core.hpp>
 #include <list>
 #include <map>
@@ -65,6 +66,19 @@ namespace linq
     {
         return [](auto e) {
             std::vector<T, Allocator> result;
+            for (auto item : e)
+            {
+                result.emplace_back(item);
+            }
+            return result;
+        };
+    }
+
+    template <typename T, typename Allocator = std::allocator<T>>
+    constexpr auto to_deque()
+    {
+        return [](auto e) {
+            std::deque<T, Allocator> result;
             for (auto item : e)
             {
                 result.emplace_back(item);

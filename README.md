@@ -42,6 +42,8 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * distinct
 * except
 * get_at
+* group
+* group_join
 * intersect
 * limit
 * reverse
@@ -49,6 +51,7 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * sum
 * union_set
 ### ToContainer
+* to_deque
 * to_list
 * to_map
 * to_multimap

@@ -27,9 +27,10 @@
 #define LINQ_AGGREGATE_HPP
 
 #include <algorithm>
+#include <deque>
 #include <linq/core.hpp>
+#include <map>
 #include <set>
-#include <vector>
 
 namespace linq
 {
@@ -139,8 +140,8 @@ namespace linq
         class reverse_enumerator
         {
         private:
-            std::vector<T> m_vec;
-            typename std::vector<T>::reverse_iterator m_begin, m_end;
+            std::deque<T> m_vec;
+            typename std::deque<T>::reverse_iterator m_begin, m_end;
 
         public:
             // Prevent multi-reverse in copying.
@@ -189,7 +190,7 @@ namespace linq
     constexpr auto sort(Selector&& selector = {}, Comparer&& comparer = {})
     {
         return [&](auto e) {
-            std::vector<T> result;
+            std::deque<T> result;
             for (auto item : e)
             {
                 result.emplace_back(item);
@@ -418,6 +419,89 @@ namespace linq
         return [&](auto e) {
             using Eter1 = decltype(e.enumerator());
             return enumerable(impl::except_enumerator<T, Eter1>(e.enumerator(), get_enumerator(std::forward<E2>(e2))));
+        };
+    }
+
+    namespace impl
+    {
+        template <typename TKey, typename TElement, typename ResultSelector, typename Comparer = std::less<TKey>>
+        class group_enumerator
+        {
+        private:
+            std::map<TKey, std::deque<TElement>, Comparer> m_lookup;
+            typename std::map<TKey, std::deque<TElement>, Comparer>::iterator m_begin, m_end;
+            ResultSelector m_rstsel;
+
+        public:
+            constexpr group_enumerator(const group_enumerator& eter) : m_lookup(eter.m_lookup), m_begin(m_lookup.begin()), m_end(m_lookup.end()), m_rstsel(eter.m_rstsel) {}
+
+            template <typename Eter, typename KeySelector, typename ElementSelector>
+            constexpr group_enumerator(Eter&& eter, KeySelector&& keysel, ElementSelector&& elesel, ResultSelector&& rstsel) : m_rstsel(rstsel)
+            {
+                for (; eter; ++eter)
+                {
+                    m_lookup[keysel(*eter)].emplace_back(elesel(*eter));
+                }
+                m_begin = m_lookup.begin();
+                m_end = m_lookup.end();
+            }
+
+            constexpr operator bool() const { return m_begin != m_end; }
+            constexpr group_enumerator& operator++()
+            {
+                ++m_begin;
+                return *this;
+            }
+            constexpr decltype(auto) operator*() { return m_rstsel(m_begin->first, get_enumerable(m_lookup[m_begin->first])); }
+        };
+    } // namespace impl
+
+    template <typename TKey, typename TElement, typename Comparer = std::less<TKey>, typename KeySelector, typename ElementSelector, typename ResultSelector>
+    constexpr auto group(KeySelector&& keysel, ElementSelector&& elesel, ResultSelector&& rstsel)
+    {
+        return [&](auto e) {
+            using Eter = decltype(e.enumerator());
+            return enumerable(impl::group_enumerator<TKey, TElement, ResultSelector, Comparer>(e.enumerator(), std::forward<KeySelector>(keysel), std::forward<ElementSelector>(elesel), std::forward<ResultSelector>(rstsel)));
+        };
+    }
+
+    namespace impl
+    {
+        template <typename Eter, typename TKey, typename TElement, typename KeySelector, typename ResultSelector, typename Comparer = std::less<TKey>>
+        class group_join_enumerator
+        {
+        private:
+            Eter m_eter;
+            std::map<TKey, std::deque<TElement>, Comparer> m_lookup;
+            KeySelector m_keysel;
+            ResultSelector m_rstsel;
+
+        public:
+            template <typename Eter2, typename KeySelector2, typename ElementSelector2>
+            constexpr group_join_enumerator(Eter&& eter, Eter2&& eter2, KeySelector&& keysel, KeySelector2&& keysel2, ElementSelector2&& elesel2, ResultSelector&& rstsel) : m_eter(eter), m_keysel(keysel), m_rstsel(rstsel)
+            {
+                for (; eter2; ++eter2)
+                {
+                    m_lookup[keysel2(*eter2)].emplace_back(elesel2(*eter2));
+                }
+            }
+
+            constexpr operator bool() const { return m_eter; }
+            constexpr group_join_enumerator& operator++()
+            {
+                ++m_eter;
+                return *this;
+            }
+            constexpr decltype(auto) operator*() { return m_rstsel(*m_eter, get_enumerable(m_lookup[m_keysel(*m_eter)])); }
+        };
+    } // namespace impl
+
+    template <typename TKey, typename TElement, typename Comparer = std::less<TKey>, typename E2, typename KeySelector, typename KeySelector2, typename ElementSelector2, typename ResultSelector>
+    constexpr auto group_join(E2&& e2, KeySelector&& keysel, KeySelector2&& keysel2, ElementSelector2&& elesel2, ResultSelector&& rstsel)
+    {
+        return [&](auto e) {
+            using Eter = decltype(e.enumerator());
+            return enumerable(impl::group_join_enumerator<Eter, TKey, TElement, KeySelector, ResultSelector, Comparer>(e.enumerator(), get_enumerator(std::forward<E2>(e2)), std::forward<KeySelector>(keysel), std::forward<KeySelector2>(keysel2), std::forward<ElementSelector2>(elesel2), std::forward<ResultSelector>(rstsel)));
         };
     }
 } // namespace linq

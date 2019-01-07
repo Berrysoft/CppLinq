@@ -48,7 +48,7 @@ namespace linq
             Iter m_begin, m_end;
 
         public:
-            constexpr enumerator(Container&& container) : m_container(container), m_begin(std::begin(m_container)), m_end(std::end(m_container)) {}
+            constexpr enumerator(Container&& container) : m_container(std::forward<Container>(container)), m_begin(std::begin(m_container)), m_end(std::end(m_container)) {}
 
             constexpr Container container() { return m_container; }
 
