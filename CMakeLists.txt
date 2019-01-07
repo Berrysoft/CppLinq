@@ -52,7 +52,7 @@ add_exe_test(group)
 add_exe_test(to_container)
 
 add_exe_test(split)
-add_exe_test(join)
+add_exe_test(joinstr)
 add_exe_test(instr)
 add_exe_test(chain)
 

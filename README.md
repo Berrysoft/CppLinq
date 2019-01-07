@@ -45,6 +45,7 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * group
 * group_join
 * intersect
+* join
 * limit
 * reverse
 * sort
@@ -59,5 +60,5 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * to_vector
 ### String
 * instr
-* join
+* joinstr
 * split

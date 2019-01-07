@@ -71,9 +71,24 @@ bool group_join_test()
     return e >> equals(a3);
 }
 
+bool join_test()
+{
+    pack2 a1[]{ { 1, "Gates" }, { 2, "Jobs" }, { 3, "Trump" } };
+    pack a2[]{ { 2, 88 }, { 1, 92 }, { 3, 61 } };
+    pack3 a3[]{ { "Gates", 92 }, { "Jobs", 88 }, { "Trump", 61 } };
+    auto e{ a1 >>
+            join<int, int>(
+                a2,
+                [](pack2& a) { return a.index; },
+                [](pack& a) { return a.index; },
+                [](pack& a) { return a.score; },
+                [](pack2& a, auto e) { return pack3{ a.name, e }; }) };
+    return e >> equals(a3);
+}
+
 int main()
 {
-    if (group_test() && group_join_test())
+    if (group_test() && group_join_test() && join_test())
     {
         cout << "Success." << endl;
     }

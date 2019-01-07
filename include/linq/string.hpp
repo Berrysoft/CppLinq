@@ -100,7 +100,7 @@ namespace linq
     // Contacts the string elements into a new string.
     // Named join to distinguish from concat.
     template <typename Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>>
-    constexpr auto join()
+    constexpr auto joinstr()
     {
         return [](auto e) {
             auto eter{ e.enumerator() };
@@ -115,7 +115,7 @@ namespace linq
 
     // Inserts something between every two string elements when contacting.
     template <typename Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>, typename T>
-    constexpr auto join(T&& value)
+    constexpr auto joinstr(T&& value)
     {
         return [&](auto e) {
             auto eter{ e.enumerator() };

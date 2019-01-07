@@ -9,7 +9,7 @@ bool join_test()
 {
     string str{ "123456" };
     int a1[]{ 1, 2, 3, 4, 5, 6 };
-    auto s{ a1 >> join<char>() };
+    auto s{ a1 >> joinstr<char>() };
     return s == str;
 }
 
@@ -17,7 +17,7 @@ bool join_with_char_test()
 {
     string str{ "Hello world !" };
     string_view views[]{ "Hello", "world", "!" };
-    auto s{ views >> join<char>(' ') };
+    auto s{ views >> joinstr<char>(' ') };
     return s == str;
 }
 
