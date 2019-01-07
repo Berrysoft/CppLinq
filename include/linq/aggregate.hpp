@@ -185,9 +185,50 @@ namespace linq
         }
     };
 
+    template <typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+    struct ascending
+    {
+        constexpr auto operator()(T t1, T t2)
+        {
+            return t1 - t2;
+        }
+    };
+
+    template <typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+    struct descending
+    {
+        constexpr auto operator()(T t1, T t2)
+        {
+            return t2 - t1;
+        }
+    };
+
+    template <typename T, typename Selector = identity, typename Comparer = ascending<T>>
+    constexpr auto make_comparer(Selector&& selector = {}, Comparer&& comparer = {})
+    {
+        return [&](auto t1, auto t2) { return comparer(selector(t1), selector(t2)); };
+    }
+
+    namespace impl
+    {
+        template <typename C1, typename... Comparer>
+        constexpr auto consume_comparer(C1&& c1, Comparer&&... comparer)
+        {
+            return [&](auto t1, auto t2) {
+                auto t = std::forward<C1>(c1)(t1, t2);
+                if constexpr (sizeof...(Comparer))
+                {
+                    if (t == 0)
+                        return consume_comparer<Comparer...>(std::forward<Comparer>(comparer)...)(t1, t2);
+                }
+                return t < 0;
+            };
+        }
+    } // namespace impl
+
     // Sorts the enumerable by the specified selector and comparer.
-    template <typename T, typename Selector = identity, typename Comparer = std::less<T>>
-    constexpr auto sort(Selector&& selector = {}, Comparer&& comparer = {})
+    template <typename T, typename... Comparer>
+    constexpr auto sort(Comparer&&... comparer)
     {
         return [&](auto e) {
             std::deque<T> result;
@@ -195,7 +236,7 @@ namespace linq
             {
                 result.emplace_back(item);
             }
-            std::sort(result.begin(), result.end(), [&](T& t1, T& t2) { return comparer(selector(t1), selector(t2)); });
+            std::sort(result.begin(), result.end(), impl::consume_comparer<Comparer...>(std::forward<Comparer>(comparer)...));
             return get_enumerable(std::move(result));
         };
     }
