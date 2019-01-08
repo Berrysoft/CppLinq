@@ -62,7 +62,7 @@ namespace linq
             void move_next()
             {
                 m_offset = m_index + 1;
-                if (m_offset < m_view.length())
+                if ((std::size_t)m_offset < m_view.length())
                 {
                     m_index = m_view.find(m_char, m_offset);
                     if (m_index == std::basic_string_view<Char, Traits>::npos)
@@ -76,7 +76,7 @@ namespace linq
                 move_next();
             }
 
-            constexpr operator bool() const { return m_offset < m_view.length(); }
+            constexpr operator bool() const { return (std::size_t)m_offset < m_view.length(); }
             constexpr split_enumerator& operator++()
             {
                 move_next();

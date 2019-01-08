@@ -501,7 +501,6 @@ namespace linq
     constexpr auto group(KeySelector&& keysel, ElementSelector&& elesel, ResultSelector&& rstsel)
     {
         return [&](auto e) {
-            using Eter = decltype(e.enumerator());
             return enumerable(impl::group_enumerator<TKey, TElement, ResultSelector, Comparer>(e.enumerator(), std::forward<KeySelector>(keysel), std::forward<ElementSelector>(elesel), std::forward<ResultSelector>(rstsel)));
         };
     }
