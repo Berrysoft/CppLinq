@@ -60,6 +60,24 @@ namespace linq
             }
             constexpr decltype(auto) operator*() { return *m_begin; }
         };
+
+        template <typename Iter>
+        class iter_enumerator
+        {
+        private:
+            Iter m_begin, m_end;
+
+        public:
+            constexpr iter_enumerator(Iter&& begin, Iter&& end) : m_begin(begin), m_end(end) {}
+
+            constexpr operator bool() const { return m_begin != m_end; }
+            constexpr iter_enumerator& operator++()
+            {
+                ++m_begin;
+                return *this;
+            }
+            constexpr decltype(auto) operator*() { return *m_begin; }
+        };
     } // namespace impl
 
     // An STL iterator adapter for enumerator-like class.
@@ -129,6 +147,12 @@ namespace linq
     constexpr auto get_enumerable(Container&& container)
     {
         return enumerable(get_enumerator(std::forward<Container>(container)));
+    }
+
+    template <typename Iter>
+    constexpr auto get_enumerable(Iter&& begin, Iter&& end)
+    {
+        return enumerable(impl::iter_enumerator(std::forward<Iter>(begin), std::forward<Iter>(end)));
     }
 
     // Combine enumerable and query lambdas.
