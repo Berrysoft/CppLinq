@@ -167,6 +167,69 @@ namespace linq
             return false;
         };
     }
+
+    template <typename Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>, typename T>
+    constexpr auto remove(T&& t)
+    {
+        return [&](auto e) {
+            using Container = decltype(e.enumerator().container());
+            static_assert(std::is_convertible_v<Container, std::basic_string_view<Char, Traits>>, "The enumerable should be an adapter of a string_view.");
+            std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
+            std::basic_string_view<Char, Traits> value{ std::forward<T>(t) };
+            std::basic_ostringstream<Char, Traits, Allocator> oss;
+            std::size_t offset{ 0 };
+            for (std::size_t i{ 0 }; i < view.length(); i++)
+            {
+                std::size_t j{ 0 };
+                for (; j < value.length(); j++)
+                {
+                    if (!Traits::eq(view[i + j], value[j]))
+                        goto continue_outer;
+                }
+                oss << view.substr(offset, i - offset);
+                offset = i + j;
+                i = offset - 1;
+            continue_outer:;
+            }
+            if (offset < view.length())
+            {
+                oss << view.substr(offset);
+            }
+            return oss.str();
+        };
+    }
+
+    template <typename Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>, typename TOld, typename TNew>
+    constexpr auto replace(TOld&& olds, TNew&& news)
+    {
+        return [&](auto e) {
+            using Container = decltype(e.enumerator().container());
+            static_assert(std::is_convertible_v<Container, std::basic_string_view<Char, Traits>>, "The enumerable should be an adapter of a string_view.");
+            std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
+            std::basic_string_view<Char, Traits> value{ std::forward<TOld>(olds) };
+            std::basic_ostringstream<Char, Traits, Allocator> oss;
+            std::size_t offset{ 0 };
+            for (std::size_t i{ 0 }; i < view.length(); i++)
+            {
+                std::size_t j{ 0 };
+                for (; j < value.length(); j++)
+                {
+                    if (!Traits::eq(view[i + j], value[j]))
+                        goto continue_outer;
+                }
+                oss << view.substr(offset, i - offset);
+                oss << news;
+                offset = i + j;
+                i = offset - 1;
+            continue_outer:;
+            }
+            if (offset < view.length())
+            {
+                oss << view.substr(offset);
+            }
+            return oss.str();
+        };
+    }
 } // namespace linq
 
 #endif // !LINQ_STRING_HPP

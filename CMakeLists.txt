@@ -46,6 +46,7 @@ add_exe_test(aggregate)
 add_exe_test(sort)
 add_exe_test(minmax)
 add_exe_test(get_at)
+add_exe_test(index_of)
 add_exe_test(set)
 add_exe_test(group)
 
@@ -54,6 +55,8 @@ add_exe_test(to_container)
 add_exe_test(split)
 add_exe_test(joinstr)
 add_exe_test(instr)
+add_exe_test(replace)
+
 add_exe_test(chain)
 
 add_exe_test(extension)

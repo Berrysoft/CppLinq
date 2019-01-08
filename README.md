@@ -44,6 +44,7 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * get_at
 * group
 * group_join
+* index_of
 * intersect
 * join
 * limit
@@ -61,4 +62,6 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 ### String
 * instr
 * joinstr
+* remove
+* replace
 * split

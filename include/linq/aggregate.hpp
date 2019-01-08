@@ -271,6 +271,21 @@ namespace linq
         };
     }
 
+    template <typename Pred>
+    constexpr auto index_of(Pred&& pred)
+    {
+        return [&](auto e) {
+            auto eter{ e.enumerator() };
+            std::size_t index{ 0 };
+            for (; eter && !pred(*eter); ++eter, ++index)
+                ;
+            if (!eter)
+                return static_cast<std::size_t>(-1);
+            else
+                return index;
+        };
+    }
+
     namespace impl
     {
         template <typename T, typename Eter>
