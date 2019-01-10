@@ -60,8 +60,10 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * to_set
 * to_vector
 ### String
+* ends_with
 * instr
 * joinstr
 * remove
 * replace
 * split
+* starts_with

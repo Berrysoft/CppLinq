@@ -168,6 +168,64 @@ namespace linq
         };
     }
 
+    template <typename Char, typename Traits = std::char_traits<Char>, typename = std::enable_if_t<is_char_v<Char>>>
+    constexpr auto starts_with(Char value)
+    {
+        return [=](auto e) {
+            using Container = decltype(e.enumerator().container());
+            static_assert(std::is_convertible_v<Container, std::basic_string_view<Char, Traits>>, "The enumerable should be an adapter of a string_view.");
+            std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
+            return view.front() == value;
+        };
+    }
+
+    template <typename Char, typename Traits = std::char_traits<Char>, typename T>
+    constexpr auto starts_with(T&& t)
+    {
+        return [&](auto e) {
+            using Container = decltype(e.enumerator().container());
+            static_assert(std::is_convertible_v<Container, std::basic_string_view<Char, Traits>>, "The enumerable should be an adapter of a string_view.");
+            std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
+            std::basic_string_view<Char, Traits> value{ std::forward<T>(t) };
+            std::size_t i{ 0 };
+            for (; i < view.length() && i < value.length(); i++)
+            {
+                if (!Traits::eq(view[i], value[i]))
+                    return false;
+            }
+            return i == value.length();
+        };
+    }
+
+    template <typename Char, typename Traits = std::char_traits<Char>, typename = std::enable_if_t<is_char_v<Char>>>
+    constexpr auto ends_with(Char value)
+    {
+        return [=](auto e) {
+            using Container = decltype(e.enumerator().container());
+            static_assert(std::is_convertible_v<Container, std::basic_string_view<Char, Traits>>, "The enumerable should be an adapter of a string_view.");
+            std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
+            return view.back() == value;
+        };
+    }
+
+    template <typename Char, typename Traits = std::char_traits<Char>, typename T>
+    constexpr auto ends_with(T&& t)
+    {
+        return [&](auto e) {
+            using Container = decltype(e.enumerator().container());
+            static_assert(std::is_convertible_v<Container, std::basic_string_view<Char, Traits>>, "The enumerable should be an adapter of a string_view.");
+            std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
+            std::basic_string_view<Char, Traits> value{ std::forward<T>(t) };
+            std::size_t i{ 0 };
+            for (; i < view.length() && i < value.length(); i++)
+            {
+                if (!Traits::eq(view[view.length() - i - 1], value[value.length() - i - 1]))
+                    return false;
+            }
+            return i == value.length();
+        };
+    }
+
     template <typename Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>, typename T>
     constexpr auto remove(T&& t)
     {

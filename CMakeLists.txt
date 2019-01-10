@@ -56,6 +56,7 @@ add_exe_test(split)
 add_exe_test(joinstr)
 add_exe_test(instr)
 add_exe_test(replace)
+add_exe_test(starts_ends_with)
 
 add_exe_test(chain)
 
