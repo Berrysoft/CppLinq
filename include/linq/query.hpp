@@ -30,7 +30,6 @@
 
 namespace linq
 {
-    // where enumerator
     namespace impl
     {
         template <typename Eter, typename Pred>
@@ -63,6 +62,7 @@ namespace linq
         };
     } // namespace impl
 
+    // Filters an enumerable based on a predicate.
     template <typename Pred>
     constexpr auto where(Pred&& pred)
     {
@@ -72,7 +72,6 @@ namespace linq
         };
     }
 
-    // select enumerator
     namespace impl
     {
         template <typename Eter, typename Selector>
@@ -95,6 +94,7 @@ namespace linq
         };
     } // namespace impl
 
+    // Projects each element into a new form.
     template <typename Selector>
     constexpr auto select(Selector&& selector)
     {
@@ -104,7 +104,6 @@ namespace linq
         };
     }
 
-    // select_many enumerator
     namespace impl
     {
         template <typename Eter, typename Eter2, typename CSelector, typename RSelector>
@@ -120,7 +119,7 @@ namespace linq
             {
                 if (m_eter)
                 {
-                    // Use emplace to prevent some operator= bugs.
+                    // Use emplace to prevent a operator= bug of optional.
                     m_eter2.emplace(get_enumerator(m_cselector(*m_eter)));
                     ++m_eter;
                 }
@@ -151,6 +150,7 @@ namespace linq
         };
     } // namespace impl
 
+    // Projects each element, flattens the resulting sequences into one sequence, and invokes a result selector function on each element therein.
     template <typename CSelector, typename RSelector>
     constexpr auto select_many(CSelector&& cselector, RSelector&& rselector)
     {
@@ -161,7 +161,6 @@ namespace linq
         };
     }
 
-    // skip enumerator
     namespace impl
     {
         template <typename Eter>
@@ -187,6 +186,7 @@ namespace linq
         };
     } // namespace impl
 
+    // Bypasses a specified number of elements and then returns the remaining elements.
     constexpr auto skip(std::size_t skipn)
     {
         return [=](auto e) {
@@ -195,7 +195,6 @@ namespace linq
         };
     }
 
-    // skip_while enumerator
     namespace impl
     {
         template <typename Eter>
@@ -222,6 +221,7 @@ namespace linq
         };
     } // namespace impl
 
+    // Bypasses elements as long as a specified condition is true and then returns the remaining elements.
     template <typename Pred>
     constexpr auto skip_while(Pred&& pred)
     {
@@ -231,7 +231,6 @@ namespace linq
         };
     }
 
-    // take enumerator
     namespace impl
     {
         template <typename Eter>
@@ -256,6 +255,7 @@ namespace linq
         };
     } // namespace impl
 
+    // Returns a specified number of contiguous elements from the start.
     constexpr auto take(std::size_t taken)
     {
         return [=](auto e) {
@@ -264,7 +264,6 @@ namespace linq
         };
     }
 
-    // take_while enumerator
     namespace impl
     {
         template <typename Eter, typename Pred>
@@ -287,6 +286,7 @@ namespace linq
         };
     } // namespace impl
 
+    // Returns elements as long as a specified condition is true.
     template <typename Pred>
     constexpr auto take_while(Pred&& pred)
     {
@@ -296,7 +296,6 @@ namespace linq
         };
     }
 
-    // concat enumerator
     namespace impl
     {
         template <typename Eter1, typename Eter2>
@@ -322,6 +321,7 @@ namespace linq
         };
     } // namespace impl
 
+    // Concatenates two enumerable.
     template <typename E2>
     constexpr auto concat(E2&& e2)
     {
@@ -333,7 +333,6 @@ namespace linq
         };
     }
 
-    // zip enumerator
     namespace impl
     {
         template <typename Eter1, typename Eter2, typename Selector>
@@ -358,6 +357,7 @@ namespace linq
         };
     } // namespace impl
 
+    // Applies a specified function to the corresponding elements of two enumerable, producing an enumerable of the results.
     template <typename E2, typename Selector>
     constexpr auto zip(E2&& e2, Selector&& selector)
     {
@@ -368,7 +368,6 @@ namespace linq
         };
     }
 
-    // C-style cast enumerator
     namespace impl
     {
         template <typename Eter, typename TTo>
@@ -390,6 +389,7 @@ namespace linq
         };
     } // namespace impl
 
+    // Applies C-style cast to the elements.
     template <typename TTo>
     constexpr auto cast()
     {

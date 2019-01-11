@@ -112,7 +112,6 @@ namespace linq
         enumerator_iterator<Eter> m_iter;
 
     public:
-        // When calling enumerator(), the enumerable instance will be destoryed.
         constexpr Eter enumerator() { return m_iter.enumerator(); }
 
         constexpr auto begin() { return m_iter; }
@@ -168,7 +167,6 @@ namespace linq
         return std::forward<Query>(q)(get_enumerable(std::forward<Container>(c)));
     }
 
-    // range enumerator
     namespace impl
     {
         template <typename Int>
@@ -190,13 +188,13 @@ namespace linq
         };
     } // namespace impl
 
+    // Ranges an interger in [begin, end).
     template <typename Int>
     constexpr auto range(Int begin, Int end)
     {
         return enumerable(impl::range_enumerator<Int>(std::move(begin), std::move(end)));
     }
 
-    // repeat enumerator
     namespace impl
     {
         template <typename T>
@@ -219,6 +217,7 @@ namespace linq
         };
     } // namespace impl
 
+    // Repeats an element several times.
     template <typename T>
     constexpr auto repeat(T&& element, std::size_t num)
     {
@@ -250,6 +249,7 @@ namespace linq
         };
     } // namespace impl
 
+    // Appends an element to the enumerable.
     template <typename T>
     constexpr auto append(T&& value)
     {
@@ -284,6 +284,7 @@ namespace linq
         };
     } // namespace impl
 
+    // Prepends an element to the enumerable.
     template <typename T>
     constexpr auto prepend(T&& value)
     {

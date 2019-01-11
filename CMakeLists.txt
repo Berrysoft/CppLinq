@@ -5,6 +5,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 include_directories(include)
 
+if(WIN32 AND CMAKE_SYSTEM_VERSION)
+  set(IS_WINDOWS true)
+endif()
+
 function(add_headers VAR)
   set(headers ${${VAR}})
   foreach (header ${ARGN})
@@ -14,6 +18,10 @@ function(add_headers VAR)
 endfunction()
 
 add_headers(SF_HEADERS core.hpp query.hpp aggregate.hpp to_container.hpp string.hpp)
+
+if (IS_WINDOWS)
+  add_headers(SF_HEADERS winrt.hpp)
+endif()
 
 install(FILES ${SF_HEADERS} DESTINATION include/linq)
 
@@ -62,3 +70,8 @@ add_exe_test(io_lines)
 add_exe_test(chain)
 
 add_exe_test(extension)
+
+if (IS_WINDOWS)
+  add_exe_test(winrt)
+  target_link_libraries(winrt WindowsApp.lib)
+endif()
