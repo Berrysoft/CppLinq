@@ -28,6 +28,7 @@
 
 #include <linq/core.hpp>
 #include <sstream>
+#include <string>
 #include <string_view>
 
 namespace linq
@@ -287,6 +288,57 @@ namespace linq
             }
             return oss.str();
         };
+    }
+
+    namespace impl
+    {
+        template <typename Char, typename Traits, typename Allocator>
+        class read_lines_enumerator
+        {
+        private:
+            std::basic_istream<Char, Traits>& m_stream;
+            std::optional<std::basic_string<Char, Traits, Allocator>> m_str;
+
+            constexpr void move_next()
+            {
+                std::basic_string<Char, Traits, Allocator> str;
+                if (std::getline(m_stream, str))
+                    m_str.emplace(str);
+                else
+                    m_str = std::nullopt;
+            }
+
+        public:
+            constexpr read_lines_enumerator(std::basic_istream<Char, Traits>& stream) : m_stream(stream)
+            {
+                move_next();
+            }
+
+            constexpr operator bool() const { return (bool)m_str; }
+            constexpr read_lines_enumerator& operator++()
+            {
+                move_next();
+                return *this;
+            }
+            constexpr auto operator*() { return *m_str; }
+        };
+    } // namespace impl
+
+    template <typename Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>>
+    constexpr auto read_lines(std::basic_istream<Char, Traits>& stream)
+    {
+        return enumerable(impl::read_lines_enumerator<Char, Traits, Allocator>(stream));
+    }
+
+    template <typename Char, typename Traits = std::char_traits<Char>, typename E>
+    constexpr decltype(auto) write_lines(std::basic_ostream<Char, Traits>& stream, E&& e)
+    {
+        auto eter{ get_enumerator(e) };
+        for (; eter; ++eter)
+        {
+            stream << *eter << stream.widen('\n');
+        }
+        return stream;
     }
 } // namespace linq
 

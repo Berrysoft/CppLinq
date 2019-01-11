@@ -63,7 +63,9 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * ends_with
 * instr
 * joinstr
+* read_lines
 * remove
 * replace
 * split
 * starts_with
+* write_lines
