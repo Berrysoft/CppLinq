@@ -52,7 +52,7 @@ bool map_test()
 
 int main()
 {
-    init_apartment();
+    init_apartment(apartment_type::single_threaded);
     if (vector_test() && map_test())
     {
         cout << "Success." << endl;

@@ -5,8 +5,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 include_directories(include)
 
-if(WIN32 AND CMAKE_SYSTEM_VERSION)
-  set(IS_WINDOWS true)
+if(WIN32)
+  string(REGEX MATCH "10.0[.[0-9]+]?" MATCH_WINDOWS_10 ${CMAKE_SYSTEM_VERSION})
+  string(LENGTH "${MATCH_WINDOWS_10}" MATCH_WINDOWS_10_LENGTH)
+  if(${MATCH_WINDOWS_10_LENGTH})
+    message("You are running on Windows 10")
+    set(IS_WINDOWS_10 true)
+  endif()
 endif()
 
 function(add_headers VAR)
@@ -19,7 +24,7 @@ endfunction()
 
 add_headers(SF_HEADERS core.hpp query.hpp aggregate.hpp to_container.hpp string.hpp)
 
-if (IS_WINDOWS)
+if (IS_WINDOWS_10)
   add_headers(SF_HEADERS winrt.hpp)
 endif()
 
@@ -71,7 +76,7 @@ add_exe_test(chain)
 
 add_exe_test(extension)
 
-if (IS_WINDOWS)
+if (IS_WINDOWS_10)
   add_exe_test(winrt)
   target_link_libraries(winrt WindowsApp.lib)
 endif()
