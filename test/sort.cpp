@@ -8,7 +8,7 @@ bool test_sort()
 {
     int a1[]{ 6, 5, 4, 3, 2, 1 };
     int a2[]{ 1, 2, 3, 4, 5, 6 };
-    auto e{ a1 >> sort<int>(make_comparer<int>()) };
+    auto e{ a1 >> sort() };
     return e >> equals(a2);
 }
 
@@ -33,9 +33,8 @@ bool test_sort_custom()
     pack a1[]{ { 1, 92 }, { 2, 78 }, { 4, 85 }, { 3, 85 } };
     pack a2[]{ { 1, 92 }, { 3, 85 }, { 4, 85 }, { 2, 78 } };
     auto e{ a1 >>
-            sort<pack>(
-                make_comparer<pack&>([](pack& p) { return p.score; }, descending<int>{}),
-                make_comparer<pack&>([](pack& p) { return p.index; }, ascending<int>{})) };
+            sort(make_comparer([](pack& p) { return p.score; }, descending{}),
+                 make_comparer([](pack& p) { return p.index; })) };
     return e >> equals(a2);
 }
 

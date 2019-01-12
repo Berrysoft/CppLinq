@@ -55,19 +55,6 @@ namespace linq
     template <typename C>
     constexpr bool has_GetAt_v<C, std::void_t<decltype(std::declval<C>().GetAt(0))>>{ true };
 
-    template <typename Collection, typename Query, typename = decltype(std::declval<Collection>().First())>
-    constexpr auto operator>>(Collection&& c, Query&& q)
-    {
-        if constexpr (has_GetAt_v<Collection>)
-        {
-            return std::forward<Query>(q)(enumerable(impl::winrt_fast_container_enumerator<Collection>(c)));
-        }
-        else
-        {
-            return std::forward<Query>(q)(enumerable(impl::winrt_container_enumerator<Collection>(c)));
-        }
-    }
-
     template <typename Collection, typename = decltype(std::declval<Collection>().First())>
     constexpr auto get_enumerator(Collection&& c)
     {
@@ -79,6 +66,12 @@ namespace linq
         {
             return impl::winrt_container_enumerator<Collection>(c);
         }
+    }
+
+    template <typename Collection, typename Query, typename = decltype(std::declval<Collection>().First())>
+    constexpr auto operator>>(Collection&& c, Query&& q)
+    {
+        return std::forward<Query>(q)(enumerable(get_enumerator<Collection>(std::forward<Collection>(c))));
     }
 } // namespace linq
 

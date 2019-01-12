@@ -27,10 +27,9 @@ bool group_test()
     pack a1[]{ { 2, 88 }, { 1, 92 }, { 2, 78 }, { 1, 66 }, { 3, 85 }, { 3, 61 } };
     pack a2[]{ { 1, 79 }, { 2, 83 }, { 3, 73 } };
     auto e{ a1 >>
-            group<int, int>(
-                [](pack& a) { return a.index; },
-                [](pack& a) { return a.score; },
-                [](int key, auto e) { return pack{ key, e >> average() }; }) };
+            group([](pack& a) { return a.index; },
+                  [](pack& a) { return a.score; },
+                  [](int key, auto e) { return pack{ key, e >> average() }; }) };
     return e >> equals(a2);
 }
 
@@ -62,12 +61,11 @@ bool group_join_test()
     pack a2[]{ { 2, 88 }, { 1, 92 }, { 2, 78 }, { 1, 66 }, { 3, 85 }, { 3, 61 } };
     pack3 a3[]{ { "Gates", 79 }, { "Jobs", 83 }, { "Trump", 73 } };
     auto e{ a1 >>
-            group_join<int, int>(
-                a2,
-                [](pack2& a) { return a.index; },
-                [](pack& a) { return a.index; },
-                [](pack& a) { return a.score; },
-                [](pack2& a, auto e) { return pack3{ a.name, e >> average() }; }) };
+            group_join(a2,
+                       [](pack2& a) { return a.index; },
+                       [](pack& a) { return a.index; },
+                       [](pack& a) { return a.score; },
+                       [](pack2& a, auto e) { return pack3{ a.name, e >> average() }; }) };
     return e >> equals(a3);
 }
 
@@ -77,12 +75,11 @@ bool join_test()
     pack a2[]{ { 2, 88 }, { 1, 92 }, { 3, 61 } };
     pack3 a3[]{ { "Gates", 92 }, { "Jobs", 88 }, { "Trump", 61 } };
     auto e{ a1 >>
-            join<int, int>(
-                a2,
-                [](pack2& a) { return a.index; },
-                [](pack& a) { return a.index; },
-                [](pack& a) { return a.score; },
-                [](pack2& a, auto e) { return pack3{ a.name, e }; }) };
+            join(a2,
+                 [](pack2& a) { return a.index; },
+                 [](pack& a) { return a.index; },
+                 [](pack& a) { return a.score; },
+                 [](pack2& a, auto e) { return pack3{ a.name, e }; }) };
     return e >> equals(a3);
 }
 

@@ -8,7 +8,7 @@ bool distinct_test()
 {
     int a1[]{ 1, 1, 2, 3, 3, 4, 5, 6 };
     int a2[]{ 1, 2, 3, 4, 5, 6 };
-    auto e{ a1 >> distinct<int>() };
+    auto e{ a1 >> distinct() };
     return e >> equals(a2);
 }
 
@@ -17,7 +17,7 @@ bool union_set_test()
     int a1[]{ 1, 1, 2, 3, 3, 4, 5, 6 };
     int a2[]{ 3, 4, 5, 6, 7, 7, 8 };
     int a3[]{ 1, 2, 3, 4, 5, 6, 7, 8 };
-    auto e{ a1 >> union_set<int>(a2) };
+    auto e{ a1 >> union_set(a2) };
     return e >> equals(a3);
 }
 
@@ -26,7 +26,7 @@ bool intersect_test()
     int a1[]{ 1, 1, 2, 3, 3, 4, 5, 6 };
     int a2[]{ 3, 4, 5, 6, 7, 7, 8 };
     int a3[]{ 3, 4, 5, 6 };
-    auto e{ a1 >> intersect<int>(a2) };
+    auto e{ a1 >> intersect(a2) };
     return e >> equals(a3);
 }
 
@@ -35,7 +35,7 @@ bool except_test()
     int a1[]{ 1, 1, 2, 3, 3, 4, 5, 6 };
     int a2[]{ 3, 4, 5, 6, 7, 7, 8 };
     int a3[]{ 1, 2 };
-    auto e{ a1 >> except<int>(a2) };
+    auto e{ a1 >> except(a2) };
     return e >> equals(a3);
 }
 

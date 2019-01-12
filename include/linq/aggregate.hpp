@@ -34,6 +34,7 @@
 
 namespace linq
 {
+    // Always returns true.
     struct always_true
     {
         template <typename T>
@@ -133,7 +134,6 @@ namespace linq
         };
     }
 
-    // reverse enumerator
     namespace impl
     {
         template <typename T>
@@ -145,7 +145,14 @@ namespace linq
 
         public:
             // Prevent multi-reverse in copying.
-            constexpr reverse_enumerator(const reverse_enumerator& eter) : m_vec(eter.m_vec), m_begin(m_vec.rbegin()), m_end(m_vec.rend()) {}
+            constexpr reverse_enumerator(const reverse_enumerator& eter) : m_vec(eter.m_vec), m_begin(eter.m_begin), m_end(eter.m_end) {}
+            constexpr reverse_enumerator& operator=(const reverse_enumerator& eter)
+            {
+                m_vec = eter.m_vec;
+                m_begin = eter.m_begin;
+                m_end = eter.m_end;
+                return *this;
+            }
 
             template <typename Eter>
             constexpr reverse_enumerator(Eter&& eter)
@@ -168,14 +175,16 @@ namespace linq
         };
     } // namespace impl
 
-    template <typename T>
+    // Inverts the order of the elements.
     constexpr auto reverse()
     {
         return [](auto e) {
+            using T = std::remove_const_t<std::remove_reference_t<decltype(*e.enumerator())>>;
             return enumerable(impl::reverse_enumerator<T>(e.enumerator()));
         };
     }
 
+    // Always returns the param itself.
     struct identity
     {
         template <typename T>
@@ -185,25 +194,26 @@ namespace linq
         }
     };
 
-    template <typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
     struct ascending
     {
-        constexpr auto operator()(T t1, T t2)
+        template <typename T1, typename T2>
+        constexpr auto operator()(T1&& t1, T2&& t2) const
         {
             return t1 - t2;
         }
     };
 
-    template <typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
     struct descending
     {
-        constexpr auto operator()(T t1, T t2)
+        template <typename T1, typename T2>
+        constexpr auto operator()(T1&& t1, T2&& t2) const
         {
             return t2 - t1;
         }
     };
 
-    template <typename T, typename Selector = identity, typename Comparer = ascending<T>>
+    // Make a comparer with a selector and a ascending/descending comparer.
+    template <typename Selector = identity, typename Comparer = ascending>
     constexpr auto make_comparer(Selector&& selector = {}, Comparer&& comparer = {})
     {
         return [&](auto t1, auto t2) { return comparer(selector(t1), selector(t2)); };
@@ -226,28 +236,51 @@ namespace linq
         }
     } // namespace impl
 
-    // Sorts the enumerable by the specified selector and comparer.
-    template <typename T, typename... Comparer>
+    // Sorts the enumerable by the specified comparer.
+    template <typename... Comparer>
     constexpr auto sort(Comparer&&... comparer)
     {
         return [&](auto e) {
+            using T = std::remove_const_t<std::remove_reference_t<decltype(*e.enumerator())>>;
             std::deque<T> result;
             for (auto item : e)
             {
                 result.emplace_back(item);
             }
-            std::sort(result.begin(), result.end(), impl::consume_comparer<Comparer...>(std::forward<Comparer>(comparer)...));
+            if constexpr (sizeof...(Comparer) == 0)
+                std::sort(result.begin(), result.end(), impl::consume_comparer(ascending{}));
+            else
+                std::sort(result.begin(), result.end(), impl::consume_comparer<Comparer...>(std::forward<Comparer>(comparer)...));
             return get_enumerable(std::move(result));
         };
     }
 
+    struct less_than
+    {
+        template <typename T1, typename T2>
+        constexpr bool operator()(T1&& t1, T2&& t2) const
+        {
+            return t1 < t2;
+        }
+    };
+
+    struct greater_than
+    {
+        template <typename T1, typename T2>
+        constexpr bool operator()(T1&& t1, T2&& t2) const
+        {
+            return t1 > t2;
+        }
+    };
+
     // Gets the limit value of an enumerable.
-    // min <=> limit(less<T>{})
-    // max <=> limit(greater<T>{})
-    template <typename T, typename Comparer>
+    // min <=> limit(less_than{})
+    // max <=> limit(greater_than{})
+    template <typename Comparer>
     constexpr auto limit(Comparer&& comparer)
     {
         return [&](auto e) {
+            using T = std::remove_const_t<std::remove_reference_t<decltype(*e.enumerator())>>;
             auto eter{ e.enumerator() };
             if (!eter)
                 return T{};
@@ -261,6 +294,7 @@ namespace linq
         };
     }
 
+    // Returns the element at a specified index.
     constexpr auto get_at(std::size_t index)
     {
         return [=](auto e) {
@@ -271,6 +305,7 @@ namespace linq
         };
     }
 
+    // Returns the index of the first element which satifies the predicate.
     template <typename Pred>
     constexpr auto index_of(Pred&& pred)
     {
@@ -320,11 +355,12 @@ namespace linq
         };
     } // namespace impl
 
-    template <typename T>
+    // Returns distinct elements.
     constexpr auto distinct()
     {
         return [](auto e) {
             using Eter = decltype(e.enumerator());
+            using T = std::remove_const_t<std::remove_reference_t<decltype(*e.enumerator())>>;
             return enumerable(impl::distinct_enumerator<T, Eter>(e.enumerator()));
         };
     }
@@ -372,12 +408,14 @@ namespace linq
         };
     } // namespace impl
 
-    template <typename T, typename E2>
+    // Produces the set union of two enumerable.
+    template <typename E2>
     constexpr auto union_set(E2&& e2)
     {
         return [&](auto e) {
             using Eter1 = decltype(e.enumerator());
             using Eter2 = decltype(get_enumerator(std::forward<E2>(e2)));
+            using T = std::remove_const_t<std::remove_reference_t<decltype(*e.enumerator())>>;
             return enumerable(impl::union_set_enumerator<T, Eter1, Eter2>(e.enumerator(), get_enumerator(std::forward<E2>(e2))));
         };
     }
@@ -421,11 +459,13 @@ namespace linq
         };
     } // namespace impl
 
-    template <typename T, typename E2>
+    // Produces the set intersection of two enumerable.
+    template <typename E2>
     constexpr auto intersect(E2&& e2)
     {
         return [&](auto e) {
             using Eter1 = decltype(e.enumerator());
+            using T = std::remove_const_t<std::remove_reference_t<decltype(*e.enumerator())>>;
             return enumerable(impl::intersect_enumerator<T, Eter1>(e.enumerator(), get_enumerator(std::forward<E2>(e2))));
         };
     }
@@ -469,11 +509,13 @@ namespace linq
         };
     } // namespace impl
 
-    template <typename T, typename E2>
+    // Produces the set difference of two enumerable.
+    template <typename E2>
     constexpr auto except(E2&& e2)
     {
         return [&](auto e) {
             using Eter1 = decltype(e.enumerator());
+            using T = std::remove_const_t<std::remove_reference_t<decltype(*e.enumerator())>>;
             return enumerable(impl::except_enumerator<T, Eter1>(e.enumerator(), get_enumerator(std::forward<E2>(e2))));
         };
     }
@@ -490,6 +532,14 @@ namespace linq
 
         public:
             constexpr group_enumerator(const group_enumerator& eter) : m_lookup(eter.m_lookup), m_begin(m_lookup.begin()), m_end(m_lookup.end()), m_rstsel(eter.m_rstsel) {}
+            constexpr group_enumerator& operator=(const group_enumerator& eter)
+            {
+                m_lookup = eter.m_lookup;
+                m_begin = m_lookup.begin();
+                m_end = m_lookup.end();
+                m_rstsel = eter.m_rstsel;
+                return *this;
+            }
 
             template <typename Eter, typename KeySelector, typename ElementSelector>
             constexpr group_enumerator(Eter&& eter, KeySelector&& keysel, ElementSelector&& elesel, ResultSelector&& rstsel) : m_rstsel(rstsel)
@@ -512,10 +562,14 @@ namespace linq
         };
     } // namespace impl
 
-    template <typename TKey, typename TElement, typename Comparer = std::less<TKey>, typename KeySelector, typename ElementSelector, typename ResultSelector>
+    // Groups the elements according to a specified key selector function and creates a result value from each group and its key.
+    // Key values are compared by using a specified comparer, and the elements of each group are projected by using a specified function.
+    template <typename Comparer = less_than, typename KeySelector, typename ElementSelector, typename ResultSelector>
     constexpr auto group(KeySelector&& keysel, ElementSelector&& elesel, ResultSelector&& rstsel)
     {
         return [&](auto e) {
+            using TKey = decltype(keysel(*e.enumerator()));
+            using TElement = decltype(elesel(*e.enumerator()));
             return enumerable(impl::group_enumerator<TKey, TElement, ResultSelector, Comparer>(e.enumerator(), std::forward<KeySelector>(keysel), std::forward<ElementSelector>(elesel), std::forward<ResultSelector>(rstsel)));
         };
     }
@@ -551,11 +605,14 @@ namespace linq
         };
     } // namespace impl
 
-    template <typename TKey, typename TElement, typename Comparer = std::less<TKey>, typename E2, typename KeySelector, typename KeySelector2, typename ElementSelector2, typename ResultSelector>
+    // Correlates the elements of two enumerable based on key comparer and groups the results.
+    template <typename Comparer = less_than, typename E2, typename KeySelector, typename KeySelector2, typename ElementSelector2, typename ResultSelector>
     constexpr auto group_join(E2&& e2, KeySelector&& keysel, KeySelector2&& keysel2, ElementSelector2&& elesel2, ResultSelector&& rstsel)
     {
         return [&](auto e) {
             using Eter = decltype(e.enumerator());
+            using TKey = decltype(keysel2(*get_enumerator(e2)));
+            using TElement = decltype(elesel2(*get_enumerator(e2)));
             return enumerable(impl::group_join_enumerator<Eter, TKey, TElement, KeySelector, ResultSelector, Comparer>(e.enumerator(), get_enumerator(std::forward<E2>(e2)), std::forward<KeySelector>(keysel), std::forward<KeySelector2>(keysel2), std::forward<ElementSelector2>(elesel2), std::forward<ResultSelector>(rstsel)));
         };
     }
@@ -608,11 +665,14 @@ namespace linq
         };
     } // namespace impl
 
-    template <typename TKey, typename TElement, typename Comparer = std::less<TKey>, typename E2, typename KeySelector, typename KeySelector2, typename ElementSelector2, typename ResultSelector>
+    // Correlates the elements of two enumerable based on matching keys.
+    template <typename Comparer = less_than, typename E2, typename KeySelector, typename KeySelector2, typename ElementSelector2, typename ResultSelector>
     constexpr auto join(E2&& e2, KeySelector&& keysel, KeySelector2&& keysel2, ElementSelector2&& elesel2, ResultSelector&& rstsel)
     {
         return [&](auto e) {
             using Eter = decltype(e.enumerator());
+            using TKey = decltype(keysel2(*get_enumerator(e2)));
+            using TElement = decltype(elesel2(*get_enumerator(e2)));
             return enumerable(impl::join_enumerator<Eter, TKey, TElement, KeySelector, ResultSelector, Comparer>(e.enumerator(), get_enumerator(std::forward<E2>(e2)), std::forward<KeySelector>(keysel), std::forward<KeySelector2>(keysel2), std::forward<ElementSelector2>(elesel2), std::forward<ResultSelector>(rstsel)));
         };
     }

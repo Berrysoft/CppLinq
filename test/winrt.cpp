@@ -9,7 +9,6 @@
 using namespace std;
 using namespace linq;
 using namespace winrt;
-using namespace Windows::Foundation::Collections;
 
 bool vector_test()
 {
@@ -41,12 +40,11 @@ bool map_test()
     auto a2{ single_threaded_map(map<int, int>{ { 2, 88 }, { 1, 92 }, { 3, 61 } }) };
     pack a3[]{ { L"Gates", 92 }, { L"Jobs", 88 }, { L"Trump", 61 } };
     auto e{ a1 >>
-            join<int, int>(
-                a2,
-                [](auto a) { return a.Key(); },
-                [](auto a) { return a.Key(); },
-                [](auto a) { return a.Value(); },
-                [](auto a, auto e) { return pack{ a.Value(), e }; }) };
+            join(a2,
+                 [](auto a) { return a.Key(); },
+                 [](auto a) { return a.Key(); },
+                 [](auto a) { return a.Value(); },
+                 [](auto a, auto e) { return pack{ a.Value(), e }; }) };
     return e >> equals(a3);
 }
 

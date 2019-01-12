@@ -49,7 +49,6 @@ namespace linq
     template <>
     inline constexpr bool is_char_v<char32_t>{ true };
 
-    // split enumerator
     namespace impl
     {
         template <typename Char, typename Traits>
@@ -87,6 +86,7 @@ namespace linq
         };
     } // namespace impl
 
+    // Split the string into an enumerable of string_view by a char.
     template <typename Char, typename Traits = std::char_traits<Char>>
     constexpr auto split(Char split_char)
     {
@@ -169,6 +169,7 @@ namespace linq
         };
     }
 
+    // Determines whether a char is in the start of the string.
     template <typename Char, typename Traits = std::char_traits<Char>, typename = std::enable_if_t<is_char_v<Char>>>
     constexpr auto starts_with(Char value)
     {
@@ -180,6 +181,7 @@ namespace linq
         };
     }
 
+    // Determines whether a string span is in the start of the string.
     template <typename Char, typename Traits = std::char_traits<Char>, typename T>
     constexpr auto starts_with(T&& t)
     {
@@ -198,6 +200,7 @@ namespace linq
         };
     }
 
+    // Determines whether a char is in the end of the string.
     template <typename Char, typename Traits = std::char_traits<Char>, typename = std::enable_if_t<is_char_v<Char>>>
     constexpr auto ends_with(Char value)
     {
@@ -209,6 +212,7 @@ namespace linq
         };
     }
 
+    // Determines whether a string span is in the end of the string.
     template <typename Char, typename Traits = std::char_traits<Char>, typename T>
     constexpr auto ends_with(T&& t)
     {
@@ -227,6 +231,33 @@ namespace linq
         };
     }
 
+    // Returns a new string with no specified char.
+    template <typename Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>>
+    constexpr auto remove(Char value)
+    {
+        return [=](auto e) {
+            using Container = decltype(e.enumerator().container());
+            static_assert(std::is_convertible_v<Container, std::basic_string_view<Char, Traits>>, "The enumerable should be an adapter of a string_view.");
+            std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
+            std::basic_ostringstream<Char, Traits, Allocator> oss;
+            std::size_t offset{ 0 };
+            for (std::size_t i{ 0 }; i < view.length(); i++)
+            {
+                if (Traits::eq(view[i], value))
+                {
+                    oss << view.substr(offset, i - offset);
+                    offset = i + 1;
+                }
+            }
+            if (offset < view.length())
+            {
+                oss << view.substr(offset);
+            }
+            return oss.str();
+        };
+    }
+
+    // Returns a new string with no specified string span.
     template <typename Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>, typename T>
     constexpr auto remove(T&& t)
     {
@@ -258,6 +289,7 @@ namespace linq
         };
     }
 
+    // Returns a new string which the specified string span is replaced by the new one.
     template <typename Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>, typename TOld, typename TNew>
     constexpr auto replace(TOld&& olds, TNew&& news)
     {
@@ -324,12 +356,14 @@ namespace linq
         };
     } // namespace impl
 
+    // Read lines of string from a stream.
     template <typename Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>>
     constexpr auto read_lines(std::basic_istream<Char, Traits>& stream)
     {
         return enumerable(impl::read_lines_enumerator<Char, Traits, Allocator>(stream));
     }
 
+    // Write lines of string to a stream.
     template <typename Char, typename Traits = std::char_traits<Char>, typename E>
     constexpr decltype(auto) write_lines(std::basic_ostream<Char, Traits>& stream, E&& e)
     {
