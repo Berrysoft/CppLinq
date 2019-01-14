@@ -31,6 +31,7 @@
 #include <linq/core.hpp>
 #include <map>
 #include <set>
+#include <string_view>
 
 namespace linq
 {
@@ -203,12 +204,40 @@ namespace linq
         }
     };
 
+    template <typename Char, typename Traits = std::char_traits<Char>>
+    struct string_ascending
+    {
+        using string_view_type = std::basic_string_view<Char, Traits>;
+
+        template <typename T1, typename T2>
+        constexpr auto operator()(T1&& t1, T2&& t2) const
+        {
+            string_view_type s1{ std::forward<T1>(t1) };
+            string_view_type s2{ std::forward<T2>(t2) };
+            return s1.compare(s2);
+        }
+    };
+
     struct descending
     {
         template <typename T1, typename T2>
         constexpr auto operator()(T1&& t1, T2&& t2) const
         {
             return t2 - t1;
+        }
+    };
+
+    template <typename Char, typename Traits = std::char_traits<Char>>
+    struct string_descending
+    {
+        using string_view_type = std::basic_string_view<Char, Traits>;
+
+        template <typename T1, typename T2>
+        constexpr auto operator()(T1&& t1, T2&& t2) const
+        {
+            string_view_type s1{ std::forward<T1>(t1) };
+            string_view_type s2{ std::forward<T2>(t2) };
+            return s2.compare(s1);
         }
     };
 
@@ -255,27 +284,9 @@ namespace linq
         };
     }
 
-    struct less_than
-    {
-        template <typename T1, typename T2>
-        constexpr bool operator()(T1&& t1, T2&& t2) const
-        {
-            return t1 < t2;
-        }
-    };
-
-    struct greater_than
-    {
-        template <typename T1, typename T2>
-        constexpr bool operator()(T1&& t1, T2&& t2) const
-        {
-            return t1 > t2;
-        }
-    };
-
     // Gets the limit value of an enumerable.
-    // min <=> limit(less_than{})
-    // max <=> limit(greater_than{})
+    // min <=> limit(less<void>{})
+    // max <=> limit(greater<void>{})
     template <typename Comparer>
     constexpr auto limit(Comparer&& comparer)
     {
@@ -564,7 +575,7 @@ namespace linq
 
     // Groups the elements according to a specified key selector function and creates a result value from each group and its key.
     // Key values are compared by using a specified comparer, and the elements of each group are projected by using a specified function.
-    template <typename Comparer = less_than, typename KeySelector, typename ElementSelector, typename ResultSelector>
+    template <typename Comparer = std::less<void>, typename KeySelector, typename ElementSelector, typename ResultSelector>
     constexpr auto group(KeySelector&& keysel, ElementSelector&& elesel, ResultSelector&& rstsel)
     {
         return [&](auto e) {
@@ -606,7 +617,7 @@ namespace linq
     } // namespace impl
 
     // Correlates the elements of two enumerable based on key comparer and groups the results.
-    template <typename Comparer = less_than, typename E2, typename KeySelector, typename KeySelector2, typename ElementSelector2, typename ResultSelector>
+    template <typename Comparer = std::less<void>, typename E2, typename KeySelector, typename KeySelector2, typename ElementSelector2, typename ResultSelector>
     constexpr auto group_join(E2&& e2, KeySelector&& keysel, KeySelector2&& keysel2, ElementSelector2&& elesel2, ResultSelector&& rstsel)
     {
         return [&](auto e) {
@@ -666,7 +677,7 @@ namespace linq
     } // namespace impl
 
     // Correlates the elements of two enumerable based on matching keys.
-    template <typename Comparer = less_than, typename E2, typename KeySelector, typename KeySelector2, typename ElementSelector2, typename ResultSelector>
+    template <typename Comparer = std::less<void>, typename E2, typename KeySelector, typename KeySelector2, typename ElementSelector2, typename ResultSelector>
     constexpr auto join(E2&& e2, KeySelector&& keysel, KeySelector2&& keysel2, ElementSelector2&& elesel2, ResultSelector&& rstsel)
     {
         return [&](auto e) {

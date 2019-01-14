@@ -1,5 +1,6 @@
 #include <iostream>
 #include <linq/aggregate.hpp>
+#include <string>
 
 using namespace std;
 using namespace linq;
@@ -14,27 +15,27 @@ bool test_sort()
 
 struct pack
 {
-    int index;
+    string name;
     int score;
 };
 
-constexpr bool operator==(const pack& p1, const pack& p2)
+inline bool operator==(const pack& p1, const pack& p2)
 {
-    return p1.index == p2.index && p1.score == p2.score;
+    return p1.name == p2.name && p1.score == p2.score;
 }
 
-constexpr bool operator!=(const pack& p1, const pack& p2)
+inline bool operator!=(const pack& p1, const pack& p2)
 {
     return !(p1 == p2);
 }
 
 bool test_sort_custom()
 {
-    pack a1[]{ { 1, 92 }, { 2, 78 }, { 4, 85 }, { 3, 85 } };
-    pack a2[]{ { 1, 92 }, { 3, 85 }, { 4, 85 }, { 2, 78 } };
+    pack a1[]{ { "Zh.F. Ren", 92 }, { "Jobs", 78 }, { "Trump", 85 }, { "Gates", 85 } };
+    pack a2[]{ { "Zh.F. Ren", 92 }, { "Gates", 85 }, { "Trump", 85 }, { "Jobs", 78 } };
     auto e{ a1 >>
             sort(make_comparer([](pack& p) { return p.score; }, descending{}),
-                 make_comparer([](pack& p) { return p.index; })) };
+                 make_comparer([](pack& p) { return p.name; }, string_ascending<char>{})) };
     return e >> equals(a2);
 }
 
