@@ -149,11 +149,45 @@ namespace linq
 
     namespace impl
     {
+        template <typename Eter, typename Selector>
+        class select_index_enumerator
+        {
+        private:
+            Eter m_eter;
+            Selector m_selector;
+            std::size_t m_index;
+
+        public:
+            constexpr select_index_enumerator(Eter&& eter, Selector&& selector) : m_eter(std::forward<Eter>(eter)), m_selector(selector), m_index(0) {}
+
+            constexpr operator bool() const { return m_eter; }
+            constexpr select_index_enumerator& operator++()
+            {
+                ++m_eter;
+                ++m_index;
+                return *this;
+            }
+            constexpr decltype(auto) operator*() { return m_selector(*m_eter, m_index); }
+        };
+    } // namespace impl
+
+    template <typename Selector>
+    constexpr auto select_index(Selector&& selector)
+    {
+        return [&](auto e) {
+            using Eter = decltype(e.enumerator());
+            return enumerable(impl::select_index_enumerator<Eter, Selector>(e.enumerator(), std::forward<Selector>(selector)));
+        };
+    }
+
+    namespace impl
+    {
         template <typename Eter, typename Eter2, typename CSelector, typename RSelector>
         class select_many_enumerator
         {
         private:
             Eter m_eter;
+            std::optional<std::remove_const_t<std::remove_reference_t<decltype(*m_eter)>>> m_eter_value;
             std::optional<Eter2> m_eter2;
             CSelector m_cselector;
             RSelector m_rselector;
@@ -162,8 +196,9 @@ namespace linq
             {
                 if (m_eter)
                 {
-                    // Use emplace to prevent a operator= bug of optional.
-                    m_eter2.emplace(get_enumerator(m_cselector(*m_eter)));
+                    // Use emplace to prevent an operator= bug of optional.
+                    m_eter_value.emplace(*m_eter);
+                    m_eter2.emplace(get_enumerator(m_cselector(*m_eter_value)));
                     ++m_eter;
                 }
                 else
@@ -189,7 +224,7 @@ namespace linq
                 }
                 return *this;
             }
-            constexpr decltype(auto) operator*() { return m_rselector(**m_eter2); }
+            constexpr decltype(auto) operator*() { return m_rselector(*m_eter_value, **m_eter2); }
         };
     } // namespace impl
 
@@ -201,6 +236,66 @@ namespace linq
             using Eter = decltype(e.enumerator());
             using Eter2 = decltype(get_enumerator(cselector(*e.enumerator())));
             return enumerable(impl::select_many_enumerator<Eter, Eter2, CSelector, RSelector>(e.enumerator(), std::forward<CSelector>(cselector), std::forward<RSelector>(rselector)));
+        };
+    }
+
+    namespace impl
+    {
+        template <typename Eter, typename Eter2, typename CSelector, typename RSelector>
+        class select_many_index_enumerator
+        {
+        private:
+            Eter m_eter;
+            std::optional<std::remove_const_t<std::remove_reference_t<decltype(*m_eter)>>> m_eter_value;
+            std::optional<Eter2> m_eter2;
+            CSelector m_cselector;
+            RSelector m_rselector;
+            std::size_t m_index;
+
+            constexpr void move_next()
+            {
+                if (m_eter)
+                {
+                    // Use emplace to prevent an operator= bug of optional.
+                    m_eter_value.emplace(*m_eter);
+                    m_eter2.emplace(get_enumerator(m_cselector(*m_eter_value, m_index)));
+                    ++m_eter;
+                    ++m_index;
+                }
+                else
+                {
+                    m_eter2 = std::nullopt;
+                }
+            }
+
+        public:
+            constexpr select_many_index_enumerator(Eter&& eter, CSelector&& cselector, RSelector&& rselector)
+                : m_eter(std::forward<Eter>(eter)), m_cselector(cselector), m_rselector(rselector), m_index(0)
+            {
+                move_next();
+            }
+
+            constexpr operator bool() const { return *m_eter2 || m_eter; }
+            constexpr select_many_index_enumerator& operator++()
+            {
+                ++*m_eter2;
+                if (!*m_eter2)
+                {
+                    move_next();
+                }
+                return *this;
+            }
+            constexpr decltype(auto) operator*() { return m_rselector(*m_eter_value, **m_eter2); }
+        };
+    } // namespace impl
+
+    template <typename CSelector, typename RSelector>
+    constexpr auto select_many_index(CSelector&& cselector, RSelector&& rselector)
+    {
+        return [&](auto e) {
+            using Eter = decltype(e.enumerator());
+            using Eter2 = decltype(get_enumerator(cselector(*e.enumerator(), 0)));
+            return enumerable(impl::select_many_index_enumerator<Eter, Eter2, CSelector, RSelector>(e.enumerator(), std::forward<CSelector>(cselector), std::forward<RSelector>(rselector)));
         };
     }
 

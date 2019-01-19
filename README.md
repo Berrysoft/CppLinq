@@ -26,12 +26,15 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * cast
 * concat
 * select
+* select_index
 * select_many
+* select_many_index
 * skip
 * skip_while
 * take
 * take_while
 * where
+* where_index
 * zip
 ### Aggregate
 * aggregate
