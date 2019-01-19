@@ -41,12 +41,14 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * count
 * distinct
 * except
+* first
 * get_at
 * group
 * group_join
 * index_of
 * intersect
 * join
+* last
 * limit
 * reverse
 * sort

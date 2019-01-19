@@ -74,6 +74,49 @@ namespace linq
 
     namespace impl
     {
+        template <typename Eter, typename Pred>
+        class where_index_enumerator
+        {
+        private:
+            Eter m_eter;
+            Pred m_pred;
+            std::size_t m_index;
+
+            constexpr void move_next()
+            {
+                for (; m_eter; ++m_eter, ++m_index)
+                {
+                    if (m_pred(*m_eter, m_index))
+                        break;
+                }
+            }
+
+        public:
+            constexpr where_index_enumerator(Eter&& eter, Pred&& pred) : m_eter(std::forward<Eter>(eter)), m_pred(pred), m_index(0) { move_next(); }
+
+            constexpr operator bool() const { return m_eter; }
+            constexpr where_index_enumerator& operator++()
+            {
+                ++m_eter;
+                ++m_index;
+                move_next();
+                return *this;
+            }
+            constexpr decltype(auto) operator*() { return *m_eter; }
+        };
+    } // namespace impl
+
+    template <typename Pred>
+    constexpr auto where_index(Pred&& pred)
+    {
+        return [&](auto e) {
+            using Eter = decltype(e.enumerator());
+            return enumerable(impl::where_index_enumerator<Eter, Pred>(e.enumerator(), std::forward<Pred>(pred)));
+        };
+    }
+
+    namespace impl
+    {
         template <typename Eter, typename Selector>
         class select_enumerator
         {

@@ -105,6 +105,35 @@ namespace linq
         };
     }
 
+    template <typename T, typename Pred = identity>
+    constexpr auto first(T&& def = {}, Pred&& pred = {})
+    {
+        return [&](auto e) {
+            auto eter{ e.enumerator() };
+            for (; eter; ++eter)
+            {
+                if (pred(*eter))
+                    return *eter;
+            }
+            return std::forward<T>(def);
+        };
+    }
+
+    template <typename T, typename Pred = identity>
+    constexpr auto last(T&& def = {}, Pred&& pred = {})
+    {
+        return [&](auto e) {
+            auto eter{ e.enumerator() };
+            T result{ std::forward<T>(def) };
+            for (; eter; ++eter)
+            {
+                if (pred(*eter))
+                    result = *eter;
+            }
+            return result;
+        };
+    }
+
     // Calculates the average value of the elements.
     constexpr auto average()
     {
