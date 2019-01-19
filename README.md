@@ -43,6 +43,7 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * average
 * back
 * count
+* default_if_empty
 * distinct
 * except
 * front

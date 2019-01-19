@@ -63,6 +63,7 @@ add_exe_test(index_of)
 add_exe_test(set)
 add_exe_test(group)
 add_exe_test(firstlast)
+add_exe_test(default)
 
 add_exe_test(to_container)
 

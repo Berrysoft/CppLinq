@@ -165,6 +165,44 @@ namespace linq
         };
     }
 
+    namespace impl
+    {
+        template <typename Eter, typename T>
+        class default_if_empty_enumerator
+        {
+        private:
+            Eter m_eter;
+            std::optional<T> m_def;
+
+        public:
+            constexpr default_if_empty_enumerator(Eter&& eter, T&& t) : m_eter(eter)
+            {
+                if (!m_eter)
+                    m_def.emplace(std::forward<T>(t));
+            }
+
+            constexpr operator bool() const { return m_eter || m_def; }
+            constexpr default_if_empty_enumerator& operator++()
+            {
+                if (!m_eter)
+                    m_def = std::nullopt;
+                else
+                    ++m_eter;
+                return *this;
+            }
+            constexpr decltype(auto) operator*() { return m_eter ? *m_eter : *m_def; }
+        };
+    } // namespace impl
+
+    template <typename T>
+    constexpr auto default_if_empty(T&& def)
+    {
+        return [&](auto e) {
+            using Eter = decltype(e.enumerator());
+            return enumerable(impl::default_if_empty_enumerator<Eter, T>(e.enumerator(), std::forward<T>(def)));
+        };
+    }
+
     // Calculates the average value of the elements.
     constexpr auto average()
     {
