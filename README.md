@@ -46,6 +46,7 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * default_if_empty
 * distinct
 * except
+* for_each
 * front
 * get_at
 * group

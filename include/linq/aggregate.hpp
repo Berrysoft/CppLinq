@@ -35,6 +35,16 @@
 
 namespace linq
 {
+    template <typename Action>
+    constexpr auto for_each(Action&& action)
+    {
+        return [&](auto e) {
+            auto eter{ e.enumerator() };
+            for (; eter; ++eter)
+                action(*eter);
+        };
+    }
+
     // Always returns true.
     struct always_true
     {
@@ -220,6 +230,7 @@ namespace linq
     }
 
     // Calculates the sum of the elements.
+    // This method is nesessary because of the optimization of G++.
     constexpr auto sum()
     {
         return [](auto e) {
