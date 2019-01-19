@@ -105,8 +105,23 @@ namespace linq
         };
     }
 
-    template <typename T, typename Pred = identity>
-    constexpr auto first(T&& def = {}, Pred&& pred = {})
+    template <typename Pred = always_true>
+    constexpr auto front(Pred&& pred = {})
+    {
+        return [&](auto e) {
+            using T = remove_cref<decltype(*e.enumerator())>;
+            auto eter{ e.enumerator() };
+            for (; eter; ++eter)
+            {
+                if (pred(*eter))
+                    return *eter;
+            }
+            return T{};
+        };
+    }
+
+    template <typename Pred = always_true, typename T>
+    constexpr auto front(Pred&& pred = {}, T&& def = {})
     {
         return [&](auto e) {
             auto eter{ e.enumerator() };
@@ -119,8 +134,24 @@ namespace linq
         };
     }
 
-    template <typename T, typename Pred = identity>
-    constexpr auto last(T&& def = {}, Pred&& pred = {})
+    template <typename Pred = always_true>
+    constexpr auto back(Pred&& pred = {})
+    {
+        return [&](auto e) {
+            using T = remove_cref<decltype(*e.enumerator())>;
+            auto eter{ e.enumerator() };
+            T result{};
+            for (; eter; ++eter)
+            {
+                if (pred(*eter))
+                    result = *eter;
+            }
+            return result;
+        };
+    }
+
+    template <typename Pred = always_true, typename T>
+    constexpr auto back(Pred&& pred = {}, T&& def = {})
     {
         return [&](auto e) {
             auto eter{ e.enumerator() };
@@ -138,7 +169,7 @@ namespace linq
     constexpr auto average()
     {
         return [](auto e) {
-            using T = std::remove_const_t<std::remove_reference_t<decltype(*e.enumerator())>>;
+            using T = remove_cref<decltype(*e.enumerator())>;
             T sum{ 0 };
             std::size_t num{ 0 };
             for (auto item : e)
@@ -154,7 +185,7 @@ namespace linq
     constexpr auto sum()
     {
         return [](auto e) {
-            using T = std::remove_const_t<std::remove_reference_t<decltype(*e.enumerator())>>;
+            using T = remove_cref<decltype(*e.enumerator())>;
             T sum{ 0 };
             for (auto item : e)
             {
@@ -209,7 +240,7 @@ namespace linq
     constexpr auto reverse()
     {
         return [](auto e) {
-            using T = std::remove_const_t<std::remove_reference_t<decltype(*e.enumerator())>>;
+            using T = remove_cref<decltype(*e.enumerator())>;
             return enumerable(impl::reverse_enumerator<T>(e.enumerator()));
         };
     }
@@ -299,7 +330,7 @@ namespace linq
     constexpr auto sort(Comparer&&... comparer)
     {
         return [&](auto e) {
-            using T = std::remove_const_t<std::remove_reference_t<decltype(*e.enumerator())>>;
+            using T = remove_cref<decltype(*e.enumerator())>;
             std::deque<T> result;
             for (auto item : e)
             {
@@ -320,7 +351,7 @@ namespace linq
     constexpr auto limit(Comparer&& comparer)
     {
         return [&](auto e) {
-            using T = std::remove_const_t<std::remove_reference_t<decltype(*e.enumerator())>>;
+            using T = remove_cref<decltype(*e.enumerator())>;
             auto eter{ e.enumerator() };
             if (!eter)
                 return T{};
@@ -342,6 +373,20 @@ namespace linq
             for (std::size_t i{ 0 }; eter && i < index; ++eter, ++i)
                 ;
             return *eter;
+        };
+    }
+
+    template <typename T>
+    constexpr auto get_at(std::size_t&& index, T&& def)
+    {
+        return [&](auto e) {
+            auto eter{ e.enumerator() };
+            for (std::size_t i{ 0 }; eter && i < index; ++eter, ++i)
+                ;
+            if (!eter)
+                return std::forward<T>(def);
+            else
+                return *eter;
         };
     }
 
@@ -400,7 +445,7 @@ namespace linq
     {
         return [](auto e) {
             using Eter = decltype(e.enumerator());
-            using T = std::remove_const_t<std::remove_reference_t<decltype(*e.enumerator())>>;
+            using T = remove_cref<decltype(*e.enumerator())>;
             return enumerable(impl::distinct_enumerator<T, Eter>(e.enumerator()));
         };
     }
@@ -455,7 +500,7 @@ namespace linq
         return [&](auto e) {
             using Eter1 = decltype(e.enumerator());
             using Eter2 = decltype(get_enumerator(std::forward<E2>(e2)));
-            using T = std::remove_const_t<std::remove_reference_t<decltype(*e.enumerator())>>;
+            using T = remove_cref<decltype(*e.enumerator())>;
             return enumerable(impl::union_set_enumerator<T, Eter1, Eter2>(e.enumerator(), get_enumerator(std::forward<E2>(e2))));
         };
     }
@@ -505,7 +550,7 @@ namespace linq
     {
         return [&](auto e) {
             using Eter1 = decltype(e.enumerator());
-            using T = std::remove_const_t<std::remove_reference_t<decltype(*e.enumerator())>>;
+            using T = remove_cref<decltype(*e.enumerator())>;
             return enumerable(impl::intersect_enumerator<T, Eter1>(e.enumerator(), get_enumerator(std::forward<E2>(e2))));
         };
     }
@@ -555,14 +600,14 @@ namespace linq
     {
         return [&](auto e) {
             using Eter1 = decltype(e.enumerator());
-            using T = std::remove_const_t<std::remove_reference_t<decltype(*e.enumerator())>>;
+            using T = remove_cref<decltype(*e.enumerator())>;
             return enumerable(impl::except_enumerator<T, Eter1>(e.enumerator(), get_enumerator(std::forward<E2>(e2))));
         };
     }
 
     namespace impl
     {
-        template <typename TKey, typename TElement, typename ResultSelector, typename Comparer = std::less<TKey>>
+        template <typename TKey, typename TElement, typename ResultSelector, typename Comparer>
         class group_enumerator
         {
         private:
@@ -608,15 +653,15 @@ namespace linq
     constexpr auto group(KeySelector&& keysel, ElementSelector&& elesel, ResultSelector&& rstsel)
     {
         return [&](auto e) {
-            using TKey = decltype(keysel(*e.enumerator()));
-            using TElement = decltype(elesel(*e.enumerator()));
+            using TKey = remove_cref<decltype(keysel(*e.enumerator()))>;
+            using TElement = remove_cref<decltype(elesel(*e.enumerator()))>;
             return enumerable(impl::group_enumerator<TKey, TElement, ResultSelector, Comparer>(e.enumerator(), std::forward<KeySelector>(keysel), std::forward<ElementSelector>(elesel), std::forward<ResultSelector>(rstsel)));
         };
     }
 
     namespace impl
     {
-        template <typename Eter, typename TKey, typename TElement, typename KeySelector, typename ResultSelector, typename Comparer = std::less<TKey>>
+        template <typename Eter, typename TKey, typename TElement, typename KeySelector, typename ResultSelector, typename Comparer>
         class group_join_enumerator
         {
         private:
@@ -651,15 +696,15 @@ namespace linq
     {
         return [&](auto e) {
             using Eter = decltype(e.enumerator());
-            using TKey = decltype(keysel2(*get_enumerator(e2)));
-            using TElement = decltype(elesel2(*get_enumerator(e2)));
+            using TKey = remove_cref<decltype(keysel2(*get_enumerator(e2)))>;
+            using TElement = remove_cref<decltype(elesel2(*get_enumerator(e2)))>;
             return enumerable(impl::group_join_enumerator<Eter, TKey, TElement, KeySelector, ResultSelector, Comparer>(e.enumerator(), get_enumerator(std::forward<E2>(e2)), std::forward<KeySelector>(keysel), std::forward<KeySelector2>(keysel2), std::forward<ElementSelector2>(elesel2), std::forward<ResultSelector>(rstsel)));
         };
     }
 
     namespace impl
     {
-        template <typename Eter, typename TKey, typename TElement, typename KeySelector, typename ResultSelector, typename Comparer = std::less<TKey>>
+        template <typename Eter, typename TKey, typename TElement, typename KeySelector, typename ResultSelector, typename Comparer>
         class join_enumerator
         {
         private:
@@ -711,8 +756,8 @@ namespace linq
     {
         return [&](auto e) {
             using Eter = decltype(e.enumerator());
-            using TKey = decltype(keysel2(*get_enumerator(e2)));
-            using TElement = decltype(elesel2(*get_enumerator(e2)));
+            using TKey = remove_cref<decltype(keysel2(*get_enumerator(e2)))>;
+            using TElement = remove_cref<decltype(elesel2(*get_enumerator(e2)))>;
             return enumerable(impl::join_enumerator<Eter, TKey, TElement, KeySelector, ResultSelector, Comparer>(e.enumerator(), get_enumerator(std::forward<E2>(e2)), std::forward<KeySelector>(keysel), std::forward<KeySelector2>(keysel2), std::forward<ElementSelector2>(elesel2), std::forward<ResultSelector>(rstsel)));
         };
     }

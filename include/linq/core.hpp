@@ -129,6 +129,9 @@ namespace linq
     template <typename T>
     inline constexpr bool is_enumerable_v<T, std::void_t<decltype(std::declval<T>().enumerator())>>{ true };
 
+    template <typename T>
+    using remove_cref = std::remove_const_t<std::remove_reference_t<T>>;
+
     // Help functions for enumerator and enumerable.
     template <typename Enumerable, typename = std::enable_if_t<is_enumerable_v<Enumerable>>>
     constexpr decltype(auto) get_enumerator(Enumerable&& e)
