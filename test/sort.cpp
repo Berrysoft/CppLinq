@@ -1,5 +1,6 @@
 #include <iostream>
 #include <linq/aggregate.hpp>
+#include <list>
 #include <string>
 
 using namespace std;
@@ -39,9 +40,18 @@ bool test_sort_custom()
     return e >> equals(a2);
 }
 
+bool container_sort_test()
+{
+    list<pack> a1{ { "Zh.F. Ren", 92 }, { "Jobs", 78 }, { "Trump", 85 }, { "Gates", 85 } };
+    pack a2[]{ { "Zh.F. Ren", 92 }, { "Gates", 85 }, { "Trump", 85 }, { "Jobs", 78 } };
+    a1.sort(make_sorter(make_comparer([](pack& p) { return p.score; }, descending{}),
+                        make_comparer([](pack& p) { return p.name; }, string_ascending<char>{})));
+    return a1 >> equals(a2);
+}
+
 int main()
 {
-    if (test_sort() && test_sort_custom())
+    if (test_sort() && test_sort_custom() && container_sort_test())
     {
         cout << "Success." << endl;
     }

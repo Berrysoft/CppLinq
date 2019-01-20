@@ -42,6 +42,43 @@ namespace linq
             auto eter{ e.enumerator() };
             for (; eter; ++eter)
                 action(*eter);
+            return e;
+        };
+    }
+
+    namespace impl
+    {
+        template <typename Eter, typename Action>
+        class for_each_lazy_enumerator
+        {
+        private:
+            Eter m_eter;
+            Action m_action;
+
+        public:
+            constexpr for_each_lazy_enumerator(Eter&& eter, Action action) : m_eter(std::forward<Eter>(eter)), m_action(action) {}
+
+            constexpr operator bool() const { return m_eter; }
+            constexpr for_each_lazy_enumerator& operator++()
+            {
+                ++m_eter;
+                return *this;
+            }
+            constexpr decltype(auto) operator*()
+            {
+                auto current{ *m_eter };
+                m_action(current);
+                return current;
+            }
+        };
+    } // namespace impl
+
+    template <typename Action>
+    constexpr auto for_each_lazy(Action&& action)
+    {
+        return [&](auto e) {
+            using Eter = decltype(e.enumerator());
+            return enumerable(impl::for_each_lazy_enumerator<Eter, Action>(e.enumerator(), std::forward<Action>(action)));
         };
     }
 
@@ -185,7 +222,7 @@ namespace linq
             std::optional<T> m_def;
 
         public:
-            constexpr default_if_empty_enumerator(Eter&& eter, T&& t) : m_eter(eter)
+            constexpr default_if_empty_enumerator(Eter&& eter, T&& t) : m_eter(std::forward<Eter>(eter))
             {
                 if (!m_eter)
                     m_def.emplace(std::forward<T>(t));
@@ -374,6 +411,19 @@ namespace linq
         }
     } // namespace impl
 
+    template <typename... Comparer>
+    constexpr auto make_sorter(Comparer&&... comparer)
+    {
+        if constexpr (sizeof...(Comparer) == 0)
+        {
+            return impl::consume_comparer(ascending{});
+        }
+        else
+        {
+            return impl::consume_comparer<Comparer...>(std::forward<Comparer>(comparer)...);
+        }
+    }
+
     // Sorts the enumerable by the specified comparer.
     template <typename... Comparer>
     constexpr auto sort(Comparer&&... comparer)
@@ -385,10 +435,7 @@ namespace linq
             {
                 result.emplace_back(item);
             }
-            if constexpr (sizeof...(Comparer) == 0)
-                std::sort(result.begin(), result.end(), impl::consume_comparer(ascending{}));
-            else
-                std::sort(result.begin(), result.end(), impl::consume_comparer<Comparer...>(std::forward<Comparer>(comparer)...));
+            std::sort(result.begin(), result.end(), make_sorter<Comparer...>(std::forward<Comparer>(comparer)...));
             return get_enumerable(std::move(result));
         };
     }
@@ -721,7 +768,8 @@ namespace linq
 
         public:
             template <typename Eter2, typename KeySelector2, typename ElementSelector2>
-            constexpr group_join_enumerator(Eter&& eter, Eter2&& eter2, KeySelector&& keysel, KeySelector2&& keysel2, ElementSelector2&& elesel2, ResultSelector&& rstsel) : m_eter(eter), m_keysel(keysel), m_rstsel(rstsel)
+            constexpr group_join_enumerator(Eter&& eter, Eter2&& eter2, KeySelector&& keysel, KeySelector2&& keysel2, ElementSelector2&& elesel2, ResultSelector&& rstsel)
+                : m_eter(std::forward<Eter>(eter)), m_keysel(keysel), m_rstsel(rstsel)
             {
                 for (; eter2; ++eter2)
                 {
@@ -775,7 +823,8 @@ namespace linq
 
         public:
             template <typename Eter2, typename KeySelector2, typename ElementSelector2>
-            constexpr join_enumerator(Eter&& eter, Eter2&& eter2, KeySelector&& keysel, KeySelector2&& keysel2, ElementSelector2&& elesel2, ResultSelector&& rstsel) : m_eter(eter), m_keysel(keysel), m_rstsel(rstsel)
+            constexpr join_enumerator(Eter&& eter, Eter2&& eter2, KeySelector&& keysel, KeySelector2&& keysel2, ElementSelector2&& elesel2, ResultSelector&& rstsel)
+                : m_eter(std::forward<Eter>(eter)), m_keysel(keysel), m_rstsel(rstsel)
             {
                 for (; eter2; ++eter2)
                 {
