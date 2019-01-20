@@ -47,7 +47,6 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * distinct
 * except
 * for_each
-* for_each_lazy
 * front
 * get_at
 * group
@@ -56,6 +55,7 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * intersect
 * join
 * limit
+* peek
 * reverse
 * sort
 * sum

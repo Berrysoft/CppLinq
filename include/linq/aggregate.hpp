@@ -49,17 +49,17 @@ namespace linq
     namespace impl
     {
         template <typename Eter, typename Action>
-        class for_each_lazy_enumerator
+        class peek_enumerator
         {
         private:
             Eter m_eter;
             Action m_action;
 
         public:
-            constexpr for_each_lazy_enumerator(Eter&& eter, Action action) : m_eter(std::forward<Eter>(eter)), m_action(action) {}
+            constexpr peek_enumerator(Eter&& eter, Action action) : m_eter(std::forward<Eter>(eter)), m_action(action) {}
 
             constexpr operator bool() const { return m_eter; }
-            constexpr for_each_lazy_enumerator& operator++()
+            constexpr peek_enumerator& operator++()
             {
                 ++m_eter;
                 return *this;
@@ -74,11 +74,11 @@ namespace linq
     } // namespace impl
 
     template <typename Action>
-    constexpr auto for_each_lazy(Action&& action)
+    constexpr auto peek(Action&& action)
     {
         return [&](auto e) {
             using Eter = decltype(e.enumerator());
-            return enumerable(impl::for_each_lazy_enumerator<Eter, Action>(e.enumerator(), std::forward<Action>(action)));
+            return enumerable(impl::peek_enumerator<Eter, Action>(e.enumerator(), std::forward<Action>(action)));
         };
     }
 
