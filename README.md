@@ -31,8 +31,10 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * select_many_index
 * skip
 * skip_while
+* skip_while_index
 * take
 * take_while
+* take_while_index
 * where
 * where_index
 * zip

@@ -35,6 +35,7 @@
 
 namespace linq
 {
+    // Applies an action to each element and return the enumerable.
     template <typename Action>
     constexpr auto for_each(Action&& action)
     {
@@ -73,6 +74,7 @@ namespace linq
         };
     } // namespace impl
 
+    // Applies an action to each element while enumerating.
     template <typename Action>
     constexpr auto peek(Action&& action)
     {
@@ -152,6 +154,7 @@ namespace linq
         };
     }
 
+    // Returns the first element that satisfies a specified condition.
     template <typename Pred = always_true>
     constexpr auto front(Pred&& pred = {})
     {
@@ -167,6 +170,7 @@ namespace linq
         };
     }
 
+    // Returns the first element that satisfies a condition or a default value if no such element is found.
     template <typename Pred = always_true, typename T>
     constexpr auto front(Pred&& pred = {}, T&& def = {})
     {
@@ -181,6 +185,7 @@ namespace linq
         };
     }
 
+    // Returns the last element that satisfies a specified condition.
     template <typename Pred = always_true>
     constexpr auto back(Pred&& pred = {})
     {
@@ -197,6 +202,7 @@ namespace linq
         };
     }
 
+    // Returns the last element that satisfies a condition or a default value if no such element is found.
     template <typename Pred = always_true, typename T>
     constexpr auto back(Pred&& pred = {}, T&& def = {})
     {
@@ -241,6 +247,17 @@ namespace linq
         };
     } // namespace impl
 
+    // Returns the elements of the specified enumerable or the element type's default value in a singleton collection if the enumerable is empty.
+    constexpr auto default_if_empty()
+    {
+        return [](auto e) {
+            using Eter = decltype(e.enumerator());
+            using T = remove_cref<decltype(*e.enumerator())>;
+            return enumerable(impl::default_if_empty_enumerator<Eter, T>(e.enumerator(), T{}));
+        };
+    }
+
+    // Returns the elements of the specified enumerable or the specified value in a singleton collection if the enumerable is empty.
     template <typename T>
     constexpr auto default_if_empty(T&& def)
     {
@@ -341,6 +358,7 @@ namespace linq
         }
     };
 
+    // Compare numeric elements.
     struct ascending
     {
         template <typename T1, typename T2>
@@ -350,6 +368,7 @@ namespace linq
         }
     };
 
+    // Compare string elements.
     template <typename Char, typename Traits = std::char_traits<Char>>
     struct string_ascending
     {
@@ -364,6 +383,7 @@ namespace linq
         }
     };
 
+    // Compare numeric elements.
     struct descending
     {
         template <typename T1, typename T2>
@@ -373,6 +393,7 @@ namespace linq
         }
     };
 
+    // Compare string elements.
     template <typename Char, typename Traits = std::char_traits<Char>>
     struct string_descending
     {
@@ -411,6 +432,7 @@ namespace linq
         }
     } // namespace impl
 
+    // Makes a sorter for algorithms.
     template <typename... Comparer>
     constexpr auto make_sorter(Comparer&&... comparer)
     {
@@ -466,12 +488,17 @@ namespace linq
     {
         return [=](auto e) {
             auto eter{ e.enumerator() };
+            using T = remove_cref<decltype(*eter)>;
             for (std::size_t i{ 0 }; eter && i < index; ++eter, ++i)
                 ;
-            return *eter;
+            if (!eter)
+                return T{};
+            else
+                return *eter;
         };
     }
 
+    // Returns the element at a specified index.
     template <typename T>
     constexpr auto get_at(std::size_t&& index, T&& def)
     {

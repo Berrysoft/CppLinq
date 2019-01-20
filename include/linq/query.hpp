@@ -106,6 +106,7 @@ namespace linq
         };
     } // namespace impl
 
+    // Filters an enumerable based on a predicate.
     template <typename Pred>
     constexpr auto where_index(Pred&& pred)
     {
@@ -171,6 +172,7 @@ namespace linq
         };
     } // namespace impl
 
+    // Projects each element into a new form.
     template <typename Selector>
     constexpr auto select_index(Selector&& selector)
     {
@@ -289,6 +291,7 @@ namespace linq
         };
     } // namespace impl
 
+    // Projects each element, flattens the resulting sequences into one sequence, and invokes a result selector function on each element therein.
     template <typename CSelector, typename RSelector>
     constexpr auto select_many_index(CSelector&& cselector, RSelector&& rselector)
     {
@@ -372,6 +375,42 @@ namespace linq
     namespace impl
     {
         template <typename Eter>
+        class skip_while_index_enumerator
+        {
+        private:
+            Eter m_eter;
+
+        public:
+            template <typename Pred>
+            constexpr skip_while_index_enumerator(Eter&& eter, Pred&& pred) : m_eter(std::forward<Eter>(eter))
+            {
+                for (std::size_t i{ 0 }; m_eter && pred(*m_eter, i); ++m_eter, ++i)
+                    ;
+            }
+
+            constexpr operator bool() const { return m_eter; }
+            constexpr skip_while_index_enumerator& operator++()
+            {
+                ++m_eter;
+                return *this;
+            }
+            constexpr decltype(auto) operator*() { return *m_eter; }
+        };
+    } // namespace impl
+
+    // Bypasses elements as long as a specified condition is true and then returns the remaining elements.
+    template <typename Pred>
+    constexpr auto skip_while_index(Pred&& pred)
+    {
+        return [&](auto e) {
+            using Eter = decltype(e.enumerator());
+            return enumerable(impl::skip_while_index_enumerator<Eter>(e.enumerator(), std::forward<Pred>(pred)));
+        };
+    }
+
+    namespace impl
+    {
+        template <typename Eter>
         class take_enumerator
         {
         private:
@@ -431,6 +470,40 @@ namespace linq
         return [&](auto e) {
             using Eter = decltype(e.enumerator());
             return enumerable(impl::take_while_enumerator<Eter, Pred>(e.enumerator(), std::forward<Pred>(pred)));
+        };
+    }
+
+    namespace impl
+    {
+        template <typename Eter, typename Pred>
+        class take_while_index_enumerator
+        {
+        private:
+            Eter m_eter;
+            Pred m_pred;
+            std::size_t m_index;
+
+        public:
+            constexpr take_while_index_enumerator(Eter&& eter, Pred&& pred) : m_eter(std::forward<Eter>(eter)), m_pred(pred), m_index(0) {}
+
+            constexpr operator bool() { return m_eter && m_pred(*m_eter, m_index); }
+            constexpr take_while_index_enumerator& operator++()
+            {
+                ++m_eter;
+                ++m_index;
+                return *this;
+            }
+            constexpr decltype(auto) operator*() { return *m_eter; }
+        };
+    } // namespace impl
+
+    // Returns elements as long as a specified condition is true.
+    template <typename Pred>
+    constexpr auto take_while_index(Pred&& pred)
+    {
+        return [&](auto e) {
+            using Eter = decltype(e.enumerator());
+            return enumerable(impl::take_while_index_enumerator<Eter, Pred>(e.enumerator(), std::forward<Pred>(pred)));
         };
     }
 

@@ -20,9 +20,17 @@ bool take_while_test()
     return e >> equals(a2);
 }
 
+bool take_while_index_test()
+{
+    int a1[]{ 1, 2, 3, 4, 5, 6 };
+    int a2[]{ 1, 2, 3 };
+    auto e{ a1 >> take_while_index([](int&, size_t i) { return i < 3; }) };
+    return e >> equals(a2);
+}
+
 int main()
 {
-    if (take_test() && take_while_test())
+    if (take_test() && take_while_test() && take_while_index_test())
     {
         cout << "Success." << endl;
     }
