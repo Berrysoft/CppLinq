@@ -412,7 +412,7 @@ namespace linq
     template <typename Selector = identity, typename Comparer = ascending>
     constexpr auto make_comparer(Selector&& selector = {}, Comparer&& comparer = {})
     {
-        return [&](auto t1, auto t2) { return comparer(selector(t1), selector(t2)); };
+        return [&](auto&& t1, auto&& t2) { return comparer(selector(t1), selector(t2)); };
     }
 
     namespace impl
@@ -420,8 +420,8 @@ namespace linq
         template <typename C1, typename... Comparer>
         constexpr auto consume_comparer(C1&& c1, Comparer&&... comparer)
         {
-            return [&](auto t1, auto t2) {
-                auto t = std::forward<C1>(c1)(t1, t2);
+            return [&](auto&& t1, auto&& t2) {
+                auto t{ std::forward<C1>(c1)(t1, t2) };
                 if constexpr (sizeof...(Comparer))
                 {
                     if (t == 0)
