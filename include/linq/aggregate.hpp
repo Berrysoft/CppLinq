@@ -47,6 +47,18 @@ namespace linq
         };
     }
 
+    // Applies an action to each element and return the enumerable.
+    template <typename Action>
+    constexpr auto for_each_index(Action&& action)
+    {
+        return [&](auto e) {
+            auto eter{ e.enumerator() };
+            for (std::size_t index{ 0 }; eter; ++eter, ++index)
+                action(*eter, index);
+            return e;
+        };
+    }
+
     namespace impl
     {
         template <typename Eter, typename Action>
@@ -57,7 +69,7 @@ namespace linq
             Action m_action;
 
         public:
-            constexpr peek_enumerator(Eter&& eter, Action action) : m_eter(std::forward<Eter>(eter)), m_action(action) {}
+            constexpr peek_enumerator(Eter&& eter, Action&& action) : m_eter(std::forward<Eter>(eter)), m_action(action) {}
 
             constexpr operator bool() const { return m_eter; }
             constexpr peek_enumerator& operator++()
@@ -81,6 +93,44 @@ namespace linq
         return [&](auto e) {
             using Eter = decltype(e.enumerator());
             return enumerable(impl::peek_enumerator<Eter, Action>(e.enumerator(), std::forward<Action>(action)));
+        };
+    }
+
+    namespace impl
+    {
+        template <typename Eter, typename Action>
+        class peek_index_enumerator
+        {
+        private:
+            Eter m_eter;
+            Action m_action;
+            std::size_t m_index;
+
+        public:
+            constexpr peek_index_enumerator(Eter&& eter, Action&& action) : m_eter(std::forward<Eter>(eter)), m_action(action), m_index(0) {}
+
+            constexpr operator bool() const { return m_eter; }
+            constexpr peek_index_enumerator& operator++()
+            {
+                ++m_eter;
+                ++m_index;
+                return *this;
+            }
+            constexpr decltype(auto) operator*()
+            {
+                auto current{ *m_eter };
+                m_action(current, m_index);
+                return current;
+            }
+        };
+    } // namespace impl
+
+    template <typename Action>
+    constexpr auto peek_index(Action&& action)
+    {
+        return [&](auto e) {
+            using Eter = decltype(e.enumerator());
+            return enumerable(impl::peek_index_enumerator<Eter, Action>(e.enumerator(), std::forward<Action>(action)));
         };
     }
 

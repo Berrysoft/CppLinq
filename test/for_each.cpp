@@ -5,12 +5,41 @@
 using namespace std;
 using namespace linq;
 
+bool for_each_test()
+{
+    int a1[]{ 1, 2, 3 };
+    int a2[]{ 2, 4, 6 };
+    a1 >> for_each([](int& i) { i *= 2; });
+    return a1 >> equals(a2);
+}
+
+bool peek_test()
+{
+    int a1[]{ 1, 2, 3 };
+    int a2[]{ 2, 4, 6 };
+    auto e{ a1 >> peek([](int& i) { i *= 2; }) };
+    return !(a1 >> equals(a2)) && e >> equals(a2);
+}
+
+bool for_each_index_test()
+{
+    int a1[]{ 1, 2, 3 };
+    int a2[]{ 0, 2, 6 };
+    a1 >> for_each_index([](int& i, size_t index) { i *= (int)index; });
+    return a1 >> equals(a2);
+}
+
+bool peek_index_test()
+{
+    int a1[]{ 1, 2, 3 };
+    int a2[]{ 0, 2, 6 };
+    auto e{ a1 >> peek_index([](int& i, size_t index) { i *= (int)index; }) };
+    return !(a1 >> equals(a2)) && e >> equals(a2);
+}
+
 int main()
 {
-    int a1[]{ 1, 2, 3, 4, 5, 6 };
-    vector<int> a2;
-    a1 >> for_each([&a2](int& i) { a2.push_back(i); });
-    if (a1 >> equals(a1 >> peek([](int&) {})))
+    if (for_each_test() && peek_test() && for_each_index_test() && peek_index_test())
     {
         cout << "Success." << endl;
     }
