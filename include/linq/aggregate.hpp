@@ -268,6 +268,68 @@ namespace linq
         };
     }
 
+    struct more_than_one : std::logic_error
+    {
+        more_than_one() : logic_error("More than one element satisfies the condition.") {}
+    };
+
+    // Returns the only element that satisfies a specified condition or a default value if no such element exists;
+    // this method throws an exception if more than one element satisfies the condition.
+    template <typename Pred = always_true>
+    constexpr auto single(Pred&& pred = {})
+    {
+        return [&](auto e) {
+            using T = remove_cref<decltype(*e.enumerator())>;
+            auto eter{ e.enumerator() };
+            T result{};
+            std::size_t num{ 0 };
+            for (; eter; ++eter)
+            {
+                if (pred(*eter))
+                {
+                    result = *eter;
+                    ++num;
+                }
+            }
+            switch (num)
+            {
+            case 0:
+            case 1:
+                return result;
+            default:
+                throw more_than_one{};
+            }
+        };
+    }
+
+    // Returns the only element that satisfies a specified condition or a default value if no such element exists;
+    // this method throws an exception if more than one element satisfies the condition.
+    template <typename Pred = always_true, typename T>
+    constexpr auto single(Pred&& pred = {}, T&& def = {})
+    {
+        return [&](auto e) {
+            auto eter{ e.enumerator() };
+            T result{ std::forward<T>(def) };
+            std::size_t num{ 0 };
+            for (; eter; ++eter)
+            {
+                if (pred(*eter))
+                {
+                    result = *eter;
+                    ++num;
+                }
+            }
+            switch (num)
+            {
+            case 0:
+            case 1:
+                return result;
+            default:
+                throw more_than_one{};
+            }
+        };
+    }
+
     namespace impl
     {
         template <typename Eter, typename T>

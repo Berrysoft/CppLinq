@@ -61,6 +61,7 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * peek
 * peek_index
 * reverse
+* single
 * sort
 * sum
 * union_set

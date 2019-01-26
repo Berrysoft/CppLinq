@@ -65,6 +65,7 @@ add_exe_test(group)
 add_exe_test(firstlast)
 add_exe_test(default)
 add_exe_test(for_each)
+add_exe_test(single)
 
 add_exe_test(to_container)
 
