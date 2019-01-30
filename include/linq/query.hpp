@@ -27,6 +27,7 @@
 #define LINQ_QUERY_HPP
 
 #include <linq/core.hpp>
+#include <tuple>
 
 namespace linq
 {
@@ -546,36 +547,52 @@ namespace linq
 
     namespace impl
     {
-        template <typename Eter1, typename Eter2, typename Selector>
+        template <typename E1, typename... Es>
+        constexpr bool and_all(E1&& e1, Es&&... es)
+        {
+            if constexpr (sizeof...(Es) == 0)
+            {
+                return e1;
+            }
+            else
+            {
+                return e1 && and_all<Es...>(std::forward<Es>(es)...);
+            }
+        }
+
+        template <typename Selector, typename... Eters>
         class zip_enumerator
         {
         private:
-            Eter1 m_eter1;
-            Eter2 m_eter2;
             Selector m_selector;
+            std::tuple<Eters...> m_eters;
 
         public:
-            constexpr zip_enumerator(Eter1&& eter1, Eter2&& eter2, Selector&& selector) : m_eter1(std::forward<Eter1>(eter1)), m_eter2(std::forward<Eter2>(eter2)), m_selector(selector) {}
+            constexpr zip_enumerator(Selector&& selector, Eters&&... eters) : m_selector(selector), m_eters(std::forward_as_tuple(std::forward<Eters>(eters)...)) {}
 
-            constexpr operator bool() const { return m_eter1 && m_eter2; }
+            constexpr operator bool() const
+            {
+                return std::apply([](auto&&... e) { return and_all(e...); }, m_eters);
+            }
             constexpr zip_enumerator& operator++()
             {
-                ++m_eter1;
-                ++m_eter2;
+                std::apply([](auto&&... e) { return std::make_tuple(++e...); }, m_eters);
                 return *this;
             }
-            constexpr decltype(auto) operator*() { return m_selector(*m_eter1, *m_eter2); }
+            constexpr decltype(auto) operator*()
+            {
+                return std::apply([this](auto&&... e) { return m_selector(*e...); }, m_eters);
+            }
         };
     } // namespace impl
 
     // Applies a specified function to the corresponding elements of two enumerable, producing an enumerable of the results.
-    template <typename E2, typename Selector>
-    constexpr auto zip(E2&& e2, Selector&& selector)
+    template <typename Selector, typename... Es>
+    constexpr auto zip(Selector&& selector, Es&&... es)
     {
         return [&](auto e) {
-            using Eter1 = decltype(e.enumerator());
-            using Eter2 = decltype(get_enumerator(std::forward<E2>(e2)));
-            return enumerable(impl::zip_enumerator<Eter1, Eter2, Selector>(e.enumerator(), get_enumerator(std::forward<E2>(e2)), std::forward<Selector>(selector)));
+            static_assert(sizeof...(Es) > 0);
+            return enumerable(impl::zip_enumerator(std::forward<Selector>(selector), e.enumerator(), get_enumerator(std::forward<Es>(es))...));
         };
     }
 

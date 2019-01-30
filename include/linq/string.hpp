@@ -57,7 +57,8 @@ namespace linq
         private:
             std::basic_string_view<Char, Traits> m_view;
             Char m_char;
-            typename Traits::off_type m_offset, m_index;
+            typename Traits::off_type m_offset;
+            std::size_t m_index;
 
             void move_next()
             {
@@ -71,7 +72,7 @@ namespace linq
             }
 
         public:
-            constexpr split_enumerator(std::basic_string_view<Char, Traits> view, Char split_char) : m_view(view), m_char(split_char), m_offset(0), m_index(-1)
+            constexpr split_enumerator(std::basic_string_view<Char, Traits> view, Char split_char) : m_view(view), m_char(split_char), m_offset(0), m_index(std::basic_string_view<Char, Traits>::npos)
             {
                 move_next();
             }

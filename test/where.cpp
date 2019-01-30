@@ -16,7 +16,7 @@ bool where_index_test()
 {
     int a1[]{ 1, 1, 2, 4, 4, 5 };
     int a2[]{ 1, 2, 4, 5 };
-    auto e{ a1 >> where_index([](int& a, size_t i) { return a == i; }) };
+    auto e{ a1 >> where_index([](int& a, size_t i) { return a == (int)i; }) };
     return e >> equals(a2);
 }
 
