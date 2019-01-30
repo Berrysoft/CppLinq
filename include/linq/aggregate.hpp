@@ -643,11 +643,11 @@ namespace linq
 
     namespace impl
     {
-        template <typename T, typename Eter>
+        template <typename Eter, typename T, typename Comparer>
         class distinct_enumerator
         {
         private:
-            std::set<T> m_set;
+            std::set<T, Comparer> m_set;
             Eter m_eter;
 
             constexpr void move_next()
@@ -676,22 +676,23 @@ namespace linq
     } // namespace impl
 
     // Returns distinct elements.
+    template <typename Comparer = std::less<void>>
     constexpr auto distinct()
     {
-        return [](auto e) {
+        return [&](auto e) {
             using Eter = decltype(e.enumerator());
             using T = remove_cref<decltype(*e.enumerator())>;
-            return enumerable(impl::distinct_enumerator<T, Eter>(e.enumerator()));
+            return enumerable(impl::distinct_enumerator<Eter, T, Comparer>(e.enumerator()));
         };
     }
 
     namespace impl
     {
-        template <typename T, typename Eter1, typename Eter2>
+        template <typename Eter1, typename Eter2, typename T, typename Comparer>
         class union_set_enumerator
         {
         private:
-            std::set<T> m_set;
+            std::set<T, Comparer> m_set;
             Eter1 m_eter1;
             Eter2 m_eter2;
 
@@ -729,24 +730,24 @@ namespace linq
     } // namespace impl
 
     // Produces the set union of two enumerable.
-    template <typename E2>
+    template <typename Comparer = std::less<void>, typename E2>
     constexpr auto union_set(E2&& e2)
     {
         return [&](auto e) {
             using Eter1 = decltype(e.enumerator());
             using Eter2 = decltype(get_enumerator(std::forward<E2>(e2)));
             using T = remove_cref<decltype(*e.enumerator())>;
-            return enumerable(impl::union_set_enumerator<T, Eter1, Eter2>(e.enumerator(), get_enumerator(std::forward<E2>(e2))));
+            return enumerable(impl::union_set_enumerator<Eter1, Eter2, T, Comparer>(e.enumerator(), get_enumerator(std::forward<E2>(e2))));
         };
     }
 
     namespace impl
     {
-        template <typename T, typename Eter1>
+        template <typename Eter1, typename T, typename Comparer>
         class intersect_enumerator
         {
         private:
-            std::set<T> m_set;
+            std::set<T, Comparer> m_set;
             Eter1 m_eter1;
 
             constexpr void move_next()
@@ -780,23 +781,23 @@ namespace linq
     } // namespace impl
 
     // Produces the set intersection of two enumerable.
-    template <typename E2>
+    template <typename Comparer = std::less<void>, typename E2>
     constexpr auto intersect(E2&& e2)
     {
         return [&](auto e) {
             using Eter1 = decltype(e.enumerator());
             using T = remove_cref<decltype(*e.enumerator())>;
-            return enumerable(impl::intersect_enumerator<T, Eter1>(e.enumerator(), get_enumerator(std::forward<E2>(e2))));
+            return enumerable(impl::intersect_enumerator<Eter1, T, Comparer>(e.enumerator(), get_enumerator(std::forward<E2>(e2))));
         };
     }
 
     namespace impl
     {
-        template <typename T, typename Eter1>
+        template <typename Eter1, typename T, typename Comparer>
         class except_enumerator
         {
         private:
-            std::set<T> m_set;
+            std::set<T, Comparer> m_set;
             Eter1 m_eter1;
 
             constexpr void move_next()
@@ -830,13 +831,13 @@ namespace linq
     } // namespace impl
 
     // Produces the set difference of two enumerable.
-    template <typename E2>
+    template <typename Comparer = std::less<void>, typename E2>
     constexpr auto except(E2&& e2)
     {
         return [&](auto e) {
             using Eter1 = decltype(e.enumerator());
             using T = remove_cref<decltype(*e.enumerator())>;
-            return enumerable(impl::except_enumerator<T, Eter1>(e.enumerator(), get_enumerator(std::forward<E2>(e2))));
+            return enumerable(impl::except_enumerator<Eter1, T, Comparer>(e.enumerator(), get_enumerator(std::forward<E2>(e2))));
         };
     }
 
