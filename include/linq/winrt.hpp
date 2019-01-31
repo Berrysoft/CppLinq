@@ -53,7 +53,7 @@ namespace linq
             constexpr decltype(auto) operator*() { return m_iter.Current(); }
         };
 
-        template <typename Collection, typename = std::enable_if_t<winrt::impl::has_GetAt<Collection>::value>>
+        template <typename Collection>
         class winrt_fast_container_enumerator
         {
         private:

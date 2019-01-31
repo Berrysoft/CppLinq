@@ -37,6 +37,7 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * where
 * where_index
 * zip
+* zip_index
 ### Aggregate
 * aggregate
 * all

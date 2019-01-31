@@ -190,7 +190,7 @@ namespace linq
         {
         private:
             Eter m_eter;
-            std::optional<std::remove_const_t<std::remove_reference_t<decltype(*m_eter)>>> m_eter_value;
+            std::optional<remove_cref<decltype(*m_eter)>> m_eter_value;
             std::optional<Eter2> m_eter2;
             CSelector m_cselector;
             RSelector m_rselector;
@@ -249,7 +249,7 @@ namespace linq
         {
         private:
             Eter m_eter;
-            std::optional<std::remove_const_t<std::remove_reference_t<decltype(*m_eter)>>> m_eter_value;
+            std::optional<remove_cref<decltype(*m_eter)>> m_eter_value;
             std::optional<Eter2> m_eter2;
             CSelector m_cselector;
             RSelector m_rselector;
@@ -556,6 +556,46 @@ namespace linq
         return [&](auto e) {
             static_assert(sizeof...(Es) > 0);
             return enumerable(impl::zip_enumerator(std::forward<Selector>(selector), e.enumerator(), get_enumerator(std::forward<Es>(es))...));
+        };
+    }
+
+    namespace impl
+    {
+        template <typename Selector, typename... Eters>
+        class zip_index_enumerator
+        {
+        private:
+            Selector m_selector;
+            std::tuple<Eters...> m_eters;
+            std::size_t m_index;
+
+        public:
+            constexpr zip_index_enumerator(Selector&& selector, Eters&&... eters) : m_selector(selector), m_eters(std::forward_as_tuple(std::forward<Eters>(eters)...)), m_index(0) {}
+
+            constexpr operator bool() const
+            {
+                return std::apply([](auto&&... e) { return and_all(e...); }, m_eters);
+            }
+            constexpr zip_index_enumerator& operator++()
+            {
+                std::apply([](auto&&... e) { return std::make_tuple(++e...); }, m_eters);
+                ++m_index;
+                return *this;
+            }
+            constexpr decltype(auto) operator*()
+            {
+                return std::apply([this](auto&&... e) { return m_selector(*e..., m_index); }, m_eters);
+            }
+        };
+    } // namespace impl
+
+    // Applies a specified function to the corresponding elements of two enumerable, producing an enumerable of the results.
+    template <typename Selector, typename... Es>
+    constexpr auto zip_index(Selector&& selector, Es&&... es)
+    {
+        return [&](auto e) {
+            static_assert(sizeof...(Es) > 0);
+            return enumerable(impl::zip_index_enumerator(std::forward<Selector>(selector), e.enumerator(), get_enumerator(std::forward<Es>(es))...));
         };
     }
 
