@@ -195,6 +195,25 @@ namespace linq
             }
             constexpr Int operator*() { return m_begin; }
         };
+
+        template <typename Int, typename Func>
+        class range_step_enumerator
+        {
+        private:
+            Int m_begin, m_end;
+            Func m_func;
+
+        public:
+            constexpr range_step_enumerator(Int&& begin, Int&& end, Func&& func) : m_begin(begin), m_end(end), m_func(func) {}
+
+            constexpr operator bool() const { return m_begin != m_end; }
+            constexpr range_step_enumerator& operator++()
+            {
+                m_begin = m_func(m_begin);
+                return *this;
+            }
+            constexpr Int operator*() { return m_begin; }
+        };
     } // namespace impl
 
     // Ranges an interger in [begin, end).
@@ -202,6 +221,12 @@ namespace linq
     constexpr auto range(Int begin, Int end)
     {
         return enumerable(impl::range_enumerator<Int>(std::move(begin), std::move(end)));
+    }
+
+    template <typename Int, typename Func>
+    constexpr auto range(Int begin, Int end, Func&& func)
+    {
+        return enumerable(impl::range_step_enumerator<Int, Func>(std::move(begin), std::move(end), std::forward<Func>(func)));
     }
 
     namespace impl

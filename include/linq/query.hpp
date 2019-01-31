@@ -523,6 +523,11 @@ namespace linq
             }
         }
 
+        template <typename... T>
+        constexpr void expand_tuple(T...)
+        {
+        }
+
         template <typename Selector, typename... Eters>
         class zip_enumerator
         {
@@ -531,7 +536,7 @@ namespace linq
             std::tuple<Eters...> m_eters;
 
         public:
-            constexpr zip_enumerator(Selector&& selector, Eters&&... eters) : m_selector(selector), m_eters(std::forward_as_tuple(std::forward<Eters>(eters)...)) {}
+            constexpr zip_enumerator(Selector&& selector, Eters&&... eters) : m_selector(selector), m_eters(std::make_tuple(std::forward<Eters>(eters)...)) {}
 
             constexpr operator bool() const
             {
@@ -539,7 +544,7 @@ namespace linq
             }
             constexpr zip_enumerator& operator++()
             {
-                std::apply([](auto&&... e) { return std::make_tuple(++e...); }, m_eters);
+                std::apply([](auto&&... e) { return expand_tuple(++e...); }, m_eters);
                 return *this;
             }
             constexpr decltype(auto) operator*()
@@ -555,7 +560,8 @@ namespace linq
     {
         return [&](auto e) {
             static_assert(sizeof...(Es) > 0);
-            return enumerable(impl::zip_enumerator(std::forward<Selector>(selector), e.enumerator(), get_enumerator(std::forward<Es>(es))...));
+            using Eter = decltype(e.enumerator());
+            return enumerable(impl::zip_enumerator<Selector, Eter, decltype(get_enumerator(std::forward<Es>(es)))...>(std::forward<Selector>(selector), e.enumerator(), get_enumerator(std::forward<Es>(es))...));
         };
     }
 
@@ -570,7 +576,7 @@ namespace linq
             std::size_t m_index;
 
         public:
-            constexpr zip_index_enumerator(Selector&& selector, Eters&&... eters) : m_selector(selector), m_eters(std::forward_as_tuple(std::forward<Eters>(eters)...)), m_index(0) {}
+            constexpr zip_index_enumerator(Selector&& selector, Eters&&... eters) : m_selector(selector), m_eters(std::make_tuple(std::forward<Eters>(eters)...)), m_index(0) {}
 
             constexpr operator bool() const
             {
@@ -578,7 +584,7 @@ namespace linq
             }
             constexpr zip_index_enumerator& operator++()
             {
-                std::apply([](auto&&... e) { return std::make_tuple(++e...); }, m_eters);
+                std::apply([](auto&&... e) { return expand_tuple(++e...); }, m_eters);
                 ++m_index;
                 return *this;
             }
@@ -595,7 +601,8 @@ namespace linq
     {
         return [&](auto e) {
             static_assert(sizeof...(Es) > 0);
-            return enumerable(impl::zip_index_enumerator(std::forward<Selector>(selector), e.enumerator(), get_enumerator(std::forward<Es>(es))...));
+            using Eter = decltype(e.enumerator());
+            return enumerable(impl::zip_index_enumerator<Selector, Eter, decltype(get_enumerator(std::forward<Es>(es)))...>(std::forward<Selector>(selector), e.enumerator(), get_enumerator(std::forward<Es>(es))...));
         };
     }
 
