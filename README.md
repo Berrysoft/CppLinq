@@ -1,30 +1,29 @@
 # CppLinq
-A simple linq library for C++.
+A simple LINQ library for C++.
 ## Usage
 To find the square root of the non-negative even numbers less than 10:
 ``` c++
 using namespace std;
 using namespace linq;
 
-for (auto i : range(0, 10)
-                    >> where([](int a) { return a % 2 == 0; })
-                    >> select([](int a) { return sqrt(a); }))
-{
-    cout << i << endl;
-}
+range(0, 10) >>
+	where([](int a) { return a % 2 == 0; }) >>
+	select([](int a) { return sqrt(a); }) >>
+	for_each([](double a) { cout << a << endl; });
 ```
 Here we use `operator>>` to make it extensible.
 For extension sample, see [extension.cpp](test/extension.cpp).
 ## Supported methods
 ### Core
 * append
+* concat
 * equals
+* insert
 * prepend
 * range
 * repeat
 ### Query
 * cast
-* concat
 * select
 * select_index
 * select_many
@@ -81,4 +80,7 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * replace
 * split
 * starts_with
+* trim
+* trim_right
+* trim_left
 * write_lines

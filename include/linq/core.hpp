@@ -129,6 +129,12 @@ namespace linq
     template <typename T>
     inline constexpr bool is_enumerable_v<T, std::void_t<decltype(std::declval<T>().enumerator())>>{ true };
 
+    template <typename T, typename = void>
+    inline constexpr bool is_enumerable_or_container_v{ is_enumerable_v<T> };
+
+    template <typename T>
+    inline constexpr bool is_enumerable_or_container_v<T, std::void_t<decltype(std::begin(std::declval<T>()))>>{ true };
+
     template <typename T>
     using remove_cref = std::remove_const_t<std::remove_reference_t<T>>;
 
@@ -294,6 +300,114 @@ namespace linq
         return [&](auto e) {
             using Eter = decltype(e.enumerator());
             return enumerable(impl::prepend_enumerator<T, Eter>(std::forward<T>(value), e.enumerator()));
+        };
+    }
+
+    namespace impl
+    {
+        template <typename Eter1, typename Eter2>
+        class concat_enumerator
+        {
+        private:
+            Eter1 m_eter1;
+            Eter2 m_eter2;
+
+        public:
+            constexpr concat_enumerator(Eter1&& eter1, Eter2&& eter2) : m_eter1(std::forward<Eter1>(eter1)), m_eter2(std::forward<Eter2>(eter2)) {}
+
+            constexpr operator bool() const { return m_eter1 || m_eter2; }
+            constexpr concat_enumerator& operator++()
+            {
+                if (m_eter1)
+                    ++m_eter1;
+                else
+                    ++m_eter2;
+                return *this;
+            }
+            constexpr decltype(auto) operator*() { return m_eter1 ? *m_eter1 : *m_eter2; }
+        };
+    } // namespace impl
+
+    // Concatenates two enumerable.
+    template <typename E2>
+    constexpr auto concat(E2&& e2)
+    {
+        return [&](auto e) {
+            using Eter1 = decltype(e.enumerator());
+            using Eter2 = decltype(get_enumerator(e2));
+            static_assert(std::is_same_v<decltype(*e.enumerator()), decltype(*get_enumerator(e2))>, "The return type of the two enumerable should be the same.");
+            return enumerable(impl::concat_enumerator<Eter1, Eter2>(e.enumerator(), get_enumerator(e2)));
+        };
+    }
+
+    namespace impl
+    {
+        template <typename Eter, typename T>
+        class insert_enumerator
+        {
+        private:
+            Eter m_eter;
+            T m_value;
+            std::size_t m_index;
+            std::size_t m_current;
+
+        public:
+            constexpr insert_enumerator(Eter&& eter, T&& value, std::size_t index) : m_eter(std::forward<Eter>(eter)), m_value(std::forward<T>(value)), m_index(index), m_current(0) {}
+
+            constexpr operator bool() const { return m_eter || m_current < m_index; }
+            constexpr insert_enumerator& operator++()
+            {
+                ++m_current;
+                if (m_current != m_index)
+                    ++m_eter;
+                return *this;
+            }
+            constexpr decltype(auto) operator*() { return m_current == m_index ? m_value : *m_eter; }
+        };
+
+        template <typename Eter1, typename Eter2>
+        class insert_enumerable_enumerator
+        {
+        private:
+            Eter1 m_eter1;
+            Eter2 m_eter2;
+            std::size_t m_index;
+            std::size_t m_current;
+
+        public:
+            constexpr insert_enumerable_enumerator(Eter1&& eter1, Eter2&& eter2, std::size_t index) : m_eter1(std::forward<Eter1>(eter1)), m_eter2(std::forward<Eter2>(eter2)), m_index(index), m_current(0) {}
+
+            constexpr operator bool() const { return m_eter1 || m_eter2; }
+            constexpr insert_enumerable_enumerator& operator++()
+            {
+                ++m_current;
+                if (m_current > m_index)
+                {
+                    if (m_eter2)
+                        ++m_eter2;
+                    else
+                        ++m_eter1;
+                }
+                else
+                    ++m_eter1;
+                return *this;
+            }
+            constexpr decltype(auto) operator*() { return (m_current >= m_index && m_eter2) ? *m_eter2 : *m_eter1; }
+        };
+    } // namespace impl
+
+    template <typename E2>
+    constexpr auto insert(E2&& e2, std::size_t index)
+    {
+        return [&e2, index](auto e) {
+            if constexpr (is_enumerable_or_container_v<E2>)
+            {
+                return enumerable(impl::insert_enumerable_enumerator(e.enumerator(), get_enumerator(std::forward<E2>(e2)), index));
+            }
+            else
+            {
+                return enumerable(impl::insert_enumerator(e.enumerator(), std::forward<E2>(e2), index));
+            }
         };
     }
 

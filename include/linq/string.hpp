@@ -323,6 +323,52 @@ namespace linq
         };
     }
 
+    template <typename Char, typename Traits = std::char_traits<Char>>
+    constexpr auto trim(Char value = (Char)' ')
+    {
+        return [=](auto e) {
+            using Container = decltype(e.enumerator().container());
+            static_assert(std::is_convertible_v<Container, std::basic_string_view<Char, Traits>>, "The enumerable should be an adapter of a string_view.");
+            std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
+            auto begin{ view.find_first_not_of(value) };
+            auto end{ view.find_last_not_of(value) };
+            if (begin == std::basic_string_view<Char, Traits>::npos)
+                return std::basic_string_view<Char, Traits>{};
+            else
+                return view.substr(begin, end - begin + 1);
+        };
+    }
+
+    template <typename Char, typename Traits = std::char_traits<Char>>
+    constexpr auto trim_left(Char value = (Char)' ')
+    {
+        return [=](auto e) {
+            using Container = decltype(e.enumerator().container());
+            static_assert(std::is_convertible_v<Container, std::basic_string_view<Char, Traits>>, "The enumerable should be an adapter of a string_view.");
+            std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
+            auto begin{ view.find_first_not_of(value) };
+            if (begin == std::basic_string_view<Char, Traits>::npos)
+                return std::basic_string_view<Char, Traits>{};
+            else
+                return view.substr(begin);
+        };
+    }
+
+    template <typename Char, typename Traits = std::char_traits<Char>>
+    constexpr auto trim_right(Char value = (Char)' ')
+    {
+        return [=](auto e) {
+            using Container = decltype(e.enumerator().container());
+            static_assert(std::is_convertible_v<Container, std::basic_string_view<Char, Traits>>, "The enumerable should be an adapter of a string_view.");
+            std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
+            auto end{ view.find_last_not_of(value) };
+            if (end == std::basic_string_view<Char, Traits>::npos)
+                return std::basic_string_view<Char, Traits>{};
+            else
+                return view.substr(0, end + 1);
+        };
+    }
+
     namespace impl
     {
         template <typename Char, typename Traits, typename Allocator>

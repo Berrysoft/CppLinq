@@ -510,43 +510,6 @@ namespace linq
 
     namespace impl
     {
-        template <typename Eter1, typename Eter2>
-        class concat_enumerator
-        {
-        private:
-            Eter1 m_eter1;
-            Eter2 m_eter2;
-
-        public:
-            constexpr concat_enumerator(Eter1&& eter1, Eter2&& eter2) : m_eter1(std::forward<Eter1>(eter1)), m_eter2(std::forward<Eter2>(eter2)) {}
-
-            constexpr operator bool() const { return m_eter1 || m_eter2; }
-            constexpr concat_enumerator& operator++()
-            {
-                if (m_eter1)
-                    ++m_eter1;
-                else
-                    ++m_eter2;
-                return *this;
-            }
-            constexpr decltype(auto) operator*() { return m_eter1 ? *m_eter1 : *m_eter2; }
-        };
-    } // namespace impl
-
-    // Concatenates two enumerable.
-    template <typename E2>
-    constexpr auto concat(E2&& e2)
-    {
-        return [&](auto e) {
-            using Eter1 = decltype(e.enumerator());
-            using Eter2 = decltype(get_enumerator(e2));
-            static_assert(std::is_same_v<decltype(*e.enumerator()), decltype(*get_enumerator(e2))>, "The return type of the two enumerable should be the same.");
-            return enumerable(impl::concat_enumerator<Eter1, Eter2>(e.enumerator(), get_enumerator(e2)));
-        };
-    }
-
-    namespace impl
-    {
         template <typename E1, typename... Es>
         constexpr bool and_all(E1&& e1, Es&&... es)
         {
