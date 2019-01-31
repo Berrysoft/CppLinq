@@ -31,6 +31,8 @@
 #include <list>
 #include <map>
 #include <set>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace linq
@@ -39,12 +41,7 @@ namespace linq
     constexpr auto to_list()
     {
         return [](auto e) {
-            std::list<T, Allocator> result;
-            for (auto item : e)
-            {
-                result.emplace_back(item);
-            }
-            return result;
+            return std::list<T, Allocator>(e.begin(), e.end());
         };
     }
 
@@ -61,16 +58,24 @@ namespace linq
         };
     }
 
+    template <typename T, typename Hash = std::hash<T>, typename KeyEq = std::equal_to<T>, typename Allocator = std::allocator<T>>
+    constexpr auto to_unordered_set()
+    {
+        return [](auto e) {
+            std::unordered_set<T, Hash, KeyEq, Allocator> result;
+            for (auto item : e)
+            {
+                result.emplace(item);
+            }
+            return result;
+        };
+    }
+
     template <typename T, typename Allocator = std::allocator<T>>
     constexpr auto to_vector()
     {
         return [](auto e) {
-            std::vector<T, Allocator> result;
-            for (auto item : e)
-            {
-                result.emplace_back(item);
-            }
-            return result;
+            return std::vector<T, Allocator>(e.begin(), e.end());
         };
     }
 
@@ -78,12 +83,7 @@ namespace linq
     constexpr auto to_deque()
     {
         return [](auto e) {
-            std::deque<T, Allocator> result;
-            for (auto item : e)
-            {
-                result.emplace_back(item);
-            }
-            return result;
+            return std::deque<T, Allocator>(e.begin(), e.end());
         };
     }
 
@@ -92,6 +92,19 @@ namespace linq
     {
         return [&](auto e) {
             std::map<TKey, TElem, Comparer, Allocator> result;
+            for (auto item : e)
+            {
+                result.emplace(keysel(item), elesel(item));
+            }
+            return result;
+        };
+    }
+
+    template <typename TKey, typename TElem, typename KeySelector, typename ElementSelector, typename Hash = std::hash<TKey>, typename KeyEq = std::equal_to<TKey>, typename Allocator = std::allocator<std::pair<const TKey, TElem>>>
+    constexpr auto to_unordered_map(KeySelector&& keysel, ElementSelector&& elesel)
+    {
+        return [&](auto e) {
+            std::unordered_map<TKey, TElem, Hash, KeyEq, Allocator> result;
             for (auto item : e)
             {
                 result.emplace(keysel(item), elesel(item));

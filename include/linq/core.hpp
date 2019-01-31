@@ -88,6 +88,12 @@ namespace linq
         std::optional<Eter> m_eter;
 
     public:
+        using iterator_category = std::input_iterator_tag;
+        using value_type = decltype(**m_eter);
+        using difference_type = std::ptrdiff_t;
+        using pointer = std::remove_reference_t<value_type>*;
+        using reference = std::remove_reference_t<value_type>&;
+
         constexpr enumerator_iterator() : m_eter(std::nullopt) {}
         constexpr enumerator_iterator(Eter&& eter) : m_eter(std::forward<Eter>(eter)) {}
 
