@@ -175,8 +175,6 @@ namespace linq
     }
 
     // Determines if any elements satisfy a condition.
-    // empty() <=> !any()
-    // contains(x) <=> any([](auto a) { return a == x; })
     template <typename Pred = always_true>
     constexpr auto any(Pred&& pred = {})
     {
@@ -190,6 +188,17 @@ namespace linq
         };
     }
 
+    constexpr auto empty()
+    {
+        return [&](auto e) { !any()(e); };
+    }
+
+    template <typename T, typename Comparer = std::equal_to<void>>
+    constexpr auto contains(T&& value, Comparer&& comparer = {})
+    {
+        return any([&](auto&& a) { return std::forward<Comparer>(comparer)(a, value); });
+    }
+
     // Applies an accumulator function over an enumerable.
     template <typename T, typename Func>
     constexpr auto aggregate(T&& seed, Func&& func)
@@ -201,22 +210,6 @@ namespace linq
                 result = func(result, item);
             }
             return result;
-        };
-    }
-
-    // Returns the first element that satisfies a specified condition.
-    template <typename Pred = always_true>
-    constexpr auto front(Pred&& pred = {})
-    {
-        return [&](auto e) {
-            using T = remove_cref<decltype(*e.enumerator())>;
-            auto eter{ e.enumerator() };
-            for (; eter; ++eter)
-            {
-                if (pred(*eter))
-                    return *eter;
-            }
-            return T{};
         };
     }
 
@@ -235,20 +228,13 @@ namespace linq
         };
     }
 
-    // Returns the last element that satisfies a specified condition.
+    // Returns the first element that satisfies a specified condition.
     template <typename Pred = always_true>
-    constexpr auto back(Pred&& pred = {})
+    constexpr auto front(Pred&& pred = {})
     {
         return [&](auto e) {
             using T = remove_cref<decltype(*e.enumerator())>;
-            auto eter{ e.enumerator() };
-            T result{};
-            for (; eter; ++eter)
-            {
-                if (pred(*eter))
-                    result = *eter;
-            }
-            return result;
+            return front<Pred, T>(std::forward<Pred>(pred))(e);
         };
     }
 
@@ -268,39 +254,20 @@ namespace linq
         };
     }
 
+    // Returns the last element that satisfies a specified condition.
+    template <typename Pred = always_true>
+    constexpr auto back(Pred&& pred = {})
+    {
+        return [&](auto e) {
+            using T = remove_cref<decltype(*e.enumerator())>;
+            return back<Pred, T>(std::forward<Pred>(pred))(e);
+        };
+    }
+
     struct more_than_one : std::logic_error
     {
         more_than_one() : logic_error("More than one element satisfies the condition.") {}
     };
-
-    // Returns the only element that satisfies a specified condition or a default value if no such element exists;
-    // this method throws an exception if more than one element satisfies the condition.
-    template <typename Pred = always_true>
-    constexpr auto single(Pred&& pred = {})
-    {
-        return [&](auto e) {
-            using T = remove_cref<decltype(*e.enumerator())>;
-            auto eter{ e.enumerator() };
-            T result{};
-            std::size_t num{ 0 };
-            for (; eter; ++eter)
-            {
-                if (pred(*eter))
-                {
-                    result = *eter;
-                    ++num;
-                }
-            }
-            switch (num)
-            {
-            case 0:
-            case 1:
-                return result;
-            default:
-                throw more_than_one{};
-            }
-        };
-    }
 
     // Returns the only element that satisfies a specified condition or a default value if no such element exists;
     // this method throws an exception if more than one element satisfies the condition.
@@ -327,6 +294,17 @@ namespace linq
             default:
                 throw more_than_one{};
             }
+        };
+    }
+
+    // Returns the only element that satisfies a specified condition or a default value if no such element exists;
+    // this method throws an exception if more than one element satisfies the condition.
+    template <typename Pred = always_true>
+    constexpr auto single(Pred&& pred = {})
+    {
+        return [&](auto e) {
+            using T = remove_cref<decltype(*e.enumerator())>;
+            return single<Pred, T>(std::forward<Pred>(pred))(e);
         };
     }
 
@@ -384,29 +362,17 @@ namespace linq
     {
         return [](auto e) {
             using T = remove_cref<decltype(*e.enumerator())>;
-            T sum{ 0 };
             std::size_t num{ 0 };
-            for (auto item : e)
-            {
-                sum += item;
-                ++num;
-            }
-            return (T)(sum / num);
+            return (T)(aggregate<T>({}, [&num](auto& a, auto& b) { ++num; return a + b; })(e) / num);
         };
     }
 
     // Calculates the sum of the elements.
-    // This method is nesessary because of the optimization of G++.
     constexpr auto sum()
     {
         return [](auto e) {
             using T = remove_cref<decltype(*e.enumerator())>;
-            T sum{ 0 };
-            for (auto item : e)
-            {
-                sum += item;
-            }
-            return sum;
+            return aggregate<T>({}, [](auto& a, auto& b) { return a + b; })(e);
         };
     }
 
@@ -564,19 +530,13 @@ namespace linq
     {
         return [&](auto e) {
             using T = remove_cref<decltype(*e.enumerator())>;
-            std::deque<T> result;
-            for (auto item : e)
-            {
-                result.emplace_back(item);
-            }
+            std::deque<T> result(e.begin(), e.end());
             std::sort(result.begin(), result.end(), make_sorter<Comparer...>(std::forward<Comparer>(comparer)...));
             return get_enumerable(std::move(result));
         };
     }
 
     // Gets the limit value of an enumerable.
-    // min <=> limit(less<void>{})
-    // max <=> limit(greater<void>{})
     template <typename Comparer>
     constexpr auto limit(Comparer&& comparer)
     {
@@ -595,26 +555,48 @@ namespace linq
         };
     }
 
-    // Returns the element at a specified index.
-    constexpr auto get_at(std::size_t index)
+    template <typename Comparer, typename T>
+    constexpr auto limit(Comparer&& comparer, T&& def)
     {
-        return [=](auto e) {
+        return [&](auto e) {
             auto eter{ e.enumerator() };
-            using T = remove_cref<decltype(*eter)>;
-            for (std::size_t i{ 0 }; eter && i < index; ++eter, ++i)
-                ;
-            if (!eter)
-                return T{};
-            else
-                return *eter;
+            T result{ std::forward<T>(def) };
+            for (; eter; ++eter)
+            {
+                if (!comparer(result, *eter))
+                    result = *eter;
+            }
+            return result;
         };
+    }
+
+    constexpr auto(min)()
+    {
+        return limit<std::less<void>>({});
+    }
+
+    template <typename T>
+    constexpr auto(min)(T&& def)
+    {
+        return limit<std::less<void>, T>({}, std::forward<T>(def));
+    }
+
+    constexpr auto(max)()
+    {
+        return limit<std::greater<void>>({});
+    }
+
+    template <typename T>
+    constexpr auto(max)(T&& def)
+    {
+        return limit<std::greater<void>, T>({}, std::forward<T>(def));
     }
 
     // Returns the element at a specified index.
     template <typename T>
-    constexpr auto get_at(std::size_t&& index, T&& def)
+    constexpr auto get_at(std::size_t index, T&& def)
     {
-        return [&](auto e) {
+        return [index, &def](auto e) {
             auto eter{ e.enumerator() };
             for (std::size_t i{ 0 }; eter && i < index; ++eter, ++i)
                 ;
@@ -622,6 +604,15 @@ namespace linq
                 return std::forward<T>(def);
             else
                 return *eter;
+        };
+    }
+
+    // Returns the element at a specified index.
+    constexpr auto get_at(std::size_t index)
+    {
+        return [=](auto e) {
+            using T = remove_cref<decltype(*e.enumerator())>;
+            return get_at<T>(index, {})(e);
         };
     }
 

@@ -559,9 +559,15 @@ namespace linq
     constexpr auto zip(Selector&& selector, Es&&... es)
     {
         return [&](auto e) {
-            static_assert(sizeof...(Es) > 0);
-            using Eter = decltype(e.enumerator());
-            return enumerable(impl::zip_enumerator<Selector, Eter, decltype(get_enumerator(std::forward<Es>(es)))...>(std::forward<Selector>(selector), e.enumerator(), get_enumerator(std::forward<Es>(es))...));
+            if constexpr (sizeof...(Es) == 0)
+            {
+                return e;
+            }
+            else
+            {
+                using Eter = decltype(e.enumerator());
+                return enumerable(impl::zip_enumerator<Selector, Eter, decltype(get_enumerator(std::forward<Es>(es)))...>(std::forward<Selector>(selector), e.enumerator(), get_enumerator(std::forward<Es>(es))...));
+            }
         };
     }
 
@@ -600,9 +606,15 @@ namespace linq
     constexpr auto zip_index(Selector&& selector, Es&&... es)
     {
         return [&](auto e) {
-            static_assert(sizeof...(Es) > 0);
-            using Eter = decltype(e.enumerator());
-            return enumerable(impl::zip_index_enumerator<Selector, Eter, decltype(get_enumerator(std::forward<Es>(es)))...>(std::forward<Selector>(selector), e.enumerator(), get_enumerator(std::forward<Es>(es))...));
+            if constexpr (sizeof...(Es) == 0)
+            {
+                return e;
+            }
+            else
+            {
+                using Eter = decltype(e.enumerator());
+                return enumerable(impl::zip_index_enumerator<Selector, Eter, decltype(get_enumerator(std::forward<Es>(es)))...>(std::forward<Selector>(selector), e.enumerator(), get_enumerator(std::forward<Es>(es))...));
+            }
         };
     }
 

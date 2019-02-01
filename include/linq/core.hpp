@@ -366,7 +366,6 @@ namespace linq
         return [&](auto e) {
             using Eter1 = decltype(e.enumerator());
             using Eter2 = decltype(get_enumerator(e2));
-            static_assert(std::is_same_v<decltype(*e.enumerator()), decltype(*get_enumerator(e2))>, "The return type of the two enumerable should be the same.");
             return enumerable(impl::concat_enumerator<Eter1, Eter2>(e.enumerator(), get_enumerator(e2)));
         };
     }
@@ -443,18 +442,33 @@ namespace linq
     }
 
     // Determines whether the two enumerable are equal.
-    template <typename E2>
-    constexpr auto equals(E2&& e2)
+    template <typename E2, typename Comparer = std::equal_to<void>>
+    constexpr auto equals(E2&& e2, Comparer&& comparer = {})
     {
         return [&](auto e) {
             auto eter1{ e.enumerator() };
             auto eter2{ get_enumerator(std::forward<E2>(e2)) };
             for (; eter1 && eter2; ++eter1, ++eter2)
             {
-                if (*eter1 != *eter2)
+                if (!comparer(*eter1, *eter2))
                     return false;
             }
             return !eter1 && !eter2;
+        };
+    }
+
+    template <typename E2, typename Comparer = std::equal_to<void>>
+    constexpr auto equals_weak(E2&& e2, Comparer&& comparer = {})
+    {
+        return [&](auto e) {
+            auto eter1{ e.enumerator() };
+            auto eter2{ get_enumerator(std::forward<E2>(e2)) };
+            for (; eter1 && eter2; ++eter1, ++eter2)
+            {
+                if (!comparer(*eter1, *eter2))
+                    return false;
+            }
+            return true;
         };
     }
 } // namespace linq

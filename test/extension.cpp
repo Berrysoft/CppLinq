@@ -51,10 +51,10 @@ public:
     constexpr decltype(auto) operator*() { return *m_current; }
 };
 
-inline auto as_random()
+constexpr auto as_random()
 {
     return [](auto e) {
-        using T = remove_reference_t<decltype(*e.begin())>;
+        using T = remove_cref<decltype(*e.enumerator())>;
         return enumerable(random_enumerator<T>(e.enumerator()));
     };
 }
@@ -64,8 +64,9 @@ int main()
     auto e{ range(0, 10) >> as_random() };
     for (auto a : e)
     {
-        cout << a << endl;
+        cout << a << ' ';
     }
+    cout << endl;
     cout << "Success." << endl;
     return 0;
 }

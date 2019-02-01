@@ -7,9 +7,9 @@ using namespace linq;
 int main()
 {
     int a1[]{ 3, 4, 2, 6, 1, 5 };
-    auto min{ a1 >> limit(less<void>{}) };
-    auto max{ a1 >> limit(greater<void>{}) };
-    if (min == 1 && max == 6)
+    auto minimum{ a1 >> min() };
+    auto maximum{ a1 >> max(7) };
+    if (minimum == 1 && maximum == 7)
     {
         cout << "Success." << endl;
     }

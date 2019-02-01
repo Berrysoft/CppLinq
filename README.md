@@ -18,6 +18,7 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * append
 * concat
 * equals
+* equals_weak
 * insert
 * prepend
 * range
@@ -44,9 +45,11 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * any
 * average
 * back
+* contains
 * count
 * default_if_empty
 * distinct
+* empty
 * except
 * for_each
 * for_each_index
@@ -58,6 +61,8 @@ For extension sample, see [extension.cpp](test/extension.cpp).
 * intersect
 * join
 * limit
+* max
+* min
 * peek
 * peek_index
 * reverse
