@@ -93,7 +93,6 @@ namespace linq
     {
         return [=](auto e) {
             using Container = decltype(e.enumerator().container());
-            static_assert(std::is_convertible_v<Container, std::basic_string_view<Char, Traits>>, "The enumerable should be an adapter of a string_view.");
             std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
             return enumerable(impl::split_enumerator(view, split_char));
         };
@@ -141,7 +140,6 @@ namespace linq
     {
         return [=](auto e) {
             using Container = decltype(e.enumerator().container());
-            static_assert(std::is_convertible_v<Container, std::basic_string_view<Char, Traits>>, "The enumerable should be an adapter of a string_view.");
             std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
             return view.find(value) != std::basic_string_view<Char, Traits>::npos;
         };
@@ -153,7 +151,6 @@ namespace linq
     {
         return [&](auto e) {
             using Container = decltype(e.enumerator().container());
-            static_assert(std::is_convertible_v<Container, std::basic_string_view<Char, Traits>>, "The enumerable should be an adapter of a string_view.");
             std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
             std::basic_string_view<Char, Traits> value{ std::forward<T>(t) };
             for (std::size_t i{ 0 }; i < view.length(); i++)
@@ -176,7 +173,6 @@ namespace linq
     {
         return [=](auto e) {
             using Container = decltype(e.enumerator().container());
-            static_assert(std::is_convertible_v<Container, std::basic_string_view<Char, Traits>>, "The enumerable should be an adapter of a string_view.");
             std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
             return view.front() == value;
         };
@@ -188,7 +184,6 @@ namespace linq
     {
         return [&](auto e) {
             using Container = decltype(e.enumerator().container());
-            static_assert(std::is_convertible_v<Container, std::basic_string_view<Char, Traits>>, "The enumerable should be an adapter of a string_view.");
             std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
             std::basic_string_view<Char, Traits> value{ std::forward<T>(t) };
             std::size_t i{ 0 };
@@ -207,7 +202,6 @@ namespace linq
     {
         return [=](auto e) {
             using Container = decltype(e.enumerator().container());
-            static_assert(std::is_convertible_v<Container, std::basic_string_view<Char, Traits>>, "The enumerable should be an adapter of a string_view.");
             std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
             return view.back() == value;
         };
@@ -219,7 +213,6 @@ namespace linq
     {
         return [&](auto e) {
             using Container = decltype(e.enumerator().container());
-            static_assert(std::is_convertible_v<Container, std::basic_string_view<Char, Traits>>, "The enumerable should be an adapter of a string_view.");
             std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
             std::basic_string_view<Char, Traits> value{ std::forward<T>(t) };
             std::size_t i{ 0 };
@@ -238,7 +231,6 @@ namespace linq
     {
         return [=](auto e) {
             using Container = decltype(e.enumerator().container());
-            static_assert(std::is_convertible_v<Container, std::basic_string_view<Char, Traits>>, "The enumerable should be an adapter of a string_view.");
             std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
             std::basic_ostringstream<Char, Traits, Allocator> oss;
             std::size_t offset{ 0 };
@@ -264,7 +256,6 @@ namespace linq
     {
         return [&](auto e) {
             using Container = decltype(e.enumerator().container());
-            static_assert(std::is_convertible_v<Container, std::basic_string_view<Char, Traits>>, "The enumerable should be an adapter of a string_view.");
             std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
             std::basic_string_view<Char, Traits> value{ std::forward<T>(t) };
             std::basic_ostringstream<Char, Traits, Allocator> oss;
@@ -290,13 +281,36 @@ namespace linq
         };
     }
 
+    template <typename Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>, typename TNew>
+    constexpr auto replace(Char oldc, TNew&& news)
+    {
+        return [oldc, &news](auto e) {
+            using Container = decltype(e.enumerator().container());
+            std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
+            std::basic_ostringstream<Char, Traits, Allocator> oss;
+            std::size_t offset{ 0 };
+            for (std::size_t i{ 0 }; i < view.length(); i++)
+            {
+                if (Traits::eq(view[i], oldc))
+                {
+                    oss << view.substr(offset, i - offset) << news;
+                    offset = i + 1;
+                }
+            }
+            if (offset < view.length())
+            {
+                oss << view.substr(offset);
+            }
+            return oss.str();
+        };
+    }
+
     // Returns a new string which the specified string span is replaced by the new one.
     template <typename Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>, typename TOld, typename TNew>
     constexpr auto replace(TOld&& olds, TNew&& news)
     {
         return [&](auto e) {
             using Container = decltype(e.enumerator().container());
-            static_assert(std::is_convertible_v<Container, std::basic_string_view<Char, Traits>>, "The enumerable should be an adapter of a string_view.");
             std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
             std::basic_string_view<Char, Traits> value{ std::forward<TOld>(olds) };
             std::basic_ostringstream<Char, Traits, Allocator> oss;
@@ -309,8 +323,7 @@ namespace linq
                     if (!Traits::eq(view[i + j], value[j]))
                         goto continue_outer;
                 }
-                oss << view.substr(offset, i - offset);
-                oss << news;
+                oss << view.substr(offset, i - offset) << news;
                 offset = i + j;
                 i = offset - 1;
             continue_outer:;
@@ -328,7 +341,6 @@ namespace linq
     {
         return [=](auto e) {
             using Container = decltype(e.enumerator().container());
-            static_assert(std::is_convertible_v<Container, std::basic_string_view<Char, Traits>>, "The enumerable should be an adapter of a string_view.");
             std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
             auto begin{ view.find_first_not_of(value) };
             auto end{ view.find_last_not_of(value) };
@@ -344,7 +356,6 @@ namespace linq
     {
         return [=](auto e) {
             using Container = decltype(e.enumerator().container());
-            static_assert(std::is_convertible_v<Container, std::basic_string_view<Char, Traits>>, "The enumerable should be an adapter of a string_view.");
             std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
             auto begin{ view.find_first_not_of(value) };
             if (begin == std::basic_string_view<Char, Traits>::npos)
@@ -359,7 +370,6 @@ namespace linq
     {
         return [=](auto e) {
             using Container = decltype(e.enumerator().container());
-            static_assert(std::is_convertible_v<Container, std::basic_string_view<Char, Traits>>, "The enumerable should be an adapter of a string_view.");
             std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
             auto end{ view.find_last_not_of(value) };
             if (end == std::basic_string_view<Char, Traits>::npos)

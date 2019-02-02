@@ -1,6 +1,5 @@
 #include <iostream>
 #include <linq/aggregate.hpp>
-#include <linq/query.hpp>
 #include <string>
 
 using namespace std;

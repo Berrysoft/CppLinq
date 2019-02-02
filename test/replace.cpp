@@ -9,7 +9,7 @@ bool replace_test()
 {
     string str{ "Hello world!o" };
     string_view str2{ "Hellooo wooorld!ooo" };
-    auto e{ str >> replace<char>("o", "ooo") };
+    auto e{ str >> replace('o', "ooo") };
     return e == str2;
 }
 
