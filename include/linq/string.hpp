@@ -89,7 +89,7 @@ namespace linq
 
     // Split the string into an enumerable of string_view by a char.
     template <typename Char, typename Traits = std::char_traits<Char>>
-    constexpr auto split(Char split_char)
+    constexpr auto split(Char split_char = (Char)' ')
     {
         return [=](auto e) {
             using Container = decltype(e.enumerator().container());
@@ -153,15 +153,10 @@ namespace linq
             using Container = decltype(e.enumerator().container());
             std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
             std::basic_string_view<Char, Traits> value{ std::forward<T>(t) };
-            for (std::size_t i{ 0 }; i < view.length(); i++)
+            for (std::size_t i{ 0 }; i <= (view.length() - value.length()); i++)
             {
-                for (std::size_t j{ 0 }; j < value.length(); j++)
-                {
-                    if (!Traits::eq(view[i + j], value[j]))
-                        goto continue_outer;
-                }
-                return true;
-            continue_outer:;
+                if (view.compare(i, value.length(), value) == 0)
+                    return true;
             }
             return false;
         };
@@ -186,13 +181,9 @@ namespace linq
             using Container = decltype(e.enumerator().container());
             std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
             std::basic_string_view<Char, Traits> value{ std::forward<T>(t) };
-            std::size_t i{ 0 };
-            for (; i < view.length() && i < value.length(); i++)
-            {
-                if (!Traits::eq(view[i], value[i]))
-                    return false;
-            }
-            return i == value.length();
+            if (view.length() < value.length())
+                return false;
+            return view.compare(0, value.length(), value) == 0;
         };
     }
 
@@ -215,13 +206,9 @@ namespace linq
             using Container = decltype(e.enumerator().container());
             std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
             std::basic_string_view<Char, Traits> value{ std::forward<T>(t) };
-            std::size_t i{ 0 };
-            for (; i < view.length() && i < value.length(); i++)
-            {
-                if (!Traits::eq(view[view.length() - i - 1], value[value.length() - i - 1]))
-                    return false;
-            }
-            return i == value.length();
+            if (view.length() < value.length())
+                return false;
+            return view.compare(view.length() - value.length(), value.length(), value) == 0;
         };
     }
 
@@ -260,18 +247,14 @@ namespace linq
             std::basic_string_view<Char, Traits> value{ std::forward<T>(t) };
             std::basic_ostringstream<Char, Traits, Allocator> oss;
             std::size_t offset{ 0 };
-            for (std::size_t i{ 0 }; i < view.length(); i++)
+            for (std::size_t i{ 0 }; i <= view.length() - value.length(); i++)
             {
-                std::size_t j{ 0 };
-                for (; j < value.length(); j++)
+                if (view.compare(i, value.length(), value) == 0)
                 {
-                    if (!Traits::eq(view[i + j], value[j]))
-                        goto continue_outer;
+                    oss << view.substr(offset, i - offset);
+                    offset = i + value.length();
+                    i = offset - 1;
                 }
-                oss << view.substr(offset, i - offset);
-                offset = i + j;
-                i = offset - 1;
-            continue_outer:;
             }
             if (offset < view.length())
             {
@@ -315,18 +298,14 @@ namespace linq
             std::basic_string_view<Char, Traits> value{ std::forward<TOld>(olds) };
             std::basic_ostringstream<Char, Traits, Allocator> oss;
             std::size_t offset{ 0 };
-            for (std::size_t i{ 0 }; i < view.length(); i++)
+            for (std::size_t i{ 0 }; i <= view.length() - value.length(); i++)
             {
-                std::size_t j{ 0 };
-                for (; j < value.length(); j++)
+                if (view.compare(i, value.length(), value) == 0)
                 {
-                    if (!Traits::eq(view[i + j], value[j]))
-                        goto continue_outer;
+                    oss << view.substr(offset, i - offset) << news;
+                    offset = i + value.length();
+                    i = offset - 1;
                 }
-                oss << view.substr(offset, i - offset) << news;
-                offset = i + j;
-                i = offset - 1;
-            continue_outer:;
             }
             if (offset < view.length())
             {
