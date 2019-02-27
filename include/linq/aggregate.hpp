@@ -870,7 +870,11 @@ namespace linq
                 ++m_begin;
                 return *this;
             }
-            constexpr decltype(auto) operator*() { return m_rstsel(m_begin->first, get_enumerable(m_lookup[m_begin->first])); }
+            constexpr decltype(auto) operator*()
+            {
+                auto&& f{ m_begin->first };
+                return m_rstsel(f, get_enumerable(m_lookup[f]));
+            }
         };
     } // namespace impl
 

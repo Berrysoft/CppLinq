@@ -524,7 +524,7 @@ namespace linq
         }
 
         template <typename... T>
-        constexpr void expand_tuple(T...)
+        constexpr void expand_tuple(T&&...)
         {
         }
 
