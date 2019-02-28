@@ -22,6 +22,15 @@ bool to_set_test()
     return e >> equals(a2);
 }
 
+bool to_multiset_test()
+{
+    int a1[]{ 1, 1, 2, 3, 2, 4, 3, 5, 6, 2, 4, 3, 5, 2, 6, 1 };
+    int a2[]{ 2, 2, 2, 2, 4, 4, 6, 6 };
+    auto s{ a1 >> to_multiset<int>() };
+    auto e{ s >> where([](int a) { return a % 2 == 0; }) };
+    return e >> equals(a2);
+}
+
 bool to_vector_test()
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
@@ -56,7 +65,7 @@ bool to_multimap_test()
 
 int main()
 {
-    if (to_list_test() && to_set_test() && to_vector_test() && to_map_test() && to_multimap_test())
+    if (to_list_test() && to_set_test() && to_multiset_test() && to_vector_test() && to_map_test() && to_multimap_test())
     {
         cout << "Success." << endl;
     }

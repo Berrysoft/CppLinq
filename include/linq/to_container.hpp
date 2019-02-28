@@ -58,11 +58,37 @@ namespace linq
         };
     }
 
+    template <typename T, typename Comparer = std::less<T>, typename Allocator = std::allocator<T>>
+    constexpr auto to_multiset()
+    {
+        return [](auto e) {
+            std::multiset<T, Comparer, Allocator> result;
+            for (auto item : e)
+            {
+                result.emplace(item);
+            }
+            return result;
+        };
+    }
+
     template <typename T, typename Hash = std::hash<T>, typename KeyEq = std::equal_to<T>, typename Allocator = std::allocator<T>>
     constexpr auto to_unordered_set()
     {
         return [](auto e) {
             std::unordered_set<T, Hash, KeyEq, Allocator> result;
+            for (auto item : e)
+            {
+                result.emplace(item);
+            }
+            return result;
+        };
+    }
+
+    template <typename T, typename Hash = std::hash<T>, typename KeyEq = std::equal_to<T>, typename Allocator = std::allocator<T>>
+    constexpr auto to_unordered_multiset()
+    {
+        return [](auto e) {
+            std::unordered_multiset<T, Hash, KeyEq, Allocator> result;
             for (auto item : e)
             {
                 result.emplace(item);
@@ -118,6 +144,19 @@ namespace linq
     {
         return [&](auto e) {
             std::multimap<TKey, TElem, Comparer, Allocator> result;
+            for (auto item : e)
+            {
+                result.emplace(keysel(item), elesel(item));
+            }
+            return result;
+        };
+    }
+
+    template <typename TKey, typename TElem, typename KeySelector, typename ElementSelector, typename Hash = std::hash<TKey>, typename KeyEq = std::equal_to<TKey>, typename Allocator = std::allocator<std::pair<const TKey, TElem>>>
+    constexpr auto to_unordered_multimap(KeySelector&& keysel, ElementSelector&& elesel)
+    {
+        return [&](auto e) {
+            std::unordered_multimap<TKey, TElem, Hash, KeyEq, Allocator> result;
             for (auto item : e)
             {
                 result.emplace(keysel(item), elesel(item));
