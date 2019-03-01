@@ -26,7 +26,7 @@
 #ifndef LINQ_WINRT_HPP
 #define LINQ_WINRT_HPP
 
-#ifdef CPPWINRT_VERSION
+#ifdef LINQ_USE_WINRT
 
 #include <linq/core.hpp>
 
