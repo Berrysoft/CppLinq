@@ -1,5 +1,6 @@
 #include "aggregate_test.hpp"
 #include "core_test.hpp"
+#include "extension_test.hpp"
 #include "query_test.hpp"
 #include "string_test.hpp"
 #include "winrt_test.hpp"

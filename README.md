@@ -12,7 +12,7 @@ range(0, 10) >>
 	for_each([](double a) { cout << a << endl; });
 ```
 Here we use `operator>>` to make it extensible.
-For extension sample, see [extension.cpp](test/extension.cpp).
+For extension sample, see [extension_test.cpp](test/extension_test.cpp).
 ## Supported methods
 ### Core
 * append

@@ -41,12 +41,3 @@ private:
     void insert_item_test();
     void insert_enumerable_test();
 };
-
-class extension_test : public bstest::test_base
-{
-public:
-    extension_test() { add_test(test); }
-
-private:
-    void test();
-};
