@@ -442,7 +442,7 @@ namespace linq
         template <typename T1, typename T2>
         constexpr auto operator()(T1&& t1, T2&& t2) const
         {
-            return t1 - t2;
+            return (t1 > t2) - (t1 < t2);
         }
     };
 
@@ -467,7 +467,7 @@ namespace linq
         template <typename T1, typename T2>
         constexpr auto operator()(T1&& t1, T2&& t2) const
         {
-            return t2 - t1;
+            return (t1 < t2) - (t1 > t2);
         }
     };
 
