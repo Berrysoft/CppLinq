@@ -133,32 +133,15 @@ namespace linq
         };
     }
 
-    // Determines whether a char is in the string.
+    // Determines whether a char or a string span is in the string.
     // Named instr to distinguish from contains, although the latter doesn't exist now.
-    template <typename Char, typename Traits = std::char_traits<Char>, typename = std::enable_if_t<is_char_v<Char>>>
-    constexpr auto instr(Char value)
-    {
-        return [=](auto e) {
-            using Container = decltype(e.enumerator().container());
-            std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
-            return view.find(value) != std::basic_string_view<Char, Traits>::npos;
-        };
-    }
-
-    // Determines whether a string span is in the string.
     template <typename Char, typename Traits = std::char_traits<Char>, typename T>
     constexpr auto instr(T&& t)
     {
         return [&](auto e) {
             using Container = decltype(e.enumerator().container());
             std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
-            std::basic_string_view<Char, Traits> value{ std::forward<T>(t) };
-            for (std::size_t i{ 0 }; i <= (view.length() - value.length()); i++)
-            {
-                if (view.compare(i, value.length(), value) == 0)
-                    return true;
-            }
-            return false;
+            return view.find(std::forward<T>(t)) != std::basic_string_view<Char, Traits>::npos;
         };
     }
 

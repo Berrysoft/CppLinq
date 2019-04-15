@@ -31,7 +31,7 @@ void string_test::joinstr_test()
 
 void string_test::instr_test()
 {
-    is_true("Hello world!" >> instr('o'));
+    is_true("Hello world!" >> instr<char>('o'));
     is_true("Hello world!" >> instr<char>("world"));
 }
 
