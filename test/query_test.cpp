@@ -114,7 +114,7 @@ void linear_test::zip_index_test()
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     int a2[]{ 1, 4, 9, 16, 25, 36 };
-    auto e{ a1 >> zip_index([](int i1, int i2, size_t index) { return i1 + i2 * index; }, vector<int>{ 1, 2, 3, 4, 5, 6 }) };
+    auto e{ a1 >> zip_index([](int i1, int i2, size_t index) { return (int)(i1 + i2 * index); }, vector<int>{ 1, 2, 3, 4, 5, 6 }) };
     test_equals(a2, e);
 }
 

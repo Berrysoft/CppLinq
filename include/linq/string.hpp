@@ -65,7 +65,7 @@ namespace linq
                 m_offset = m_index + 1;
                 if ((std::size_t)m_offset < m_view.length())
                 {
-                    m_index = m_view.find(m_char, m_offset);
+                    m_index = m_view.find(m_char, (std::size_t)m_offset);
                     if (m_index == std::basic_string_view<Char, Traits>::npos)
                         m_index = m_view.length();
                 }
@@ -83,7 +83,7 @@ namespace linq
                 move_next();
                 return *this;
             }
-            constexpr auto operator*() { return m_view.substr(m_offset, m_index - m_offset); }
+            constexpr auto operator*() { return m_view.substr((std::size_t)m_offset, (std::size_t)(m_index - m_offset)); }
         };
     } // namespace impl
 

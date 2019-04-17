@@ -11,9 +11,9 @@ void aggregate_test::count_test()
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     auto c1{ a1 >> count() };
-    are_equal(6, c1);
+    are_equal(6ULL, c1);
     auto c2{ a1 >> count([](int& a) { return a % 2 == 0; }) };
-    are_equal(3, c2);
+    are_equal(3ULL, c2);
 }
 
 void aggregate_test::any_all_test()
@@ -124,7 +124,7 @@ void find_test::get_at_test()
 void find_test::index_of_test()
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
-    are_equal(3, a1 >> index_of([](int& a) { return a == 4; }));
+    are_equal(3ULL, a1 >> index_of([](int& a) { return a == 4; }));
 }
 
 void find_test::front_back_test()
