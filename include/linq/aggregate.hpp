@@ -383,28 +383,37 @@ namespace linq
         {
         private:
             std::deque<T> m_vec;
-            typename std::deque<T>::reverse_iterator m_begin, m_end;
+            typename std::deque<T>::iterator m_begin, m_end;
 
         public:
             // Prevent multi-reverse in copying.
-            constexpr reverse_enumerator(const reverse_enumerator& eter) : m_vec(eter.m_vec), m_begin(eter.m_begin), m_end(eter.m_end) {}
+            constexpr reverse_enumerator( reverse_enumerator&& eter) {
+              m_vec.swap(eter.m_vec); 
+              m_begin=(m_vec.begin());
+              m_end=(m_vec.end());
+            }
+            constexpr reverse_enumerator(const reverse_enumerator& eter) :
+              m_vec(eter.m_vec), 
+              m_begin(m_vec.begin()),
+              m_end(m_vec.end()) {}
             constexpr reverse_enumerator& operator=(const reverse_enumerator& eter)
             {
                 m_vec = eter.m_vec;
-                m_begin = eter.m_begin;
-                m_end = eter.m_end;
+                m_begin = m_vec.m_begin;
+                m_end = m_vec.m_end;
                 return *this;
             }
 
             template <typename Eter>
             constexpr reverse_enumerator(Eter&& eter)
             {
+                //std::cout << "RE Ctor "<< std::endl;
                 for (; eter; ++eter)
                 {
-                    m_vec.emplace_back(*eter);
+                    m_vec.emplace_front(*eter);
                 }
-                m_begin = m_vec.rbegin();
-                m_end = m_vec.rend();
+                m_begin = m_vec.begin();
+                m_end = m_vec.end();
             }
 
             constexpr operator bool() const { return m_begin != m_end; }
