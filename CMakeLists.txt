@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.1)
-project(CppLinq)
+project(cpplinq)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -14,27 +14,50 @@ if(WIN32)
   endif()
 endif()
 
-function(add_headers VAR)
-  set(headers ${${VAR}})
-  foreach (header ${ARGN})
-    set(headers ${headers} include/linq/${header})
-  endforeach()
-  set(${VAR} ${headers} PARENT_SCOPE)
-endfunction()
-
-add_headers(SF_HEADERS core.hpp query.hpp aggregate.hpp to_container.hpp string.hpp)
+file(GLOB LINQ_HEADERS "include/linq/*.hpp")
 
 if (IS_WINDOWS_10)
-  add_headers(SF_HEADERS winrt.hpp)
   add_definitions(-DLINQ_USE_WINRT)
 endif()
 
-install(FILES ${SF_HEADERS} DESTINATION include/linq)
+add_library(linq INTERFACE)
 
-find_path(BSTEST_INCLUDE_DIR NAMES bstest.hpp)
+install(FILES ${LINQ_HEADERS} DESTINATION include/linq)
+install(TARGETS linq EXPORT cpplinq_targets)
+
+include(CMakePackageConfigHelpers)
+
+export(EXPORT cpplinq_targets
+  FILE "${CMAKE_CURRENT_BINARY_DIR}/cpplinq/cpplinq-targets.cmake"
+  NAMESPACE cpplinq::
+)
+configure_file(cmake/cpplinq-config.cmake
+  "${CMAKE_CURRENT_BINARY_DIR}/cpplinq/cpplinq-config.cmake"
+  COPYONLY
+)
+
+set(ConfigPackageLocation lib/cpplinq)
+install(EXPORT cpplinq_targets
+  FILE
+    cpplinq-targets.cmake
+  NAMESPACE
+    cpplinq::
+  DESTINATION
+    ${ConfigPackageLocation}
+)
+install(
+  FILES
+    cmake/cpplinq-config.cmake
+  DESTINATION
+    ${ConfigPackageLocation}
+  COMPONENT
+    Devel
+)
+
+find_package(bstest CONFIG REQUIRED)
 file(GLOB TEST_SOURCE "test/*.cpp")
 add_executable(test ${TEST_SOURCE})
-target_include_directories(test PRIVATE ${BSTEST_INCLUDE_DIR})
+target_link_libraries(test INTERFACE bstest)
 
 if (IS_WINDOWS_10)
   target_link_libraries(test WindowsApp.lib)
