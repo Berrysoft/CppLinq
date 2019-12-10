@@ -120,7 +120,7 @@ namespace linq
     public:
         constexpr Eter enumerator() { return m_iter.enumerator(); }
 
-        constexpr auto begin() { return m_iter; }
+        constexpr enumerator_iterator<Eter>& begin() { return m_iter; }
         constexpr auto end() { return enumerator_iterator<Eter>(); }
 
         constexpr enumerable() = default;
