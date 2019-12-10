@@ -57,7 +57,7 @@ install(
 find_package(bstest CONFIG REQUIRED)
 file(GLOB TEST_SOURCE "test/*.cpp")
 add_executable(test ${TEST_SOURCE})
-target_link_libraries(test INTERFACE bstest)
+target_link_libraries(test bstest::bstest)
 
 if (IS_WINDOWS_10)
   target_link_libraries(test WindowsApp.lib)
