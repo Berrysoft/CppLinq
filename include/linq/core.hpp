@@ -79,6 +79,9 @@ namespace linq
             It begin() const noexcept(std::is_nothrow_copy_constructible_v<It>) { return m_begin; }
             It end() const noexcept(std::is_nothrow_copy_constructible_v<It>) { return m_end; }
         };
+
+        template <typename It>
+        iterable(It &&) -> iterable<It>;
     } // namespace impl
 
     template <typename Container, typename Query, typename = decltype(std::begin(std::declval<Container>())), typename = decltype(std::end(std::declval<Container>()))>
@@ -129,7 +132,7 @@ namespace linq
     template <typename T, typename F = impl::increase<T>>
     constexpr auto range(T begin, T end, F func = {})
     {
-        return impl::iterable<impl::range_iterator<T, F>>{ impl::range_iterator<T, F>{ std::move(begin), std::move(end), std::move(func) } };
+        return impl::iterable{ impl::range_iterator<T, F>{ std::move(begin), std::move(end), std::move(func) } };
     }
 
     namespace impl
@@ -168,7 +171,7 @@ namespace linq
     template <typename T>
     constexpr auto repeat(T value, std::size_t count)
     {
-        return impl::iterable<impl::repeat_iterator<T>>{ impl::repeat_iterator<T>(std::move(value), count) };
+        return impl::iterable{ impl::repeat_iterator<T>(std::move(value), count) };
     }
 
     namespace impl
@@ -217,7 +220,7 @@ namespace linq
     {
         return [&](auto&& container) {
             using It = decltype(std::begin(container));
-            return impl::iterable<impl::append_iterator<T, It>>{ impl::append_iterator<T, It>{ std::forward<T>(value), std::begin(container), std::end(container) } };
+            return impl::iterable{ impl::append_iterator<T, It>{ std::forward<T>(value), std::begin(container), std::end(container) } };
         };
     }
 
@@ -270,7 +273,7 @@ namespace linq
     {
         return [&](auto&& container) {
             using It = decltype(std::begin(container));
-            return impl::iterable<impl::prepend_iterator<T, It>>{ impl::prepend_iterator<T, It>{ std::forward<T>(value), std::begin(container), std::end(container) } };
+            return impl::iterable{ impl::prepend_iterator<T, It>{ std::forward<T>(value), std::begin(container), std::end(container) } };
         };
     }
 
@@ -325,7 +328,7 @@ namespace linq
         return [container2 = std::forward<Container2>(container2)](auto&& container) {
             using It1 = decltype(std::begin(container));
             using It2 = decltype(std::begin(container2));
-            return impl::iterable<impl::concat_iterator<It1, It2>>{ impl::concat_iterator<It1, It2>{ std::begin(container), std::end(container), std::begin(container2), std::end(container2) } };
+            return impl::iterable{ impl::concat_iterator<It1, It2>{ std::begin(container), std::end(container), std::begin(container2), std::end(container2) } };
         };
     }
 } // namespace linq
