@@ -1,4 +1,4 @@
-#define BOOST_TEST_MAIN
+#define BOOST_TEST_MODULE QueryTest
 
 #include "test_utility.hpp"
 #include <cmath>
@@ -12,7 +12,7 @@ struct pack
     int arr[2];
 };
 
-inline std::ostream& operator<<(std::ostream& stream, const pack& p)
+inline ostream& operator<<(ostream& stream, const pack& p)
 {
     return stream << '(' << p.arr[0] << ", " << p.arr[1] << ')';
 }

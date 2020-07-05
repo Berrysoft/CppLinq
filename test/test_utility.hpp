@@ -11,6 +11,7 @@ void test_equals(E1&& e1, E2&& e2)
     {
         BOOST_CHECK_EQUAL(*eter1, *eter2);
     }
+    BOOST_CHECK(!eter1 && !eter2);
 }
 template <typename E1, typename E2>
 void test_noteqs(E1&& e1, E2&& e2)
