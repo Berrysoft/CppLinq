@@ -34,11 +34,11 @@ namespace linq
     namespace impl
     {
         template <typename It, typename Pred>
-        class where_iterator : public iterator_base
+        class where_iterator : public iterator_base<where_iterator<It, Pred>>
         {
         private:
-            It m_begin, m_end;
-            std::optional<Pred> m_pred;
+            It m_begin{}, m_end{};
+            std::shared_ptr<Pred> m_pred{};
 
             void move_next()
             {
@@ -48,51 +48,25 @@ namespace linq
 
         public:
             using iterator_category = std::input_iterator_tag;
-            using value_type = std::remove_reference_t<decltype(*std::declval<It>())>;
-            using difference_type = std::intptr_t;
-            using pointer = const value_type*;
-            using reference = const value_type&;
+            using value_type = typename std::iterator_traits<It>::value_type;
+            using difference_type = typename std::iterator_traits<It>::difference_type;
+            using pointer = typename std::iterator_traits<It>::pointer;
+            using reference = typename std::iterator_traits<It>::reference;
 
-            where_iterator() : m_begin(), m_end(), m_pred(std::nullopt) {}
-            where_iterator(It begin, It end, Pred pred) : iterator_base(true), m_begin(begin), m_end(end), m_pred(std::move(pred)) { move_next(); }
+            where_iterator() {}
+            where_iterator(It begin, It end, Pred pred)
+                : iterator_base<where_iterator>(true), m_begin(begin), m_end(end),
+                  m_pred(std::make_shared<Pred>(std::move(pred))) { move_next(); }
             where_iterator(const where_iterator&) = default;
             where_iterator& operator=(const where_iterator&) = default;
 
-            void swap(where_iterator& it)
-            {
-                iterator_base::swap(it);
-                std::swap(m_begin, it.m_begin);
-                std::swap(m_end, it.m_end);
-                std::swap(m_pred, it.m_pred);
-            }
-
             reference operator*() const noexcept { return *m_begin; }
-            pointer operator->() const noexcept { return &operator*(); }
-
-            constexpr bool operator==(const where_iterator& it) const noexcept
-            {
-                if (this->m_valid && it.m_valid)
-                {
-                    return m_begin == it.m_begin && m_end == it.m_end && m_pred == it.m_pred;
-                }
-                else
-                {
-                    return !this->m_valid && !it.m_valid;
-                }
-            }
-            constexpr bool operator!=(const where_iterator& it) const noexcept { return !(*this == it); }
 
             constexpr where_iterator& operator++()
             {
                 ++m_begin;
                 move_next();
                 return *this;
-            }
-            where_iterator operator++(int)
-            {
-                where_iterator it = *this;
-                operator++();
-                return it;
             }
         };
     } // namespace impl
@@ -103,178 +77,270 @@ namespace linq
     {
         return [&](auto&& container) {
             using It = decltype(std::begin(container));
-            return impl::iterable<impl::where_iterator<It, Pred>>{ impl::where_iterator<It, Pred>{ std::begin(container), std::end(container), pred } };
+            return impl::iterable<impl::where_iterator<It, Pred>>{ impl::where_iterator<It, Pred>{ std::begin(container), std::end(container), std::forward<Pred>(pred) } };
         };
     }
 
-    //namespace impl
-    //{
-    //    template <typename Eter, typename Pred>
-    //    class where_index_enumerator
-    //    {
-    //    private:
-    //        Eter m_eter;
-    //        Pred m_pred;
-    //        std::size_t m_index;
+    namespace impl
+    {
+        template <typename It, typename Pred>
+        class where_index_iterator : public iterator_base<where_index_iterator<It, Pred>>
+        {
+        private:
+            It m_begin{}, m_end{};
+            std::shared_ptr<Pred> m_pred{};
+            std::size_t m_index{ 0 };
 
-    //        constexpr void move_next()
-    //        {
-    //            for (; m_eter; ++m_eter, ++m_index)
-    //            {
-    //                if (m_pred(*m_eter, m_index))
-    //                    break;
-    //            }
-    //        }
+            constexpr void move_next()
+            {
+                for (; m_begin != m_end; ++m_begin, ++m_index)
+                {
+                    if ((*m_pred)(*m_begin, m_index)) break;
+                }
+                if (m_begin == m_end) this->m_valid = false;
+            }
 
-    //    public:
-    //        constexpr where_index_enumerator(Eter&& eter, Pred&& pred) : m_eter(std::forward<Eter>(eter)), m_pred(pred), m_index(0) { move_next(); }
+        public:
+            using iterator_category = std::input_iterator_tag;
+            using value_type = typename std::iterator_traits<It>::value_type;
+            using difference_type = typename std::iterator_traits<It>::difference_type;
+            using pointer = typename std::iterator_traits<It>::pointer;
+            using reference = typename std::iterator_traits<It>::reference;
 
-    //        constexpr operator bool() const { return m_eter; }
-    //        constexpr where_index_enumerator& operator++()
-    //        {
-    //            ++m_eter;
-    //            ++m_index;
-    //            move_next();
-    //            return *this;
-    //        }
-    //        constexpr decltype(auto) operator*() { return *m_eter; }
-    //    };
-    //} // namespace impl
+            where_index_iterator() {}
+            where_index_iterator(It begin, It end, Pred pred)
+                : iterator_base<where_index_iterator>(true), m_begin(begin), m_end(end),
+                  m_pred(std::make_shared<Pred>(std::move(pred))) { move_next(); }
+            where_index_iterator(const where_index_iterator&) = default;
+            where_index_iterator& operator=(const where_index_iterator&) = default;
 
-    //// Filters an enumerable based on a predicate.
-    //template <typename Pred>
-    //constexpr auto where_index(Pred&& pred)
-    //{
-    //    return [&](auto e) {
-    //        using Eter = decltype(e.enumerator());
-    //        return enumerable(impl::where_index_enumerator<Eter, Pred>(e.enumerator(), std::forward<Pred>(pred)));
-    //    };
-    //}
+            reference operator*() const noexcept { return *m_begin; }
 
-    //namespace impl
-    //{
-    //    template <typename Eter, typename Selector>
-    //    class select_enumerator
-    //    {
-    //    private:
-    //        Eter m_eter;
-    //        Selector m_selector;
+            constexpr where_index_iterator& operator++()
+            {
+                ++m_begin;
+                ++m_index;
+                move_next();
+                return *this;
+            }
+        };
+    } // namespace impl
 
-    //    public:
-    //        constexpr select_enumerator(Eter&& eter, Selector&& selector) : m_eter(std::forward<Eter>(eter)), m_selector(selector) {}
+    // Filters an enumerable based on a predicate.
+    template <typename Pred>
+    constexpr auto where_index(Pred&& pred)
+    {
+        return [&](auto&& container) {
+            using It = decltype(std::begin(container));
+            return impl::iterable<impl::where_index_iterator<It, Pred>>{ impl::where_index_iterator<It, Pred>{ std::begin(container), std::end(container), std::forward<Pred>(pred) } };
+        };
+    }
 
-    //        constexpr operator bool() const { return m_eter; }
-    //        constexpr select_enumerator& operator++()
-    //        {
-    //            ++m_eter;
-    //            return *this;
-    //        }
-    //        constexpr decltype(auto) operator*() { return m_selector(*m_eter); }
-    //    };
-    //} // namespace impl
+    namespace impl
+    {
+        template <typename It, typename Selector>
+        class select_iterator : public iterator_base<select_iterator<It, Selector>>
+        {
+        private:
+            It m_begin{}, m_end{};
+            std::shared_ptr<Selector> m_selector{};
 
-    //// Projects each element into a new form.
-    //template <typename Selector>
-    //constexpr auto select(Selector&& selector)
-    //{
-    //    return [&](auto e) {
-    //        using Eter = decltype(e.enumerator());
-    //        return enumerable(impl::select_enumerator<Eter, Selector>(e.enumerator(), std::forward<Selector>(selector)));
-    //    };
-    //}
+            using result_type = std::remove_cv_t<decltype(std::declval<Selector>()(std::declval<typename std::iterator_traits<It>::reference>()))>;
 
-    //namespace impl
-    //{
-    //    template <typename Eter, typename Selector>
-    //    class select_index_enumerator
-    //    {
-    //    private:
-    //        Eter m_eter;
-    //        Selector m_selector;
-    //        std::size_t m_index;
+            std::optional<result_type> m_result{};
 
-    //    public:
-    //        constexpr select_index_enumerator(Eter&& eter, Selector&& selector) : m_eter(std::forward<Eter>(eter)), m_selector(selector), m_index(0) {}
+            void set_result()
+            {
+                if (m_begin == m_end)
+                {
+                    m_result = std::nullopt;
+                    this->m_valid = false;
+                }
+                else
+                    m_result = (*m_selector)(*m_begin);
+            }
 
-    //        constexpr operator bool() const { return m_eter; }
-    //        constexpr select_index_enumerator& operator++()
-    //        {
-    //            ++m_eter;
-    //            ++m_index;
-    //            return *this;
-    //        }
-    //        constexpr decltype(auto) operator*() { return m_selector(*m_eter, m_index); }
-    //    };
-    //} // namespace impl
+        public:
+            using iterator_category = std::input_iterator_tag;
+            using value_type = result_type;
+            using difference_type = typename std::iterator_traits<It>::difference_type;
+            using pointer = const result_type*;
+            using reference = const result_type&;
 
-    //// Projects each element into a new form.
-    //template <typename Selector>
-    //constexpr auto select_index(Selector&& selector)
-    //{
-    //    return [&](auto e) {
-    //        using Eter = decltype(e.enumerator());
-    //        return enumerable(impl::select_index_enumerator<Eter, Selector>(e.enumerator(), std::forward<Selector>(selector)));
-    //    };
-    //}
+            select_iterator() {}
+            select_iterator(It begin, It end, Selector selector)
+                : iterator_base<select_iterator>(true), m_begin(begin), m_end(end),
+                  m_selector(std::make_shared<Selector>(std::move(selector))) { set_result(); }
+            select_iterator(const select_iterator&) = default;
+            select_iterator& operator=(const select_iterator&) = default;
 
-    //namespace impl
-    //{
-    //    template <typename Eter, typename Eter2, typename CSelector, typename RSelector>
-    //    class select_many_enumerator
-    //    {
-    //    private:
-    //        Eter m_eter;
-    //        std::optional<remove_cref<decltype(*m_eter)>> m_eter_value;
-    //        std::optional<Eter2> m_eter2;
-    //        CSelector m_cselector;
-    //        RSelector m_rselector;
+            reference operator*() const noexcept { return *m_result; }
 
-    //        constexpr void move_next()
-    //        {
-    //            if (m_eter)
-    //            {
-    //                // Use emplace to prevent an operator= bug of optional.
-    //                m_eter_value.emplace(*m_eter);
-    //                m_eter2.emplace(get_enumerator(m_cselector(*m_eter_value)));
-    //                ++m_eter;
-    //            }
-    //            else
-    //            {
-    //                m_eter2 = std::nullopt;
-    //            }
-    //        }
+            constexpr select_iterator& operator++()
+            {
+                ++m_begin;
+                set_result();
+                return *this;
+            }
+        };
+    } // namespace impl
 
-    //    public:
-    //        constexpr select_many_enumerator(Eter&& eter, CSelector&& cselector, RSelector&& rselector)
-    //            : m_eter(std::forward<Eter>(eter)), m_cselector(cselector), m_rselector(rselector)
-    //        {
-    //            move_next();
-    //        }
+    // Projects each element into a new form.
+    template <typename Selector>
+    constexpr auto select(Selector&& selector)
+    {
+        return [&](auto&& container) {
+            using It = decltype(std::begin(container));
+            return impl::iterable<impl::select_iterator<It, Selector>>{ impl::select_iterator<It, Selector>{ std::begin(container), std::end(container), std::forward<Selector>(selector) } };
+        };
+    }
 
-    //        constexpr operator bool() const { return *m_eter2 || m_eter; }
-    //        constexpr select_many_enumerator& operator++()
-    //        {
-    //            ++*m_eter2;
-    //            if (!*m_eter2)
-    //            {
-    //                move_next();
-    //            }
-    //            return *this;
-    //        }
-    //        constexpr decltype(auto) operator*() { return m_rselector(*m_eter_value, **m_eter2); }
-    //    };
-    //} // namespace impl
+    namespace impl
+    {
+        template <typename It, typename Selector>
+        class select_index_iterator : public iterator_base<select_index_iterator<It, Selector>>
+        {
+        private:
+            It m_begin{}, m_end{};
+            std::shared_ptr<Selector> m_selector{};
+            std::size_t m_index{ 0 };
 
-    //// Projects each element, flattens the resulting sequences into one sequence, and invokes a result selector function on each element therein.
-    //template <typename CSelector, typename RSelector>
-    //constexpr auto select_many(CSelector&& cselector, RSelector&& rselector)
-    //{
-    //    return [&](auto e) {
-    //        using Eter = decltype(e.enumerator());
-    //        using Eter2 = decltype(get_enumerator(cselector(*e.enumerator())));
-    //        return enumerable(impl::select_many_enumerator<Eter, Eter2, CSelector, RSelector>(e.enumerator(), std::forward<CSelector>(cselector), std::forward<RSelector>(rselector)));
-    //    };
-    //}
+            using result_type = std::remove_cv_t<decltype(std::declval<Selector>()(std::declval<typename std::iterator_traits<It>::reference>(), m_index))>;
+
+            std::optional<result_type> m_result{};
+
+            void set_result()
+            {
+                if (m_begin == m_end)
+                {
+                    m_result = std::nullopt;
+                    this->m_valid = false;
+                }
+                else
+                    m_result = (*m_selector)(*m_begin, m_index);
+            }
+
+        public:
+            using iterator_category = std::input_iterator_tag;
+            using value_type = result_type;
+            using difference_type = typename std::iterator_traits<It>::difference_type;
+            using pointer = const result_type*;
+            using reference = const result_type&;
+
+            select_index_iterator() {}
+            select_index_iterator(It begin, It end, Selector selector)
+                : iterator_base<select_index_iterator>(true), m_begin(begin), m_end(end),
+                  m_selector(std::make_shared<Selector>(std::move(selector))) { set_result(); }
+            select_index_iterator(const select_index_iterator&) = default;
+            select_index_iterator& operator=(const select_index_iterator&) = default;
+
+            reference operator*() const noexcept { return *m_result; }
+
+            constexpr select_index_iterator& operator++()
+            {
+                ++m_begin;
+                ++m_index;
+                set_result();
+                return *this;
+            }
+        };
+    } // namespace impl
+
+    // Projects each element into a new form.
+    template <typename Selector>
+    constexpr auto select_index(Selector&& selector)
+    {
+        return [&](auto&& container) {
+            using It = decltype(std::begin(container));
+            return impl::iterable<impl::select_index_iterator<It, Selector>>{ impl::select_index_iterator<It, Selector>{ std::begin(container), std::end(container), std::forward<Selector>(selector) } };
+        };
+    }
+
+    namespace impl
+    {
+        template <typename It1, typename It2, typename CSelector, typename RSelector>
+        class select_many_iterator : public iterator_base<select_many_iterator<It1, It2, CSelector, RSelector>>
+        {
+        private:
+            It1 m_begin1{}, m_end1{};
+            It2 m_begin2{}, m_end2{};
+            std::shared_ptr<CSelector> m_cselector{};
+            std::shared_ptr<RSelector> m_rselector{};
+
+            using container_type = std::remove_reference_t<decltype((*m_cselector)(*m_begin1))>;
+            std::shared_ptr<container_type> m_container{};
+
+            using result1_type = typename std::iterator_traits<It1>::pointer;
+            result1_type m_result1{};
+            using result_type = decltype((*m_rselector)(*m_result1, *m_begin2));
+            std::optional<result_type> m_result{};
+
+            void set_container()
+            {
+                if (m_begin1 != m_end1)
+                {
+                    m_result1 = &*m_begin1;
+                    m_container = std::make_shared<container_type>((*m_cselector)(*m_result1));
+                    m_begin2 = std::begin(*m_container);
+                    m_end2 = std::end(*m_container);
+                }
+                else
+                {
+                    m_container = nullptr;
+                    this->m_valid = false;
+                }
+            }
+
+            void set_result()
+            {
+                if (this->m_valid)
+                    m_result.emplace((*m_rselector)(*m_result1, *m_begin2));
+            }
+
+        public:
+            using iterator_category = std::input_iterator_tag;
+            using value_type = result_type;
+            using difference_type = typename std::iterator_traits<It2>::difference_type;
+            using pointer = const result_type*;
+            using reference = const result_type&;
+
+            select_many_iterator() {}
+            select_many_iterator(It1 begin, It1 end, CSelector cselector, RSelector rselector)
+                : iterator_base<select_many_iterator>(true), m_begin1(begin), m_end1(end),
+                  m_cselector(std::make_shared<CSelector>(std::move(cselector))), m_rselector(std::make_shared<RSelector>(std::move(rselector)))
+            {
+                set_container();
+                set_result();
+            }
+            select_many_iterator(const select_many_iterator& it) { *this = it; }
+            select_many_iterator& operator=(const select_many_iterator& it) = default;
+
+            reference operator*() const noexcept { return *m_result; }
+
+            constexpr select_many_iterator& operator++()
+            {
+                ++m_begin2;
+                if (m_begin2 == m_end2)
+                {
+                    ++m_begin1;
+                    set_container();
+                }
+                set_result();
+                return *this;
+            }
+        };
+    } // namespace impl
+
+    // Projects each element, flattens the resulting sequences into one sequence, and invokes a result selector function on each element therein.
+    template <typename CSelector, typename RSelector>
+    constexpr auto select_many(CSelector&& cselector, RSelector&& rselector)
+    {
+        return [&](auto&& container) {
+            using It1 = decltype(std::begin(container));
+            using It2 = decltype(std::begin(cselector(*std::begin(container))));
+            return impl::iterable<impl::select_many_iterator<It1, It2, CSelector, RSelector>>{ impl::select_many_iterator<It1, It2, CSelector, RSelector>{ std::begin(container), std::end(container), std::forward<CSelector>(cselector), std::forward<RSelector>(rselector) } };
+        };
+    }
 
     //namespace impl
     //{

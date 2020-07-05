@@ -27,12 +27,14 @@
 #define LINQ_CORE_HPP
 
 #include <iterator>
+#include <memory>
 #include <optional>
 
 namespace linq
 {
     namespace impl
     {
+        template <typename D>
         class iterator_base
         {
         protected:
@@ -43,9 +45,22 @@ namespace linq
             iterator_base(const iterator_base&) noexcept = default;
             iterator_base& operator=(const iterator_base&) noexcept = default;
 
-            void swap(iterator_base& it) noexcept { std::swap(m_valid, it.m_valid); }
+            decltype(auto) operator->() const noexcept(noexcept(&static_cast<const D*>(this)->operator*())) { return &static_cast<const D*>(this)->operator*(); }
 
             constexpr operator bool() const noexcept { return m_valid; }
+
+            bool operator==(const D& it) const
+            {
+                return this == &it || (!m_valid && !it.m_valid);
+            }
+            bool operator!=(const D& it) const { return !operator==(it); }
+
+            D operator++(int)
+            {
+                D it = *static_cast<D*>(this);
+                static_cast<D*>(this)->operator++();
+                return it;
+            }
         };
 
         template <typename It>
@@ -81,61 +96,32 @@ namespace linq
         };
 
         template <typename T, typename Func>
-        class range_iterator : public iterator_base
+        class range_iterator : public iterator_base<range_iterator<T, Func>>
         {
         private:
-            T m_current, m_end;
-            std::optional<Func> m_func;
+            T m_current{}, m_end{};
+            std::shared_ptr<Func> m_func{};
 
         public:
             using iterator_category = std::input_iterator_tag;
-            using value_type = T;
-            using difference_type = std::intptr_t;
-            using pointer = const T*;
-            using reference = const T&;
+            using value_type = typename std::iterator_traits<T*>::value_type;
+            using difference_type = typename std::iterator_traits<T*>::difference_type;
+            using pointer = const value_type*;
+            using reference = const value_type&;
 
-            constexpr range_iterator() noexcept(std::is_nothrow_constructible_v<T>&& std::is_nothrow_constructible_v<Func>)
-                : m_current(), m_end(), m_func(std::nullopt) {}
+            constexpr range_iterator() noexcept(std::is_nothrow_constructible_v<T>&& std::is_nothrow_constructible_v<Func>) {}
             constexpr range_iterator(T begin, T end, Func func) noexcept(std::is_nothrow_move_constructible_v<T>&& std::is_nothrow_move_constructible_v<Func>)
-                : iterator_base(true), m_current(std::move(begin)), m_end(std::move(end)), m_func(std::move(func)) {}
+                : iterator_base<range_iterator>(true), m_current(std::move(begin)), m_end(std::move(end)), m_func(std::make_shared<Func>(std::move(func))) {}
             range_iterator(const range_iterator&) noexcept(std::is_nothrow_copy_constructible_v<T>&& std::is_nothrow_copy_constructible_v<Func>) = default;
             range_iterator& operator=(const range_iterator&) noexcept(std::is_nothrow_copy_assignable_v<T>&& std::is_nothrow_copy_assignable_v<Func>) = default;
 
-            void swap(range_iterator& it) noexcept(std::is_nothrow_swappable_v<T>&& std::is_nothrow_swappable_v<Func>)
-            {
-                iterator_base::swap(it);
-                std::swap(m_current, it.m_current);
-                std::swap(m_end, it.m_end);
-                std::swap(m_func, it.m_func);
-            }
-
             reference operator*() const noexcept { return m_current; }
-            pointer operator->() const noexcept { return &m_current; }
-
-            constexpr bool operator==(const range_iterator& it) const noexcept
-            {
-                if (this->m_valid && it.m_valid)
-                {
-                    return m_current == it.m_current && m_end == it.m_end;
-                }
-                else
-                {
-                    return !this->m_valid && !it.m_valid;
-                }
-            }
-            constexpr bool operator!=(const range_iterator& it) const noexcept { return !(*this == it); }
 
             constexpr range_iterator& operator++()
             {
                 m_current = (*m_func)(m_current);
                 if (m_current >= m_end) this->m_valid = false;
                 return *this;
-            }
-            range_iterator operator++(int)
-            {
-                range_iterator it = *this;
-                operator++();
-                return it;
             }
         };
     } // namespace impl
@@ -149,71 +135,32 @@ namespace linq
     namespace impl
     {
         template <typename T>
-        class repeat_iterator : public iterator_base
+        class repeat_iterator : public iterator_base<repeat_iterator<T>>
         {
         private:
-            T m_value;
-            std::size_t m_count;
+            std::optional<T> m_value{};
+            std::size_t m_count{ 0 };
 
         public:
-            using iterator_category = std::bidirectional_iterator_tag;
-            using value_type = T;
-            using difference_type = std::intptr_t;
-            using pointer = const T*;
-            using reference = const T&;
+            using iterator_category = std::input_iterator_tag;
+            using value_type = typename std::iterator_traits<T*>::value_type;
+            using difference_type = typename std::iterator_traits<T*>::difference_type;
+            using pointer = const value_type*;
+            using reference = const value_type&;
 
-            constexpr repeat_iterator() noexcept(std::is_nothrow_constructible_v<T>) : m_value(), m_count(0) {}
+            constexpr repeat_iterator() noexcept(std::is_nothrow_constructible_v<T>) {}
             constexpr repeat_iterator(T value, std::size_t count) noexcept(std::is_nothrow_move_constructible_v<T>)
-                : iterator_base(true), m_value(std::move(value)), m_count(count) {}
+                : iterator_base<repeat_iterator>(true), m_value(std::move(value)), m_count(count) {}
             repeat_iterator(const repeat_iterator&) = default;
             repeat_iterator& operator=(const repeat_iterator&) = default;
 
-            void swap(repeat_iterator& it) noexcept(std::is_nothrow_swappable_v<T>)
-            {
-                iterator_base::swap(it);
-                std::swap(m_value, it.m_value);
-                std::swap(m_count, it.m_count);
-            }
-
-            reference operator*() const noexcept { return m_value; }
-            pointer operator->() const noexcept { return &m_value; }
-
-            constexpr bool operator==(const repeat_iterator& it) const noexcept
-            {
-                if (this->m_valid && it.m_valid)
-                {
-                    return m_value == it.m_value && m_count == it.m_count;
-                }
-                else
-                {
-                    return !this->m_valid && !it.m_valid;
-                }
-            }
-            constexpr bool operator!=(const repeat_iterator& it) const noexcept { return !(*this == it); }
+            reference operator*() const noexcept { return *m_value; }
 
             constexpr repeat_iterator& operator++()
             {
                 --m_count;
                 if (m_count == 0) this->m_valid = false;
                 return *this;
-            }
-            repeat_iterator operator++(int)
-            {
-                repeat_iterator it = *this;
-                operator++();
-                return it;
-            }
-
-            constexpr repeat_iterator& operator--()
-            {
-                ++m_count;
-                return *this;
-            }
-            repeat_iterator operator--(int)
-            {
-                repeat_iterator it = *this;
-                operator--();
-                return it;
             }
         };
     } // namespace impl
@@ -227,31 +174,23 @@ namespace linq
     namespace impl
     {
         template <typename T, typename It>
-        class append_iterator : public iterator_base
+        class append_iterator : public iterator_base<append_iterator<T, It>>
         {
         private:
-            std::optional<T> m_value;
-            It m_begin, m_end;
+            std::optional<T> m_value{};
+            It m_begin{}, m_end{};
 
         public:
             using iterator_category = std::input_iterator_tag;
-            using value_type = T;
-            using difference_type = std::intptr_t;
-            using pointer = const T*;
-            using reference = const T&;
+            using value_type = std::common_type_t<T, typename std::iterator_traits<It>::value_type>;
+            using difference_type = std::ptrdiff_t;
+            using pointer = const value_type*;
+            using reference = const value_type&;
 
-            constexpr append_iterator() : m_value(std::nullopt), m_begin(), m_end() {}
-            constexpr append_iterator(T value, It begin, It end) : iterator_base(true), m_value(std::move(value)), m_begin(begin), m_end(end) {}
+            constexpr append_iterator() {}
+            constexpr append_iterator(T value, It begin, It end) : iterator_base<append_iterator>(true), m_value(std::move(value)), m_begin(begin), m_end(end) {}
             append_iterator(const append_iterator&) = default;
             append_iterator& operator=(const append_iterator&) = default;
-
-            void swap(append_iterator& it)
-            {
-                iterator_base::swap(it);
-                std::swap(m_value, it.m_value);
-                std::swap(m_begin, it.m_begin);
-                std::swap(m_end, it.m_end);
-            }
 
             reference operator*() const noexcept
             {
@@ -260,20 +199,6 @@ namespace linq
                 else
                     return *m_value;
             }
-            pointer operator->() const noexcept { return &operator*(); }
-
-            constexpr bool operator==(const append_iterator& it) const noexcept
-            {
-                if (this->m_valid && it.m_valid)
-                {
-                    return m_value == it.m_value && m_begin == it.m_begin && m_end == it.m_end;
-                }
-                else
-                {
-                    return !this->m_valid && !it.m_valid;
-                }
-            }
-            constexpr bool operator!=(const append_iterator& it) const noexcept { return !(*this == it); }
 
             constexpr append_iterator& operator++()
             {
@@ -282,12 +207,6 @@ namespace linq
                 else
                     this->m_valid = false;
                 return *this;
-            }
-            append_iterator operator++(int)
-            {
-                append_iterator it = *this;
-                operator++();
-                return it;
             }
         };
     } // namespace impl
@@ -305,31 +224,23 @@ namespace linq
     namespace impl
     {
         template <typename T, typename It>
-        class prepend_iterator : public iterator_base
+        class prepend_iterator : public iterator_base<prepend_iterator<T, It>>
         {
         private:
-            std::optional<T> m_value;
-            It m_begin, m_end;
+            std::optional<T> m_value{};
+            It m_begin{}, m_end{};
 
         public:
             using iterator_category = std::input_iterator_tag;
-            using value_type = T;
-            using difference_type = std::intptr_t;
-            using pointer = const T*;
-            using reference = const T&;
+            using value_type = std::common_type_t<T, typename std::iterator_traits<It>::value_type>;
+            using difference_type = std::ptrdiff_t;
+            using pointer = const value_type*;
+            using reference = const value_type&;
 
-            constexpr prepend_iterator() : m_value(std::nullopt), m_begin(), m_end() {}
-            constexpr prepend_iterator(T value, It begin, It end) : iterator_base(true), m_value(std::move(value)), m_begin(begin), m_end(end) {}
+            constexpr prepend_iterator() {}
+            constexpr prepend_iterator(T value, It begin, It end) : iterator_base<prepend_iterator>(true), m_value(std::move(value)), m_begin(begin), m_end(end) {}
             prepend_iterator(const prepend_iterator&) = default;
             prepend_iterator& operator=(const prepend_iterator&) = default;
-
-            void swap(prepend_iterator& it)
-            {
-                iterator_base::swap(it);
-                std::swap(m_value, it.m_value);
-                std::swap(m_begin, it.m_begin);
-                std::swap(m_end, it.m_end);
-            }
 
             reference operator*() const noexcept
             {
@@ -338,20 +249,6 @@ namespace linq
                 else
                     return *m_begin;
             }
-            pointer operator->() const noexcept { return &operator*(); }
-
-            constexpr bool operator==(const prepend_iterator& it) const noexcept
-            {
-                if (this->m_valid && it.m_valid)
-                {
-                    return m_value == it.m_value && m_begin == it.m_begin && m_end == it.m_end;
-                }
-                else
-                {
-                    return !this->m_valid && !it.m_valid;
-                }
-            }
-            constexpr bool operator!=(const prepend_iterator& it) const noexcept { return !(*this == it); }
 
             constexpr prepend_iterator& operator++()
             {
@@ -363,12 +260,6 @@ namespace linq
                     if (m_begin == m_end) this->m_valid = false;
                 }
                 return *this;
-            }
-            prepend_iterator operator++(int)
-            {
-                prepend_iterator it = *this;
-                operator++();
-                return it;
             }
         };
     } // namespace impl
@@ -386,33 +277,24 @@ namespace linq
     namespace impl
     {
         template <typename It1, typename It2>
-        class concat_iterator : public iterator_base
+        class concat_iterator : public iterator_base<concat_iterator<It1, It2>>
         {
         private:
-            It1 m_begin1, m_end1;
-            It2 m_begin2, m_end2;
+            It1 m_begin1{}, m_end1{};
+            It2 m_begin2{}, m_end2{};
 
         public:
             using iterator_category = std::input_iterator_tag;
-            using value_type = std::common_type_t<std::remove_reference_t<decltype(*std::declval<It1>())>, std::remove_reference_t<decltype(*std::declval<It2>())>>;
-            using difference_type = std::intptr_t;
+            using value_type = std::common_type_t<typename std::iterator_traits<It1>::value_type, typename std::iterator_traits<It2>::value_type>;
+            using difference_type = std::ptrdiff_t;
             using pointer = const value_type*;
             using reference = const value_type&;
 
-            concat_iterator() : m_begin1(), m_end1(), m_begin2(), m_end2() {}
+            concat_iterator() {}
             concat_iterator(It1 begin1, It1 end1, It2 begin2, It2 end2)
-                : iterator_base(true), m_begin1(begin1), m_end1(end1), m_begin2(begin2), m_end2(end2) {}
+                : iterator_base<concat_iterator>(true), m_begin1(begin1), m_end1(end1), m_begin2(begin2), m_end2(end2) {}
             concat_iterator(const concat_iterator&) = default;
             concat_iterator& operator=(const concat_iterator&) = default;
-
-            void swap(concat_iterator& it)
-            {
-                iterator_base::swap(it);
-                std::swap(m_begin1, it.m_begin1);
-                std::swap(m_end1, it.m_end1);
-                std::swap(m_begin2, it.m_begin2);
-                std::swap(m_end2, it.m_end2);
-            }
 
             reference operator*() const noexcept
             {
@@ -421,20 +303,6 @@ namespace linq
                 else
                     return *m_begin2;
             }
-            pointer operator->() const noexcept { return &operator*(); }
-
-            constexpr bool operator==(const concat_iterator& it) const noexcept
-            {
-                if (this->m_valid && it.m_valid)
-                {
-                    return m_begin1 == it.m_begin1 && m_end1 == it.m_end1 && m_begin2 == it.m_begin2 && m_end2 == it.m_end2;
-                }
-                else
-                {
-                    return !this->m_valid && !it.m_valid;
-                }
-            }
-            constexpr bool operator!=(const concat_iterator& it) const noexcept { return !(*this == it); }
 
             constexpr concat_iterator& operator++()
             {
@@ -446,12 +314,6 @@ namespace linq
                     if (m_begin2 == m_end2) this->m_valid = false;
                 }
                 return *this;
-            }
-            concat_iterator operator++(int)
-            {
-                concat_iterator it = *this;
-                operator++();
-                return it;
             }
         };
     } // namespace impl
