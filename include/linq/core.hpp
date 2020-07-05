@@ -33,259 +33,262 @@ namespace linq
 {
     namespace impl
     {
-        // An enumerator for an STL container.
-        // Like IEnumerator in .NET.
-        // To enumerate an enumerator named eter, do:
-        // for( ; eter; ++eter)
-        // {
-        //     // Do with *eter
-        // }
-        template <typename Container, typename Iter = decltype(std::begin(std::declval<Container>()))>
-        class enumerator
+        class iterator_base
         {
-        private:
-            Container m_container;
-            Iter m_begin, m_end;
+        protected:
+            bool m_valid;
 
         public:
-            constexpr enumerator(Container&& container) : m_container(std::forward<Container>(container)), m_begin(std::begin(m_container)), m_end(std::end(m_container)) {}
+            constexpr iterator_base(bool valid = false) noexcept : m_valid(valid) {}
+            iterator_base(const iterator_base&) noexcept = default;
+            iterator_base& operator=(const iterator_base&) noexcept = default;
 
-            constexpr Container container() { return m_container; }
+            void swap(iterator_base& it) noexcept { std::swap(m_valid, it.m_valid); }
 
-            constexpr operator bool() const { return m_begin != m_end; }
-            constexpr enumerator& operator++()
-            {
-                ++m_begin;
-                return *this;
-            }
-            constexpr decltype(auto) operator*() { return *m_begin; }
+            constexpr operator bool() const noexcept { return m_valid; }
         };
 
-        template <typename Iter>
-        class iter_enumerator
+        template <typename It>
+        class iterable
         {
         private:
-            Iter m_begin, m_end;
+            It m_begin, m_end;
 
         public:
-            constexpr iter_enumerator(Iter&& begin, Iter&& end) : m_begin(begin), m_end(end) {}
-
-            constexpr operator bool() const { return m_begin != m_end; }
-            constexpr iter_enumerator& operator++()
+            iterable() noexcept(std::is_nothrow_constructible_v<It>) : m_begin(), m_end() {}
+            iterable(It&& begin) noexcept(std::is_nothrow_move_constructible_v<It>&& std::is_nothrow_constructible_v<It>)
+                : m_begin(std::move(begin)), m_end()
             {
-                ++m_begin;
-                return *this;
             }
-            constexpr decltype(auto) operator*() { return *m_begin; }
+
+            It begin() const noexcept(std::is_nothrow_copy_constructible_v<It>) { return m_begin; }
+            It end() const noexcept(std::is_nothrow_copy_constructible_v<It>) { return m_end; }
         };
     } // namespace impl
 
-    // An STL iterator adapter for enumerator-like class.
-    template <typename Eter>
-    class enumerator_iterator
+    template <typename Container, typename Query, typename = decltype(std::begin(std::declval<Container>())), typename = decltype(std::end(std::declval<Container>()))>
+    constexpr decltype(auto) operator>>(Container&& container, Query&& query)
     {
-    private:
-        std::optional<Eter> m_eter;
-
-    public:
-        using iterator_category = std::input_iterator_tag;
-        using value_type = decltype(**m_eter);
-        using difference_type = std::ptrdiff_t;
-        using pointer = std::remove_reference_t<value_type>*;
-        using reference = std::remove_reference_t<value_type>&;
-
-        constexpr enumerator_iterator() : m_eter(std::nullopt) {}
-        constexpr enumerator_iterator(Eter&& eter) : m_eter(std::forward<Eter>(eter)) {}
-
-        constexpr Eter enumerator() { return *m_eter; }
-
-        constexpr decltype(auto) operator*() { return *(*m_eter); }
-        constexpr enumerator_iterator& operator++()
-        {
-            ++(*m_eter);
-            return *this;
-        }
-
-        friend constexpr bool operator==(const enumerator_iterator& it1, const enumerator_iterator& it2) { return !operator!=(it1, it2); }
-        friend constexpr bool operator!=(const enumerator_iterator& it1, const enumerator_iterator& it2) { return (it1.m_eter && *it1.m_eter) || (it2.m_eter && *it2.m_eter); }
-    };
-
-    // An STL container adapter for enumerator-like class.
-    template <typename Eter>
-    class enumerable
-    {
-    private:
-        enumerator_iterator<Eter> m_iter;
-
-    public:
-        constexpr Eter enumerator() { return m_iter.enumerator(); }
-
-        constexpr enumerator_iterator<Eter>& begin() { return m_iter; }
-        constexpr auto end() { return enumerator_iterator<Eter>(); }
-
-        constexpr enumerable() = default;
-
-        constexpr enumerable(Eter&& eter) : m_iter(std::forward<Eter>(eter)) {}
-    };
-
-    // SFINAE
-    template <typename T, typename = void>
-    inline constexpr bool is_enumerable_v{ false };
-
-    template <typename T>
-    inline constexpr bool is_enumerable_v<T, std::void_t<decltype(std::declval<T>().enumerator())>>{ true };
-
-    template <typename T, typename = void>
-    inline constexpr bool is_enumerable_or_container_v{ is_enumerable_v<T> };
-
-    template <typename T>
-    inline constexpr bool is_enumerable_or_container_v<T, std::void_t<decltype(std::begin(std::declval<T>()))>>{ true };
-
-    template <typename T>
-    using remove_cref = std::remove_const_t<std::remove_reference_t<T>>;
-
-    // Help functions for enumerator and enumerable.
-    template <typename Enumerable, typename = std::enable_if_t<is_enumerable_v<Enumerable>>>
-    constexpr decltype(auto) get_enumerator(Enumerable&& e)
-    {
-        return e.enumerator();
-    }
-
-    template <typename Container, typename = std::enable_if_t<!is_enumerable_v<Container>>, typename = decltype(std::begin(std::declval<Container>())), typename = decltype(std::end(std::declval<Container>()))>
-    constexpr decltype(auto) get_enumerator(Container&& c)
-    {
-        return impl::enumerator<Container>(std::forward<Container>(c));
-    }
-
-    template <typename Container>
-    constexpr auto get_enumerable(Container&& container)
-    {
-        return enumerable(get_enumerator(std::forward<Container>(container)));
-    }
-
-    template <typename Iter>
-    constexpr auto get_enumerable(Iter&& begin, Iter&& end)
-    {
-        return enumerable(impl::iter_enumerator(std::forward<Iter>(begin), std::forward<Iter>(end)));
-    }
-
-    // Combine enumerable and query lambdas.
-    template <typename Enumerable, typename Query, typename = std::enable_if_t<is_enumerable_v<Enumerable>>>
-    constexpr decltype(auto) operator>>(Enumerable&& e, Query&& q)
-    {
-        return std::forward<Query>(q)(std::forward<Enumerable>(e));
-    }
-
-    template <typename Container, typename Query, typename = std::enable_if_t<!is_enumerable_v<Container>>, typename = decltype(std::begin(std::declval<Container>())), typename = decltype(std::end(std::declval<Container>()))>
-    constexpr decltype(auto) operator>>(Container&& c, Query&& q)
-    {
-        return std::forward<Query>(q)(get_enumerable(std::forward<Container>(c)));
-    }
-
-    namespace impl
-    {
-        template <typename Int>
-        class range_enumerator
-        {
-        private:
-            Int m_begin, m_end;
-
-        public:
-            constexpr range_enumerator(Int&& begin, Int&& end) : m_begin(begin), m_end(end) {}
-
-            constexpr operator bool() const { return m_begin != m_end; }
-            constexpr range_enumerator& operator++()
-            {
-                ++m_begin;
-                return *this;
-            }
-            constexpr Int operator*() { return m_begin; }
-        };
-
-        template <typename Int, typename Func>
-        class range_step_enumerator
-        {
-        private:
-            Int m_begin, m_end;
-            Func m_func;
-
-        public:
-            constexpr range_step_enumerator(Int&& begin, Int&& end, Func&& func) : m_begin(begin), m_end(end), m_func(func) {}
-
-            constexpr operator bool() const { return m_begin != m_end; }
-            constexpr range_step_enumerator& operator++()
-            {
-                m_begin = m_func(m_begin);
-                return *this;
-            }
-            constexpr Int operator*() { return m_begin; }
-        };
-    } // namespace impl
-
-    // Ranges an interger in [begin, end).
-    template <typename Int>
-    constexpr auto range(Int begin, Int end)
-    {
-        return enumerable(impl::range_enumerator<Int>(std::move(begin), std::move(end)));
-    }
-
-    template <typename Int, typename Func>
-    constexpr auto range(Int begin, Int end, Func&& func)
-    {
-        return enumerable(impl::range_step_enumerator<Int, Func>(std::move(begin), std::move(end), std::forward<Func>(func)));
+        return std::forward<Query>(query)(std::forward<Container>(container));
     }
 
     namespace impl
     {
         template <typename T>
-        class repeat_enumerator
+        struct increase
+        {
+            constexpr T operator()(T value) noexcept(noexcept(++value)) { return ++value; }
+        };
+
+        template <typename T, typename Func>
+        class range_iterator : public iterator_base
         {
         private:
-            T m_element;
-            std::size_t m_num;
+            T m_current, m_end;
+            std::optional<Func> m_func;
 
         public:
-            repeat_enumerator(T&& element, std::size_t num) : m_element(std::forward<T>(element)), m_num(num) {}
+            using iterator_category = std::input_iterator_tag;
+            using value_type = T;
+            using difference_type = std::intptr_t;
+            using pointer = const T*;
+            using reference = const T&;
 
-            constexpr operator bool() const { return m_num; }
-            constexpr repeat_enumerator& operator++()
+            constexpr range_iterator() noexcept(std::is_nothrow_constructible_v<T>&& std::is_nothrow_constructible_v<Func>)
+                : m_current(), m_end(), m_func(std::nullopt) {}
+            constexpr range_iterator(T begin, T end, Func func) noexcept(std::is_nothrow_move_constructible_v<T>&& std::is_nothrow_move_constructible_v<Func>)
+                : iterator_base(true), m_current(std::move(begin)), m_end(std::move(end)), m_func(std::move(func)) {}
+            range_iterator(const range_iterator&) noexcept(std::is_nothrow_copy_constructible_v<T>&& std::is_nothrow_copy_constructible_v<Func>) = default;
+            range_iterator& operator=(const range_iterator&) noexcept(std::is_nothrow_copy_assignable_v<T>&& std::is_nothrow_copy_assignable_v<Func>) = default;
+
+            void swap(range_iterator& it) noexcept(std::is_nothrow_swappable_v<T>&& std::is_nothrow_swappable_v<Func>)
             {
-                --m_num;
+                iterator_base::swap(it);
+                std::swap(m_current, it.m_current);
+                std::swap(m_end, it.m_end);
+                std::swap(m_func, it.m_func);
+            }
+
+            reference operator*() const noexcept { return m_current; }
+            pointer operator->() const noexcept { return &m_current; }
+
+            constexpr bool operator==(const range_iterator& it) const noexcept
+            {
+                if (this->m_valid && it.m_valid)
+                {
+                    return m_current == it.m_current && m_end == it.m_end;
+                }
+                else
+                {
+                    return !this->m_valid && !it.m_valid;
+                }
+            }
+            constexpr bool operator!=(const range_iterator& it) const noexcept { return !(*this == it); }
+
+            constexpr range_iterator& operator++()
+            {
+                m_current = (*m_func)(m_current);
+                if (m_current >= m_end) this->m_valid = false;
                 return *this;
             }
-            constexpr T operator*() { return m_element; }
+            range_iterator operator++(int)
+            {
+                range_iterator it = *this;
+                operator++();
+                return it;
+            }
         };
     } // namespace impl
 
-    // Repeats an element several times.
-    template <typename T>
-    constexpr auto repeat(T&& element, std::size_t num)
+    template <typename T, typename F = impl::increase<T>>
+    constexpr auto range(T begin, T end, F func = {})
     {
-        return enumerable(impl::repeat_enumerator<T>(std::forward<T>(element), num));
+        return impl::iterable<impl::range_iterator<T, F>>{ impl::range_iterator<T, F>{ std::move(begin), std::move(end), std::move(func) } };
     }
 
     namespace impl
     {
-        template <typename T, typename Eter>
-        class append_enumerator
+        template <typename T>
+        class repeat_iterator : public iterator_base
+        {
+        private:
+            T m_value;
+            std::size_t m_count;
+
+        public:
+            using iterator_category = std::bidirectional_iterator_tag;
+            using value_type = T;
+            using difference_type = std::intptr_t;
+            using pointer = const T*;
+            using reference = const T&;
+
+            constexpr repeat_iterator() noexcept(std::is_nothrow_constructible_v<T>) : m_value(), m_count(0) {}
+            constexpr repeat_iterator(T value, std::size_t count) noexcept(std::is_nothrow_move_constructible_v<T>)
+                : iterator_base(true), m_value(std::move(value)), m_count(count) {}
+            repeat_iterator(const repeat_iterator&) = default;
+            repeat_iterator& operator=(const repeat_iterator&) = default;
+
+            void swap(repeat_iterator& it) noexcept(std::is_nothrow_swappable_v<T>)
+            {
+                iterator_base::swap(it);
+                std::swap(m_value, it.m_value);
+                std::swap(m_count, it.m_count);
+            }
+
+            reference operator*() const noexcept { return m_value; }
+            pointer operator->() const noexcept { return &m_value; }
+
+            constexpr bool operator==(const repeat_iterator& it) const noexcept
+            {
+                if (this->m_valid && it.m_valid)
+                {
+                    return m_value == it.m_value && m_count == it.m_count;
+                }
+                else
+                {
+                    return !this->m_valid && !it.m_valid;
+                }
+            }
+            constexpr bool operator!=(const repeat_iterator& it) const noexcept { return !(*this == it); }
+
+            constexpr repeat_iterator& operator++()
+            {
+                --m_count;
+                if (m_count == 0) this->m_valid = false;
+                return *this;
+            }
+            repeat_iterator operator++(int)
+            {
+                repeat_iterator it = *this;
+                operator++();
+                return it;
+            }
+
+            constexpr repeat_iterator& operator--()
+            {
+                ++m_count;
+                return *this;
+            }
+            repeat_iterator operator--(int)
+            {
+                repeat_iterator it = *this;
+                operator--();
+                return it;
+            }
+        };
+    } // namespace impl
+
+    template <typename T>
+    constexpr auto repeat(T value, std::size_t count)
+    {
+        return impl::iterable<impl::repeat_iterator<T>>{ impl::repeat_iterator<T>(std::move(value), count) };
+    }
+
+    namespace impl
+    {
+        template <typename T, typename It>
+        class append_iterator : public iterator_base
         {
         private:
             std::optional<T> m_value;
-            Eter m_eter;
+            It m_begin, m_end;
 
         public:
-            constexpr append_enumerator(T&& value, Eter&& eter) : m_value(std::forward<T>(value)), m_eter(std::forward<Eter>(eter)) {}
+            using iterator_category = std::input_iterator_tag;
+            using value_type = T;
+            using difference_type = std::intptr_t;
+            using pointer = const T*;
+            using reference = const T&;
 
-            constexpr operator bool() const { return m_eter || m_value; }
-            constexpr append_enumerator& operator++()
+            constexpr append_iterator() : m_value(std::nullopt), m_begin(), m_end() {}
+            constexpr append_iterator(T value, It begin, It end) : iterator_base(true), m_value(std::move(value)), m_begin(begin), m_end(end) {}
+            append_iterator(const append_iterator&) = default;
+            append_iterator& operator=(const append_iterator&) = default;
+
+            void swap(append_iterator& it)
             {
-                if (m_eter)
-                    ++m_eter;
+                iterator_base::swap(it);
+                std::swap(m_value, it.m_value);
+                std::swap(m_begin, it.m_begin);
+                std::swap(m_end, it.m_end);
+            }
+
+            reference operator*() const noexcept
+            {
+                if (m_begin != m_end)
+                    return *m_begin;
                 else
-                    m_value = std::nullopt;
+                    return *m_value;
+            }
+            pointer operator->() const noexcept { return &operator*(); }
+
+            constexpr bool operator==(const append_iterator& it) const noexcept
+            {
+                if (this->m_valid && it.m_valid)
+                {
+                    return m_value == it.m_value && m_begin == it.m_begin && m_end == it.m_end;
+                }
+                else
+                {
+                    return !this->m_valid && !it.m_valid;
+                }
+            }
+            constexpr bool operator!=(const append_iterator& it) const noexcept { return !(*this == it); }
+
+            constexpr append_iterator& operator++()
+            {
+                if (m_begin != m_end)
+                    ++m_begin;
+                else
+                    this->m_valid = false;
                 return *this;
             }
-            constexpr decltype(auto) operator*() { return m_eter ? *m_eter : *m_value; }
+            append_iterator operator++(int)
+            {
+                append_iterator it = *this;
+                operator++();
+                return it;
+            }
         };
     } // namespace impl
 
@@ -293,34 +296,80 @@ namespace linq
     template <typename T>
     constexpr auto append(T&& value)
     {
-        return [&](auto e) {
-            using Eter = decltype(e.enumerator());
-            return enumerable(impl::append_enumerator<T, Eter>(std::forward<T>(value), e.enumerator()));
+        return [&](auto&& container) {
+            using It = decltype(std::begin(container));
+            return impl::iterable<impl::append_iterator<T, It>>{ impl::append_iterator<T, It>{ std::forward<T>(value), std::begin(container), std::end(container) } };
         };
     }
 
     namespace impl
     {
-        template <typename T, typename Eter>
-        class prepend_enumerator
+        template <typename T, typename It>
+        class prepend_iterator : public iterator_base
         {
         private:
             std::optional<T> m_value;
-            Eter m_eter;
+            It m_begin, m_end;
 
         public:
-            constexpr prepend_enumerator(T&& value, Eter&& eter) : m_value(std::forward<T>(value)), m_eter(std::forward<Eter>(eter)) {}
+            using iterator_category = std::input_iterator_tag;
+            using value_type = T;
+            using difference_type = std::intptr_t;
+            using pointer = const T*;
+            using reference = const T&;
 
-            constexpr operator bool() const { return m_value || m_eter; }
-            constexpr prepend_enumerator& operator++()
+            constexpr prepend_iterator() : m_value(std::nullopt), m_begin(), m_end() {}
+            constexpr prepend_iterator(T value, It begin, It end) : iterator_base(true), m_value(std::move(value)), m_begin(begin), m_end(end) {}
+            prepend_iterator(const prepend_iterator&) = default;
+            prepend_iterator& operator=(const prepend_iterator&) = default;
+
+            void swap(prepend_iterator& it)
+            {
+                iterator_base::swap(it);
+                std::swap(m_value, it.m_value);
+                std::swap(m_begin, it.m_begin);
+                std::swap(m_end, it.m_end);
+            }
+
+            reference operator*() const noexcept
+            {
+                if (m_value)
+                    return *m_value;
+                else
+                    return *m_begin;
+            }
+            pointer operator->() const noexcept { return &operator*(); }
+
+            constexpr bool operator==(const prepend_iterator& it) const noexcept
+            {
+                if (this->m_valid && it.m_valid)
+                {
+                    return m_value == it.m_value && m_begin == it.m_begin && m_end == it.m_end;
+                }
+                else
+                {
+                    return !this->m_valid && !it.m_valid;
+                }
+            }
+            constexpr bool operator!=(const prepend_iterator& it) const noexcept { return !(*this == it); }
+
+            constexpr prepend_iterator& operator++()
             {
                 if (m_value)
                     m_value = std::nullopt;
                 else
-                    ++m_eter;
+                {
+                    ++m_begin;
+                    if (m_begin == m_end) this->m_valid = false;
+                }
                 return *this;
             }
-            constexpr decltype(auto) operator*() { return m_value ? *m_value : *m_eter; }
+            prepend_iterator operator++(int)
+            {
+                prepend_iterator it = *this;
+                operator++();
+                return it;
+            }
         };
     } // namespace impl
 
@@ -328,147 +377,93 @@ namespace linq
     template <typename T>
     constexpr auto prepend(T&& value)
     {
-        return [&](auto e) {
-            using Eter = decltype(e.enumerator());
-            return enumerable(impl::prepend_enumerator<T, Eter>(std::forward<T>(value), e.enumerator()));
+        return [&](auto&& container) {
+            using It = decltype(std::begin(container));
+            return impl::iterable<impl::prepend_iterator<T, It>>{ impl::prepend_iterator<T, It>{ std::forward<T>(value), std::begin(container), std::end(container) } };
         };
     }
 
     namespace impl
     {
-        template <typename Eter1, typename Eter2>
-        class concat_enumerator
+        template <typename It1, typename It2>
+        class concat_iterator : public iterator_base
         {
         private:
-            Eter1 m_eter1;
-            Eter2 m_eter2;
+            It1 m_begin1, m_end1;
+            It2 m_begin2, m_end2;
 
         public:
-            constexpr concat_enumerator(Eter1&& eter1, Eter2&& eter2) : m_eter1(std::forward<Eter1>(eter1)), m_eter2(std::forward<Eter2>(eter2)) {}
+            using iterator_category = std::input_iterator_tag;
+            using value_type = std::common_type_t<std::remove_reference_t<decltype(*std::declval<It1>())>, std::remove_reference_t<decltype(*std::declval<It2>())>>;
+            using difference_type = std::intptr_t;
+            using pointer = const value_type*;
+            using reference = const value_type&;
 
-            constexpr operator bool() const { return m_eter1 || m_eter2; }
-            constexpr concat_enumerator& operator++()
+            concat_iterator() : m_begin1(), m_end1(), m_begin2(), m_end2() {}
+            concat_iterator(It1 begin1, It1 end1, It2 begin2, It2 end2)
+                : iterator_base(true), m_begin1(begin1), m_end1(end1), m_begin2(begin2), m_end2(end2) {}
+            concat_iterator(const concat_iterator&) = default;
+            concat_iterator& operator=(const concat_iterator&) = default;
+
+            void swap(concat_iterator& it)
             {
-                if (m_eter1)
-                    ++m_eter1;
+                iterator_base::swap(it);
+                std::swap(m_begin1, it.m_begin1);
+                std::swap(m_end1, it.m_end1);
+                std::swap(m_begin2, it.m_begin2);
+                std::swap(m_end2, it.m_end2);
+            }
+
+            reference operator*() const noexcept
+            {
+                if (m_begin1 != m_end1)
+                    return *m_begin1;
                 else
-                    ++m_eter2;
+                    return *m_begin2;
+            }
+            pointer operator->() const noexcept { return &operator*(); }
+
+            constexpr bool operator==(const concat_iterator& it) const noexcept
+            {
+                if (this->m_valid && it.m_valid)
+                {
+                    return m_begin1 == it.m_begin1 && m_end1 == it.m_end1 && m_begin2 == it.m_begin2 && m_end2 == it.m_end2;
+                }
+                else
+                {
+                    return !this->m_valid && !it.m_valid;
+                }
+            }
+            constexpr bool operator!=(const concat_iterator& it) const noexcept { return !(*this == it); }
+
+            constexpr concat_iterator& operator++()
+            {
+                if (m_begin1 != m_end1)
+                    ++m_begin1;
+                else
+                {
+                    ++m_begin2;
+                    if (m_begin2 == m_end2) this->m_valid = false;
+                }
                 return *this;
             }
-            constexpr decltype(auto) operator*() { return m_eter1 ? *m_eter1 : *m_eter2; }
+            concat_iterator operator++(int)
+            {
+                concat_iterator it = *this;
+                operator++();
+                return it;
+            }
         };
     } // namespace impl
 
     // Concatenates two enumerable.
-    template <typename E2>
-    constexpr auto concat(E2&& e2)
+    template <typename Container2>
+    constexpr auto concat(Container2&& container2)
     {
-        return [&](auto e) {
-            using Eter1 = decltype(e.enumerator());
-            using Eter2 = decltype(get_enumerator(e2));
-            return enumerable(impl::concat_enumerator<Eter1, Eter2>(e.enumerator(), get_enumerator(e2)));
-        };
-    }
-
-    namespace impl
-    {
-        template <typename Eter, typename T>
-        class insert_enumerator
-        {
-        private:
-            Eter m_eter;
-            T m_value;
-            std::size_t m_index;
-            std::size_t m_current;
-
-        public:
-            constexpr insert_enumerator(Eter&& eter, T&& value, std::size_t index) : m_eter(std::forward<Eter>(eter)), m_value(std::forward<T>(value)), m_index(index), m_current(0) {}
-
-            constexpr operator bool() const { return m_eter || m_current < m_index; }
-            constexpr insert_enumerator& operator++()
-            {
-                ++m_current;
-                if (m_current != m_index)
-                    ++m_eter;
-                return *this;
-            }
-            constexpr decltype(auto) operator*() { return m_current == m_index ? m_value : *m_eter; }
-        };
-
-        template <typename Eter1, typename Eter2>
-        class insert_enumerable_enumerator
-        {
-        private:
-            Eter1 m_eter1;
-            Eter2 m_eter2;
-            std::size_t m_index;
-            std::size_t m_current;
-
-        public:
-            constexpr insert_enumerable_enumerator(Eter1&& eter1, Eter2&& eter2, std::size_t index) : m_eter1(std::forward<Eter1>(eter1)), m_eter2(std::forward<Eter2>(eter2)), m_index(index), m_current(0) {}
-
-            constexpr operator bool() const { return m_eter1 || m_eter2; }
-            constexpr insert_enumerable_enumerator& operator++()
-            {
-                ++m_current;
-                if (m_current > m_index)
-                {
-                    if (m_eter2)
-                        ++m_eter2;
-                    else
-                        ++m_eter1;
-                }
-                else
-                    ++m_eter1;
-                return *this;
-            }
-            constexpr decltype(auto) operator*() { return (m_current >= m_index && m_eter2) ? *m_eter2 : *m_eter1; }
-        };
-    } // namespace impl
-
-    template <typename E2>
-    constexpr auto insert(E2&& e2, std::size_t index)
-    {
-        return [&e2, index](auto e) {
-            if constexpr (is_enumerable_or_container_v<E2>)
-            {
-                return enumerable(impl::insert_enumerable_enumerator(e.enumerator(), get_enumerator(std::forward<E2>(e2)), index));
-            }
-            else
-            {
-                return enumerable(impl::insert_enumerator(e.enumerator(), std::forward<E2>(e2), index));
-            }
-        };
-    }
-
-    // Determines whether the two enumerable are equal.
-    template <typename E2, typename Comparer = std::equal_to<void>>
-    constexpr auto equals(E2&& e2, Comparer&& comparer = {})
-    {
-        return [&](auto e) {
-            auto eter1{ e.enumerator() };
-            auto eter2{ get_enumerator(std::forward<E2>(e2)) };
-            for (; eter1 && eter2; ++eter1, ++eter2)
-            {
-                if (!comparer(*eter1, *eter2))
-                    return false;
-            }
-            return !eter1 && !eter2;
-        };
-    }
-
-    template <typename E2, typename Comparer = std::equal_to<void>>
-    constexpr auto equals_weak(E2&& e2, Comparer&& comparer = {})
-    {
-        return [&](auto e) {
-            auto eter1{ e.enumerator() };
-            auto eter2{ get_enumerator(std::forward<E2>(e2)) };
-            for (; eter1 && eter2; ++eter1, ++eter2)
-            {
-                if (!comparer(*eter1, *eter2))
-                    return false;
-            }
-            return true;
+        return [container2 = std::forward<Container2>(container2)](auto&& container) {
+            using It1 = decltype(std::begin(container));
+            using It2 = decltype(std::begin(container2));
+            return impl::iterable<impl::concat_iterator<It1, It2>>{ impl::concat_iterator<It1, It2>{ std::begin(container), std::end(container), std::begin(container2), std::end(container2) } };
         };
     }
 } // namespace linq
