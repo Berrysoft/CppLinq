@@ -1,12 +1,29 @@
-#include "query_test.hpp"
+#define BOOST_TEST_MAIN
+
+#include "test_utility.hpp"
 #include <cmath>
 #include <linq/query.hpp>
 
 using namespace std;
 using namespace linq;
-using namespace bstest;
 
-void where_select_test::where_test()
+struct pack
+{
+    int arr[2];
+};
+
+inline std::ostream& operator<<(std::ostream& stream, const pack& p)
+{
+    return stream << '(' << p.arr[0] << ", " << p.arr[1] << ')';
+}
+
+constexpr bool operator==(const pack& p1, const pack& p2) noexcept
+{
+    return p1.arr[0] == p2.arr[0] && p1.arr[1] == p2.arr[1];
+}
+constexpr bool operator!=(const pack& p1, const pack& p2) noexcept { return !(p1 == p2); }
+
+BOOST_AUTO_TEST_CASE(where_select_where_test)
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     int a2[]{ 2, 4, 6 };
@@ -14,7 +31,7 @@ void where_select_test::where_test()
     test_equals(a2, e);
 }
 
-void where_select_test::where_index_test()
+BOOST_AUTO_TEST_CASE(where_select_where_index_test)
 {
     int a1[]{ 1, 1, 2, 4, 4, 5 };
     int a2[]{ 1, 2, 4, 5 };
@@ -22,7 +39,7 @@ void where_select_test::where_index_test()
     test_equals(a2, e);
 }
 
-void where_select_test::select_test()
+BOOST_AUTO_TEST_CASE(where_select_select_test)
 {
     int a1[]{ 1, 4, 9, 16, 25 };
     double a2[]{ 1, 2, 3, 4, 5 };
@@ -30,7 +47,7 @@ void where_select_test::select_test()
     test_equals(a2, e);
 }
 
-void where_select_test::select_index_test()
+BOOST_AUTO_TEST_CASE(where_select_select_index_test)
 {
     int a1[]{ 1, 4, 9, 16, 25 };
     pack a2[]{ { 0, 1 }, { 1, 2 }, { 2, 3 }, { 3, 4 }, { 4, 5 } };
@@ -38,7 +55,7 @@ void where_select_test::select_index_test()
     test_equals(a2, e);
 }
 
-void where_select_test::select_many_test()
+BOOST_AUTO_TEST_CASE(where_select_select_many_test)
 {
     pack a1[]{ { 1, 1 }, { 2, 4 }, { 3, 9 } };
     int a2[]{ 1, 1, 4, 16, 9, 81 };
@@ -46,7 +63,7 @@ void where_select_test::select_many_test()
     test_equals(a2, e);
 }
 
-void where_select_test::select_many_index_test()
+BOOST_AUTO_TEST_CASE(where_select_select_many_index_test)
 {
     pack a1[]{ { 1, 1 }, { 2, 4 }, { 3, 9 } };
     int a2[]{ 0, 1, 1, 1, 4, 16, 4, 9, 81 };
@@ -54,7 +71,7 @@ void where_select_test::select_many_index_test()
     test_equals(a2, e);
 }
 
-void skip_take_test::skip_test()
+BOOST_AUTO_TEST_CASE(skip_take_skip_test)
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     int a2[]{ 4, 5, 6 };
@@ -62,7 +79,7 @@ void skip_take_test::skip_test()
     test_equals(a2, e);
 }
 
-void skip_take_test::skip_while_test()
+BOOST_AUTO_TEST_CASE(skip_take_skip_while_test)
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     int a2[]{ 4, 5, 6 };
@@ -70,7 +87,7 @@ void skip_take_test::skip_while_test()
     test_equals(a2, e);
 }
 
-void skip_take_test::skip_while_index_test()
+BOOST_AUTO_TEST_CASE(skip_take_skip_while_index_test)
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     int a2[]{ 4, 5, 6 };
@@ -78,7 +95,7 @@ void skip_take_test::skip_while_index_test()
     test_equals(a2, e);
 }
 
-void skip_take_test::take_test()
+BOOST_AUTO_TEST_CASE(skip_take_take_test)
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     int a2[]{ 1, 2, 3 };
@@ -86,7 +103,7 @@ void skip_take_test::take_test()
     test_equals(a2, e);
 }
 
-void skip_take_test::take_while_test()
+BOOST_AUTO_TEST_CASE(skip_take_take_while_test)
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     int a2[]{ 1, 2, 3 };
@@ -94,7 +111,7 @@ void skip_take_test::take_while_test()
     test_equals(a2, e);
 }
 
-void skip_take_test::take_while_index_test()
+BOOST_AUTO_TEST_CASE(skip_take_take_while_index_test)
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     int a2[]{ 1, 2, 3 };
@@ -102,7 +119,7 @@ void skip_take_test::take_while_index_test()
     test_equals(a2, e);
 }
 
-void linear_test::zip_test()
+BOOST_AUTO_TEST_CASE(linear_zip_test)
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     int a2[]{ 101, 202, 303, 404, 505, 606 };
@@ -110,7 +127,7 @@ void linear_test::zip_test()
     test_equals(a2, e);
 }
 
-void linear_test::zip_index_test()
+BOOST_AUTO_TEST_CASE(linear_zip_index_test)
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     int a2[]{ 1, 4, 9, 16, 25, 36 };
@@ -118,7 +135,7 @@ void linear_test::zip_index_test()
     test_equals(a2, e);
 }
 
-void linear_test::cast_test()
+BOOST_AUTO_TEST_CASE(linear_cast_test)
 {
     int a1[]{ 1, 4, 9, 16, 25 };
     int a2[]{ 1, 2, 3, 4, 5 };

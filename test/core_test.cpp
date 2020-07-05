@@ -1,12 +1,14 @@
-#include "core_test.hpp"
+#define BOOST_TEST_MAIN
+
+#include "test_utility.hpp"
 #include <linq/core.hpp>
 #include <linq/query.hpp>
+#include <vector>
 
 using namespace std;
 using namespace linq;
-using namespace bstest;
 
-void enumerable_test::test()
+BOOST_AUTO_TEST_CASE(enumerable_test)
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     auto e1{ get_enumerable(a1) };
@@ -16,7 +18,7 @@ void enumerable_test::test()
     test_equals(e3, e2);
 }
 
-void construct_test::range_test()
+BOOST_AUTO_TEST_CASE(construct_range_test)
 {
     int a1[]{ 1, 2, 3, 4 };
     auto e1{ range(1, 5) };
@@ -27,14 +29,14 @@ void construct_test::range_test()
     test_equals(a2, e2);
 }
 
-void construct_test::repeat_test()
+BOOST_AUTO_TEST_CASE(construct_repeat_test)
 {
     int a2[]{ 1, 1, 1, 1, 1 };
     auto e{ repeat(1, 5) };
     test_equals(a2, e);
 }
 
-void calculate_test::concat_test()
+BOOST_AUTO_TEST_CASE(calculate_concat_test)
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     int a2[]{ 1, 3, 5, 2, 4, 6 };
@@ -42,7 +44,7 @@ void calculate_test::concat_test()
     test_equals(a2, e);
 }
 
-void calculate_test::pend_test()
+BOOST_AUTO_TEST_CASE(calculate_pend_test)
 {
     int a1[]{ 2, 3, 4, 5 };
     int a2[]{ 1, 2, 3, 4, 5, 6 };
@@ -50,7 +52,7 @@ void calculate_test::pend_test()
     test_equals(a2, e);
 }
 
-void calculate_test::insert_item_test()
+BOOST_AUTO_TEST_CASE(calculate_insert_item_test)
 {
     {
         int a1[]{ 1, 2, 3, 4, 5, 6 };
@@ -66,7 +68,7 @@ void calculate_test::insert_item_test()
     }
 }
 
-void calculate_test::insert_enumerable_test()
+BOOST_AUTO_TEST_CASE(calculate_insert_enumerable_test)
 {
     {
         int a1[]{ 1, 2, 3, 4, 5, 6 };

@@ -1,9 +1,8 @@
 cmake_minimum_required(VERSION 3.1)
-project(cpplinq)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-include_directories(include)
+project(cpplinq CXX)
+if(NOT CMAKE_CXX_STANDARD)
+    set(CMAKE_CXX_STANDARD 17)
+endif()
 
 if(WIN32)
   string(REGEX MATCH "10.0[.[0-9]+]?" MATCH_WINDOWS_10 ${CMAKE_SYSTEM_VERSION})
@@ -15,50 +14,27 @@ if(WIN32)
 endif()
 
 file(GLOB LINQ_HEADERS "include/linq/*.hpp")
+add_library(linq INTERFACE)
+target_include_directories(linq
+  INTERFACE
+    $<INSTALL_INTERFACE:include>    
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+)
 
-if (IS_WINDOWS_10)
-  add_definitions(-DLINQ_USE_WINRT)
+if(IS_WINDOWS_10)
+  target_compile_definitions(linq INTERFACE "LINQ_USE_WINRT")
 endif()
 
-add_library(linq INTERFACE)
+option(LINQ_INSTALL "Install CppLinq" OFF)
+option(LINQ_BUILD_TESTS "Build tests." OFF)
 
-install(FILES ${LINQ_HEADERS} DESTINATION include/linq)
-install(TARGETS linq EXPORT cpplinq_targets)
+if(${LINQ_INSTALL})
+  install(FILES ${LINQ_HEADERS} DESTINATION include/linq)
+  install(TARGETS linq EXPORT cpplinq-targets)
+  install(EXPORT cpplinq-targets DESTINATION lib/cmake/linq)
+  install(FILES cmake/cpplinq-config.cmake DESTINATION lib/cmake/linq)
+endif()
 
-include(CMakePackageConfigHelpers)
-
-export(EXPORT cpplinq_targets
-  FILE "${CMAKE_CURRENT_BINARY_DIR}/cpplinq/cpplinq-targets.cmake"
-  NAMESPACE cpplinq::
-)
-configure_file(cmake/cpplinq-config.cmake
-  "${CMAKE_CURRENT_BINARY_DIR}/cpplinq/cpplinq-config.cmake"
-  COPYONLY
-)
-
-set(ConfigPackageLocation lib/cpplinq)
-install(EXPORT cpplinq_targets
-  FILE
-    cpplinq-targets.cmake
-  NAMESPACE
-    cpplinq::
-  DESTINATION
-    ${ConfigPackageLocation}
-)
-install(
-  FILES
-    cmake/cpplinq-config.cmake
-  DESTINATION
-    ${ConfigPackageLocation}
-  COMPONENT
-    Devel
-)
-
-find_package(bstest CONFIG REQUIRED)
-file(GLOB TEST_SOURCE "test/*.cpp")
-add_executable(test ${TEST_SOURCE})
-target_link_libraries(test bstest::bstest)
-
-if (IS_WINDOWS_10)
-  target_link_libraries(test WindowsApp.lib)
+if(${LINQ_BUILD_TESTS})
+  add_subdirectory(test)
 endif()
