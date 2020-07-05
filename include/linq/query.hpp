@@ -430,75 +430,97 @@ namespace linq
         };
     }
 
-    //namespace impl
-    //{
-    //    template <typename Eter>
-    //    class skip_enumerator
-    //    {
-    //    private:
-    //        Eter m_eter;
+    namespace impl
+    {
+        template <typename It>
+        class skip_iterator : public iterator_base<skip_iterator<It>>
+        {
+        private:
+            It m_begin{}, m_end{};
 
-    //    public:
-    //        constexpr skip_enumerator(Eter&& eter, std::size_t skipn) : m_eter(std::forward<Eter>(eter))
-    //        {
-    //            for (; m_eter && skipn; ++m_eter, --skipn)
-    //                ;
-    //        }
+        public:
+            using iterator_category = std::input_iterator_tag;
+            using value_type = typename std::iterator_traits<It>::value_type;
+            using difference_type = typename std::iterator_traits<It>::difference_type;
+            using pointer = typename std::iterator_traits<It>::pointer;
+            using reference = typename std::iterator_traits<It>::reference;
 
-    //        constexpr operator bool() const { return m_eter; }
-    //        constexpr skip_enumerator& operator++()
-    //        {
-    //            ++m_eter;
-    //            return *this;
-    //        }
-    //        constexpr decltype(auto) operator*() { return *m_eter; }
-    //    };
-    //} // namespace impl
+            skip_iterator() {}
+            skip_iterator(It begin, It end, std::size_t skipn) : m_begin(begin), m_end(end)
+            {
+                for (; m_begin != m_end && skipn--; ++m_begin)
+                    ;
+                this->m_valid = m_begin != m_end;
+            }
+            skip_iterator(const skip_iterator&) = default;
+            skip_iterator& operator=(const skip_iterator&) = default;
 
-    //// Bypasses a specified number of elements and then returns the remaining elements.
-    //constexpr auto skip(std::size_t skipn)
-    //{
-    //    return [=](auto e) {
-    //        using Eter = decltype(e.enumerator());
-    //        return enumerable(impl::skip_enumerator<Eter>(e.enumerator(), skipn));
-    //    };
-    //}
+            reference operator*() const noexcept { return *m_begin; }
 
-    //namespace impl
-    //{
-    //    template <typename Eter>
-    //    class skip_while_enumerator
-    //    {
-    //    private:
-    //        Eter m_eter;
+            constexpr skip_iterator& operator++()
+            {
+                ++m_begin;
+                if (m_begin == m_end) this->m_valid = false;
+                return *this;
+            }
+        };
+    } // namespace impl
 
-    //    public:
-    //        template <typename Pred>
-    //        constexpr skip_while_enumerator(Eter&& eter, Pred&& pred) : m_eter(std::forward<Eter>(eter))
-    //        {
-    //            for (; m_eter && pred(*m_eter); ++m_eter)
-    //                ;
-    //        }
+    // Bypasses a specified number of elements and then returns the remaining elements.
+    constexpr auto skip(std::size_t skipn)
+    {
+        return [=](auto&& container) {
+            using It = decltype(std::begin(container));
+            return impl::iterable{ impl::skip_iterator<It>{ std::begin(container), std::end(container), skipn } };
+        };
+    }
 
-    //        constexpr operator bool() const { return m_eter; }
-    //        constexpr skip_while_enumerator& operator++()
-    //        {
-    //            ++m_eter;
-    //            return *this;
-    //        }
-    //        constexpr decltype(auto) operator*() { return *m_eter; }
-    //    };
-    //} // namespace impl
+    namespace impl
+    {
+        template <typename It>
+        class skip_while_iterator : public iterator_base<skip_while_iterator<It>>
+        {
+        private:
+            It m_begin{}, m_end{};
 
-    //// Bypasses elements as long as a specified condition is true and then returns the remaining elements.
-    //template <typename Pred>
-    //constexpr auto skip_while(Pred&& pred)
-    //{
-    //    return [&](auto e) {
-    //        using Eter = decltype(e.enumerator());
-    //        return enumerable(impl::skip_while_enumerator<Eter>(e.enumerator(), std::forward<Pred>(pred)));
-    //    };
-    //}
+        public:
+            using iterator_category = std::input_iterator_tag;
+            using value_type = typename std::iterator_traits<It>::value_type;
+            using difference_type = typename std::iterator_traits<It>::difference_type;
+            using pointer = typename std::iterator_traits<It>::pointer;
+            using reference = typename std::iterator_traits<It>::reference;
+
+            skip_while_iterator() {}
+            template <typename Pred>
+            skip_while_iterator(It begin, It end, Pred&& pred) : m_begin(begin), m_end(end)
+            {
+                for (; m_begin != m_end && pred(*m_begin); ++m_begin)
+                    ;
+                this->m_valid = m_begin != m_end;
+            }
+            skip_while_iterator(const skip_while_iterator&) = default;
+            skip_while_iterator& operator=(const skip_while_iterator&) = default;
+
+            reference operator*() const noexcept { return *m_begin; }
+
+            constexpr skip_while_iterator& operator++()
+            {
+                ++m_begin;
+                if (m_begin == m_end) this->m_valid = false;
+                return *this;
+            }
+        };
+    } // namespace impl
+
+    // Bypasses elements as long as a specified condition is true and then returns the remaining elements.
+    template <typename Pred>
+    constexpr auto skip_while(Pred&& pred)
+    {
+        return [&](auto&& container) {
+            using It = decltype(std::begin(container));
+            return impl::iterable{ impl::skip_while_iterator<It>{ std::begin(container), std::end(container), std::forward<Pred>(pred) } };
+        };
+    }
 
     //namespace impl
     //{

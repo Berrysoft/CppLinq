@@ -71,22 +71,22 @@ BOOST_AUTO_TEST_CASE(where_select_select_many_index_test)
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 }
 
-//BOOST_AUTO_TEST_CASE(skip_take_skip_test)
-//{
-//    int a1[]{ 1, 2, 3, 4, 5, 6 };
-//    int a2[]{ 4, 5, 6 };
-//    auto e{ a1 >> skip(3) };
-//    test_equals(a2, e);
-//}
-//
-//BOOST_AUTO_TEST_CASE(skip_take_skip_while_test)
-//{
-//    int a1[]{ 1, 2, 3, 4, 5, 6 };
-//    int a2[]{ 4, 5, 6 };
-//    auto e{ a1 >> skip_while([](int& i) { return i < 4; }) };
-//    test_equals(a2, e);
-//}
-//
+BOOST_AUTO_TEST_CASE(skip_take_skip_test)
+{
+    int a1[]{ 1, 2, 3, 4, 5, 6 };
+    int a2[]{ 4, 5, 6 };
+    auto e{ a1 >> skip(3) };
+    LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
+}
+
+BOOST_AUTO_TEST_CASE(skip_take_skip_while_test)
+{
+    int a1[]{ 1, 2, 3, 4, 5, 6 };
+    int a2[]{ 4, 5, 6 };
+    auto e{ a1 >> skip_while([](int& i) { return i < 4; }) };
+    LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
+}
+
 //BOOST_AUTO_TEST_CASE(skip_take_skip_while_index_test)
 //{
 //    int a1[]{ 1, 2, 3, 4, 5, 6 };
