@@ -1,4 +1,6 @@
-#include "extension_test.hpp"
+#define BOOST_TEST_MODULE ExtensionTest
+
+#include "test_utility.hpp"
 #include <ctime>
 #include <optional>
 #include <random>
@@ -6,7 +8,6 @@
 
 using namespace std;
 using namespace linq;
-using namespace bstest;
 
 template <typename T>
 class random_enumerator
@@ -59,8 +60,8 @@ constexpr auto as_random()
     };
 }
 
-void extension_test::test()
+BOOST_AUTO_TEST_CASE(extension_test)
 {
     auto e{ range(0, 10) >> as_random() };
-    is_true(true);
+    BOOST_CHECK(true);
 }

@@ -1,6 +1,11 @@
-#include "winrt_test.hpp"
+#define BOOST_TEST_MODULE StringTest
 
-#ifdef LINQ_USE_WINRT
+#include "test_utility.hpp"
+
+#define NOMAXMIN
+#define WIN32_LEAN_AND_MEAN
+
+#include <winrt/Windows.Foundation.h>
 
 #include <winrt/Windows.Foundation.Collections.h>
 
@@ -12,16 +17,8 @@
 using namespace std;
 using namespace linq;
 using namespace winrt;
-using namespace bstest;
 
-winrt_test::winrt_test()
-{
-    add_test(vector_test);
-    add_test(map_test);
-    init_apartment(apartment_type::single_threaded);
-}
-
-void winrt_test::vector_test()
+BOOST_AUTO_TEST_CASE(winrt_vector_test)
 {
     auto a1{ single_threaded_vector(vector<int>{ 1, 2, 3, 4, 5, 6 }) };
     int a2[]{ 2, 4, 6 };
@@ -29,18 +26,34 @@ void winrt_test::vector_test()
     test_equals(a2, e);
 }
 
-void winrt_test::map_test()
+struct pack
+{
+    hstring name;
+    int score;
+};
+
+inline ostream& operator<<(ostream& stream, const pack& p)
+{
+    return stream << '(' << to_string(p.name) << ", " << p.score << ')';
+}
+
+inline bool operator==(const pack& p1, const pack& p2)
+{
+    return p1.name == p2.name && p1.score == p2.score;
+}
+inline bool operator!=(const pack& p1, const pack& p2) { return !(p1 == p2); }
+
+BOOST_AUTO_TEST_CASE(winrt_map_test)
 {
     auto a1{ single_threaded_map(map<int, hstring>{ { 1, L"Gates" }, { 2, L"Jobs" }, { 3, L"Trump" } }) };
     auto a2{ single_threaded_map(map<int, int>{ { 2, 88 }, { 1, 92 }, { 3, 61 } }) };
     pack a3[]{ { L"Gates", 92 }, { L"Jobs", 88 }, { L"Trump", 61 } };
     auto e{ a1 >>
-            join(a2,
-                 [](auto a) { return a.Key(); },
-                 [](auto a) { return a.Key(); },
-                 [](auto a) { return a.Value(); },
-                 [](auto a, auto e) { return pack{ a.Value(), e }; }) };
+            join(
+                a2,
+                [](auto a) { return a.Key(); },
+                [](auto a) { return a.Key(); },
+                [](auto a) { return a.Value(); },
+                [](auto a, auto e) { return pack{ a.Value(), e }; }) };
     test_equals(a3, e);
 }
-
-#endif

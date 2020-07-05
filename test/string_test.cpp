@@ -1,11 +1,12 @@
-#include "string_test.hpp"
+#define BOOST_TEST_MODULE StringTest
+
+#include "test_utility.hpp"
 #include <linq/string.hpp>
 
 using namespace std;
 using namespace linq;
-using namespace bstest;
 
-void string_test::split_test()
+BOOST_AUTO_TEST_CASE(string_split_test)
 {
     string str{ "Hello world !" };
     string_view views[]{ "Hello", "world", "!" };
@@ -13,76 +14,76 @@ void string_test::split_test()
     test_equals(views, e);
 }
 
-void string_test::joinstr_test()
+BOOST_AUTO_TEST_CASE(string_joinstr_test)
 {
     {
         string str{ "123456" };
         int a1[]{ 1, 2, 3, 4, 5, 6 };
         auto s{ a1 >> joinstr<char>() };
-        are_equal(str, s);
+        BOOST_CHECK_EQUAL(str, s);
     }
     {
         string str{ "Hello world !" };
         string_view views[]{ "Hello", "world", "!" };
         auto s{ views >> joinstr<char>(' ') };
-        are_equal(str, s);
+        BOOST_CHECK_EQUAL(str, s);
     }
 }
 
-void string_test::instr_test()
+BOOST_AUTO_TEST_CASE(string_instr_test)
 {
-    is_true("Hello world!" >> instr<char>('o'));
-    is_true("Hello world!" >> instr<char>("world"));
+    BOOST_CHECK("Hello world!" >> instr<char>('o'));
+    BOOST_CHECK("Hello world!" >> instr<char>("world"));
 }
 
-void string_test::replace_test()
+BOOST_AUTO_TEST_CASE(string_replace_test)
 {
     string str{ "Hello world!o" };
     string_view str2{ "Hellooo wooorld!ooo" };
     auto e{ str >> replace('o', "ooo") };
-    are_equal(str2, e);
+    BOOST_CHECK_EQUAL(str2, e);
 }
 
-void string_test::remove_test()
+BOOST_AUTO_TEST_CASE(string_remove_test)
 {
     string str{ "Hello world!o" };
     string_view str2{ "Hell wrld!" };
     auto e{ str >> remove<char>("o") };
-    are_equal(str2, e);
+    BOOST_CHECK_EQUAL(str2, e);
     auto e2{ str >> remove('o') };
-    are_equal(str2, e2);
+    BOOST_CHECK_EQUAL(str2, e2);
 }
 
 constexpr string_view test_str{ "123456" };
 
-void string_test::starts_with_test()
+BOOST_AUTO_TEST_CASE(string_starts_with_test)
 {
-    is_true(test_str >> starts_with('1'));
-    is_true(test_str >> starts_with<char>("123"));
-    is_false(test_str >> starts_with('2'));
-    is_false(test_str >> starts_with<char>("456"));
+    BOOST_CHECK(test_str >> starts_with('1'));
+    BOOST_CHECK(test_str >> starts_with<char>("123"));
+    BOOST_CHECK(!(test_str >> starts_with('2')));
+    BOOST_CHECK(!(test_str >> starts_with<char>("456")));
 }
 
-void string_test::ends_with_test()
+BOOST_AUTO_TEST_CASE(string_ends_with_test)
 {
-    is_true(test_str >> ends_with('6'));
-    is_true(test_str >> ends_with<char>("456"));
-    is_false(test_str >> ends_with('5'));
-    is_false(test_str >> ends_with<char>("123"));
+    BOOST_CHECK(test_str >> ends_with('6'));
+    BOOST_CHECK(test_str >> ends_with<char>("456"));
+    BOOST_CHECK(!(test_str >> ends_with('5')));
+    BOOST_CHECK(!(test_str >> ends_with<char>("123")));
 }
 
-void string_test::trim_test()
+BOOST_AUTO_TEST_CASE(string_trim_test)
 {
     string str{ "   123456   " };
     auto tl{ str >> trim_left<char>() };
-    are_equal("123456   ", tl);
+    BOOST_CHECK_EQUAL("123456   ", tl);
     auto tr{ str >> trim_right<char>() };
-    are_equal("   123456", tr);
+    BOOST_CHECK_EQUAL("   123456", tr);
     auto tall{ str >> trim<char>() };
-    are_equal("123456", tall);
+    BOOST_CHECK_EQUAL("123456", tall);
 }
 
-void string_test::io_lines_test()
+BOOST_AUTO_TEST_CASE(string_io_lines_test)
 {
     string str{ R"(Twinkle, twinkle, little star,
 How I wonder what you are.
@@ -92,5 +93,5 @@ Like a diamond in the sky.
     istringstream iss{ str };
     ostringstream oss;
     write_lines(oss, read_lines(iss));
-    are_equal(str, oss.str());
+    BOOST_CHECK_EQUAL(str, oss.str());
 }
