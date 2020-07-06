@@ -1,0 +1,132 @@
+trigger:
+- master
+
+jobs:
+- job: 'Build'
+  strategy:
+    matrix:
+      windows:
+        imageName: 'windows-latest'
+        plat: 'win'
+        rid: 'win'
+        arch: x64
+      windows_x86:
+        imageName: 'windows-latest'
+        plat: 'win'
+        rid: 'win'
+        arch: x86
+      mingw:
+        imageName: 'windows-latest'
+        plat: 'win'
+        rid: 'mingw'
+        arch: 'x64'
+        arch_pkg: 'x86_64'
+        msystem: 'MINGW64'
+        bindir: 'C:\msys64\mingw64\bin'
+        bindir2: 'C:/msys64/mingw64/bin'
+      mingw_x86:
+        imageName: 'windows-latest'
+        plat: 'win'
+        rid: 'mingw'
+        arch: 'x86'
+        arch_pkg: 'i686'
+        msystem: 'MINGW32'
+        bindir: 'C:\msys64\mingw32\bin'
+        bindir2: 'C:/msys64/mingw32/bin'
+      linux:
+        imageName: 'ubuntu-latest'
+        plat: 'linux'
+        rid: 'linux'
+      mac:
+        imageName: 'macos-latest'
+        plat: 'mac'
+        rid: 'mac'
+  pool:
+    vmImage: $(imageName)
+
+  variables:
+    macLLVMPath: /usr/local/opt/llvm/bin
+
+  steps:
+  - pwsh: |
+      C:\msys64\usr\bin\bash --login -c "pacman -S --noconfirm mingw-w64-$(arch_pkg)-gcc mingw-w64-$(arch_pkg)-boost"
+    displayName: 'Install msys2'
+    condition: eq(variables.rid, 'mingw')
+    env:
+      MSYSTEM: $(msystem)
+
+  - script: |
+      sudo add-apt-repository ppa:ubuntu-toolchain-r/ppa
+      sudo add-apt-repository ppa:mhier/libboost-latest
+      sudo apt-get install gcc-10 g++-10 libgtk-3-dev ninja-build libboost1.70-dev
+      sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100 --slave /usr/bin/g++ g++ /usr/bin/g++-10 --slave /usr/bin/gcov gcov /usr/bin/gcov-10
+    displayName: 'Install linux dependencies'
+    condition: eq(variables.rid, 'linux')
+
+  - script: |
+      brew install ninja boost llvm
+    displayName: 'Install ninja & boost & llvm'
+    condition: eq(variables.plat, 'mac')
+
+  - script: |
+      call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" $(arch)
+      mkdir build & cd build
+      cmake .. -GNinja -DCMAKE_CXX_COMPILER=cl -DCMAKE_BUILD_TYPE=Release -DLINQ_BUILD_TESTS=on
+    displayName: 'Configure all projects'
+    condition: eq(variables.rid, 'win')
+    env:
+      BOOST_ROOT: $(BOOST_ROOT_1_72_0)
+
+  - script: |
+      call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" $(arch)
+      mkdir build & cd build
+      cmake .. -GNinja -DCMAKE_CXX_COMPILER=$(bindir2)/g++.exe -DCMAKE_BUILD_TYPE=Release -DLINQ_BUILD_TESTS=on
+    displayName: 'Configure all projects'
+    condition: eq(variables.rid, 'mingw')
+    env:
+      MSYSTEM: $(msystem)
+      PATH: $(bindir)
+
+  - task: CMake@1
+    displayName: 'Configure all projects'
+    condition: eq(variables.plat, 'linux')
+    inputs:
+      cmakeArgs: .. -GNinja -DCMAKE_BUILD_TYPE=Release -DLINQ_BUILD_TESTS=on
+
+  - task: CMake@1
+    displayName: 'Configure all projects'
+    condition: eq(variables.plat, 'mac')
+    inputs:
+      cmakeArgs: .. -GNinja -DCMAKE_CXX_COMPILER=$(macLLVMPath)/clang++ -DCMAKE_BUILD_TYPE=Release -DLINQ_BUILD_TESTS=on
+
+  - script: |
+      call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" $(arch)
+      cd build
+      ninja
+      ctest -T test
+    displayName: 'Test all projects'
+    condition: eq(variables.rid, 'win')
+
+  - script: |
+      call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" $(arch)
+      cd build
+      ninja
+      ctest -T test
+    displayName: 'Test all projects'
+    condition: eq(variables.rid, 'mingw')
+    env:
+      MSYSTEM: $(msystem)
+      PATH: $(bindir)
+
+  - script: |
+      cd build
+      ninja
+      ctest -T test
+    displayName: 'Test all projects'
+    condition: ne(variables.plat, 'win')
+
+  - task: PublishTestResults@2
+    displayName: 'Publish test results'
+    inputs:
+      testResultsFormat: 'cTest'
+      testResultsFiles: 'build/Testing/**/Test.xml'
