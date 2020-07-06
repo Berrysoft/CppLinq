@@ -479,281 +479,322 @@ namespace linq
         };
     }
 
-    //namespace impl
-    //{
-    //    template <typename Eter>
-    //    class skip_while_index_enumerator
-    //    {
-    //    private:
-    //        Eter m_eter;
+    namespace impl
+    {
+        template <typename It>
+        class skip_while_index_iterator_impl
+        {
+        private:
+            It m_begin, m_end;
 
-    //    public:
-    //        template <typename Pred>
-    //        constexpr skip_while_index_enumerator(Eter&& eter, Pred&& pred) : m_eter(std::forward<Eter>(eter))
-    //        {
-    //            for (std::size_t i{ 0 }; m_eter && pred(*m_eter, i); ++m_eter, ++i)
-    //                ;
-    //        }
+        public:
+            using traits_type = std::iterator_traits<It>;
 
-    //        constexpr operator bool() const { return m_eter; }
-    //        constexpr skip_while_index_enumerator& operator++()
-    //        {
-    //            ++m_eter;
-    //            return *this;
-    //        }
-    //        constexpr decltype(auto) operator*() { return *m_eter; }
-    //    };
-    //} // namespace impl
+            template <typename Pred>
+            skip_while_index_iterator_impl(It begin, It end, Pred&& pred) : m_begin(begin), m_end(end)
+            {
+                for (std::size_t i = 0; m_begin != m_end && pred(*m_begin, i); ++m_begin, ++i)
+                    ;
+            }
 
-    //// Bypasses elements as long as a specified condition is true and then returns the remaining elements.
-    //template <typename Pred>
-    //constexpr auto skip_while_index(Pred&& pred)
-    //{
-    //    return [&](auto e) {
-    //        using Eter = decltype(e.enumerator());
-    //        return enumerable(impl::skip_while_index_enumerator<Eter>(e.enumerator(), std::forward<Pred>(pred)));
-    //    };
-    //}
+            typename traits_type::reference value() const noexcept { return *m_begin; }
 
-    //namespace impl
-    //{
-    //    template <typename Eter>
-    //    class take_enumerator
-    //    {
-    //    private:
-    //        Eter m_eter;
-    //        // skip doesn't need the number because it just skipped.
-    //        std::size_t m_taken;
+            bool move_next()
+            {
+                if (m_begin != m_end)
+                    ++m_begin;
+                return m_begin != m_end;
+            }
+        };
 
-    //    public:
-    //        constexpr take_enumerator(Eter&& eter, std::size_t taken) : m_eter(std::forward<Eter>(eter)), m_taken(taken) {}
+        template <typename It>
+        using skip_while_index_iterator = iterator_base<skip_while_index_iterator_impl<It>>;
+    } // namespace impl
 
-    //        constexpr operator bool() const { return m_eter && m_taken; }
-    //        constexpr take_enumerator& operator++()
-    //        {
-    //            ++m_eter;
-    //            --m_taken;
-    //            return *this;
-    //        }
-    //        constexpr decltype(auto) operator*() { return *m_eter; }
-    //    };
-    //} // namespace impl
+    // Bypasses elements as long as a specified condition is true and then returns the remaining elements.
+    template <typename Pred>
+    constexpr auto skip_while_index(Pred&& pred)
+    {
+        return [&](auto&& container) {
+            using It = decltype(std::begin(container));
+            return impl::iterable{ impl::skip_while_index_iterator<It>{ impl::iterator_ctor, std::begin(container), std::end(container), std::forward<Pred>(pred) } };
+        };
+    }
 
-    //// Returns a specified number of contiguous elements from the start.
-    //constexpr auto take(std::size_t taken)
-    //{
-    //    return [=](auto e) {
-    //        using Eter = decltype(e.enumerator());
-    //        return enumerable(impl::take_enumerator<Eter>(e.enumerator(), taken));
-    //    };
-    //}
+    namespace impl
+    {
+        template <typename It>
+        class take_iterator_impl
+        {
+        private:
+            It m_begin, m_end;
+            // skip doesn't need the number because it just skipped.
+            std::size_t m_taken;
 
-    //namespace impl
-    //{
-    //    template <typename Eter, typename Pred>
-    //    class take_while_enumerator
-    //    {
-    //    private:
-    //        Eter m_eter;
-    //        Pred m_pred;
+        public:
+            using traits_type = std::iterator_traits<It>;
 
-    //    public:
-    //        constexpr take_while_enumerator(Eter&& eter, Pred&& pred) : m_eter(std::forward<Eter>(eter)), m_pred(pred) {}
+            take_iterator_impl(It begin, It end, std::size_t taken) : m_begin(begin), m_end(end), m_taken(taken) {}
 
-    //        constexpr operator bool() { return m_eter && m_pred(*m_eter); }
-    //        constexpr take_while_enumerator& operator++()
-    //        {
-    //            ++m_eter;
-    //            return *this;
-    //        }
-    //        constexpr decltype(auto) operator*() { return *m_eter; }
-    //    };
-    //} // namespace impl
+            typename traits_type::reference value() { return *m_begin; }
 
-    //// Returns elements as long as a specified condition is true.
-    //template <typename Pred>
-    //constexpr auto take_while(Pred&& pred)
-    //{
-    //    return [&](auto e) {
-    //        using Eter = decltype(e.enumerator());
-    //        return enumerable(impl::take_while_enumerator<Eter, Pred>(e.enumerator(), std::forward<Pred>(pred)));
-    //    };
-    //}
+            bool move_next()
+            {
+                if (m_begin != m_end)
+                {
+                    ++m_begin;
+                    --m_taken;
+                }
+                return m_begin != m_end && m_taken;
+            }
+        };
 
-    //namespace impl
-    //{
-    //    template <typename Eter, typename Pred>
-    //    class take_while_index_enumerator
-    //    {
-    //    private:
-    //        Eter m_eter;
-    //        Pred m_pred;
-    //        std::size_t m_index;
+        template <typename It>
+        using take_iterator = iterator_base<take_iterator_impl<It>>;
+    } // namespace impl
 
-    //    public:
-    //        constexpr take_while_index_enumerator(Eter&& eter, Pred&& pred) : m_eter(std::forward<Eter>(eter)), m_pred(pred), m_index(0) {}
+    // Returns a specified number of contiguous elements from the start.
+    constexpr auto take(std::size_t taken)
+    {
+        return [=](auto&& container) {
+            using It = decltype(std::begin(container));
+            return impl::iterable{ impl::take_iterator<It>{ impl::iterator_ctor, std::begin(container), std::end(container), taken } };
+        };
+    }
 
-    //        constexpr operator bool() { return m_eter && m_pred(*m_eter, m_index); }
-    //        constexpr take_while_index_enumerator& operator++()
-    //        {
-    //            ++m_eter;
-    //            ++m_index;
-    //            return *this;
-    //        }
-    //        constexpr decltype(auto) operator*() { return *m_eter; }
-    //    };
-    //} // namespace impl
+    namespace impl
+    {
+        template <typename It, typename Pred>
+        class take_while_iterator_impl
+        {
+        private:
+            It m_begin, m_end;
+            std::decay_t<Pred> m_pred;
 
-    //// Returns elements as long as a specified condition is true.
-    //template <typename Pred>
-    //constexpr auto take_while_index(Pred&& pred)
-    //{
-    //    return [&](auto e) {
-    //        using Eter = decltype(e.enumerator());
-    //        return enumerable(impl::take_while_index_enumerator<Eter, Pred>(e.enumerator(), std::forward<Pred>(pred)));
-    //    };
-    //}
+        public:
+            using traits_type = std::iterator_traits<It>;
 
-    //namespace impl
-    //{
-    //    template <typename E1, typename... Es>
-    //    constexpr bool and_all(E1&& e1, Es&&... es)
-    //    {
-    //        if constexpr (sizeof...(Es) == 0)
-    //        {
-    //            return e1;
-    //        }
-    //        else
-    //        {
-    //            return e1 && and_all<Es...>(std::forward<Es>(es)...);
-    //        }
-    //    }
+            take_while_iterator_impl(It begin, It end, Pred&& pred) : m_begin(begin), m_end(end), m_pred(pred) {}
 
-    //    template <typename... T>
-    //    constexpr void expand_tuple(T&&...)
-    //    {
-    //    }
+            typename traits_type::reference value() { return *m_begin; }
 
-    //    template <typename Selector, typename... Eters>
-    //    class zip_enumerator
-    //    {
-    //    private:
-    //        Selector m_selector;
-    //        std::tuple<Eters...> m_eters;
+            bool move_next()
+            {
+                if (m_begin != m_end)
+                    ++m_begin;
+                return m_begin != m_end && m_pred(*m_begin);
+            }
+        };
 
-    //    public:
-    //        constexpr zip_enumerator(Selector&& selector, Eters&&... eters) : m_selector(selector), m_eters(std::make_tuple(std::forward<Eters>(eters)...)) {}
+        template <typename It, typename Pred>
+        using take_while_iterator = iterator_base<take_while_iterator_impl<It, Pred>>;
+    } // namespace impl
 
-    //        constexpr operator bool() const
-    //        {
-    //            return std::apply([](auto&&... e) { return and_all(e...); }, m_eters);
-    //        }
-    //        constexpr zip_enumerator& operator++()
-    //        {
-    //            std::apply([](auto&&... e) { return expand_tuple(++e...); }, m_eters);
-    //            return *this;
-    //        }
-    //        constexpr decltype(auto) operator*()
-    //        {
-    //            return std::apply([this](auto&&... e) { return m_selector(*e...); }, m_eters);
-    //        }
-    //    };
-    //} // namespace impl
+    // Returns elements as long as a specified condition is true.
+    template <typename Pred>
+    constexpr auto take_while(Pred&& pred)
+    {
+        return [&](auto&& container) {
+            using It = decltype(std::begin(container));
+            return impl::iterable{ impl::take_while_iterator<It, Pred>{ impl::iterator_ctor, std::begin(container), std::end(container), std::forward<Pred>(pred) } };
+        };
+    }
 
-    //// Applies a specified function to the corresponding elements of two enumerable, producing an enumerable of the results.
-    //template <typename Selector, typename... Es>
-    //constexpr auto zip(Selector&& selector, Es&&... es)
-    //{
-    //    return [&](auto e) {
-    //        if constexpr (sizeof...(Es) == 0)
-    //        {
-    //            return e;
-    //        }
-    //        else
-    //        {
-    //            using Eter = decltype(e.enumerator());
-    //            return enumerable(impl::zip_enumerator<Selector, Eter, decltype(get_enumerator(std::forward<Es>(es)))...>(std::forward<Selector>(selector), e.enumerator(), get_enumerator(std::forward<Es>(es))...));
-    //        }
-    //    };
-    //}
+    namespace impl
+    {
+        template <typename It, typename Pred>
+        class take_while_index_iterator_impl
+        {
+        private:
+            It m_begin, m_end;
+            std::decay_t<Pred> m_pred;
+            std::size_t m_index{ 0 };
 
-    //namespace impl
-    //{
-    //    template <typename Selector, typename... Eters>
-    //    class zip_index_enumerator
-    //    {
-    //    private:
-    //        Selector m_selector;
-    //        std::tuple<Eters...> m_eters;
-    //        std::size_t m_index;
+        public:
+            using traits_type = std::iterator_traits<It>;
 
-    //    public:
-    //        constexpr zip_index_enumerator(Selector&& selector, Eters&&... eters) : m_selector(selector), m_eters(std::make_tuple(std::forward<Eters>(eters)...)), m_index(0) {}
+            take_while_index_iterator_impl(It begin, It end, Pred&& pred) : m_begin(begin), m_end(end), m_pred(pred) {}
 
-    //        constexpr operator bool() const
-    //        {
-    //            return std::apply([](auto&&... e) { return and_all(e...); }, m_eters);
-    //        }
-    //        constexpr zip_index_enumerator& operator++()
-    //        {
-    //            std::apply([](auto&&... e) { return expand_tuple(++e...); }, m_eters);
-    //            ++m_index;
-    //            return *this;
-    //        }
-    //        constexpr decltype(auto) operator*()
-    //        {
-    //            return std::apply([this](auto&&... e) { return m_selector(*e..., m_index); }, m_eters);
-    //        }
-    //    };
-    //} // namespace impl
+            typename traits_type::reference value() { return *m_begin; }
 
-    //// Applies a specified function to the corresponding elements of two enumerable, producing an enumerable of the results.
-    //template <typename Selector, typename... Es>
-    //constexpr auto zip_index(Selector&& selector, Es&&... es)
-    //{
-    //    return [&](auto e) {
-    //        if constexpr (sizeof...(Es) == 0)
-    //        {
-    //            return e;
-    //        }
-    //        else
-    //        {
-    //            using Eter = decltype(e.enumerator());
-    //            return enumerable(impl::zip_index_enumerator<Selector, Eter, decltype(get_enumerator(std::forward<Es>(es)))...>(std::forward<Selector>(selector), e.enumerator(), get_enumerator(std::forward<Es>(es))...));
-    //        }
-    //    };
-    //}
+            bool move_next()
+            {
+                if (m_begin != m_end)
+                {
+                    ++m_begin;
+                    ++m_index;
+                }
+                return m_begin != m_end && m_pred(*m_begin, m_index);
+            }
+        };
 
-    //namespace impl
-    //{
-    //    template <typename Eter, typename TTo>
-    //    class cast_enumerator
-    //    {
-    //    private:
-    //        Eter m_eter;
+        template <typename It, typename Pred>
+        using take_while_index_iterator = iterator_base<take_while_index_iterator_impl<It, Pred>>;
+    } // namespace impl
 
-    //    public:
-    //        cast_enumerator(Eter&& eter) : m_eter(std::forward<Eter>(eter)) {}
+    // Returns elements as long as a specified condition is true.
+    template <typename Pred>
+    constexpr auto take_while_index(Pred&& pred)
+    {
+        return [&](auto&& container) {
+            using It = decltype(std::begin(container));
+            return impl::iterable{ impl::take_while_index_iterator<It, Pred>{ impl::iterator_ctor, std::begin(container), std::end(container), std::forward<Pred>(pred) } };
+        };
+    }
 
-    //        constexpr operator bool() const { return m_eter; }
-    //        constexpr cast_enumerator& operator++()
-    //        {
-    //            ++m_eter;
-    //            return *this;
-    //        }
-    //        constexpr TTo operator*() { return (TTo)*m_eter; }
-    //    };
-    //} // namespace impl
+    namespace impl
+    {
+        template <typename E1, typename... Es>
+        constexpr bool and_all(E1&& e1, Es&&... es)
+        {
+            if constexpr (sizeof...(Es) == 0)
+            {
+                return e1;
+            }
+            else
+            {
+                return e1 && and_all<Es...>(std::forward<Es>(es)...);
+            }
+        }
 
-    //// Applies C-style cast to the elements.
-    //template <typename TTo>
-    //constexpr auto cast()
-    //{
-    //    return [](auto e) {
-    //        using Eter = decltype(e.enumerator());
-    //        return enumerable(impl::cast_enumerator<Eter, TTo>(e.enumerator()));
-    //    };
-    //}
+        template <typename... T>
+        constexpr void expand_tuple(T&&...)
+        {
+        }
+
+        template <typename It>
+        struct iterator_pack
+        {
+            It m_begin, m_end;
+        };
+
+        template <typename Selector, typename... Its>
+        class zip_iterator_impl
+        {
+        private:
+            std::decay_t<Selector> m_selector;
+            std::tuple<iterator_pack<Its>...> m_its;
+
+            using result_type = std::common_type_t<typename std::iterator_traits<Its>::value_type...>;
+            std::optional<result_type> m_result{};
+
+            bool set_result()
+            {
+                bool res = is_valid();
+                if (res)
+                    m_result.emplace(std::apply([this](auto&&... pack) { return m_selector((*pack.m_begin)...); }, m_its));
+                return res;
+            }
+
+            bool is_valid() const
+            {
+                return std::apply([](auto&&... pack) { return and_all((pack.m_begin != pack.m_end)...); }, m_its);
+            }
+
+        public:
+            using traits_type = iterator_impl_traits<result_type>;
+
+            zip_iterator_impl(Selector&& selector, iterator_pack<Its>... its) : m_selector(std::move(selector)), m_its(std::make_tuple(its...)) { set_result(); }
+
+            typename traits_type::reference value() const { return *m_result; }
+
+            bool move_next()
+            {
+                if (is_valid())
+                {
+                    std::apply([](auto&&... pack) { return expand_tuple((++pack.m_begin)...); }, m_its);
+                    return set_result();
+                }
+                return false;
+            }
+        };
+
+        template <typename Selector, typename... Its>
+        using zip_iterator = iterator_base<zip_iterator_impl<Selector, Its...>>;
+    } // namespace impl
+
+    // Applies a specified function to the corresponding elements of two enumerable, producing an enumerable of the results.
+    template <typename Selector, typename... Containers>
+    constexpr auto zip(Selector&& selector, Containers&&... cs)
+    {
+        return [&](auto&& container) {
+            if constexpr (sizeof...(Containers) == 0)
+            {
+                return container;
+            }
+            else
+            {
+                using It = decltype(std::begin(container));
+                return impl::iterable{ impl::zip_iterator<Selector, It, decltype(std::begin(cs))...>{ impl::iterator_ctor, std::forward<Selector>(selector), impl::iterator_pack<It>{ std::begin(container), std::end(container) }, impl::iterator_pack<decltype(std::begin(cs))>{ std::begin(cs), std::end(cs) }... } };
+            }
+        };
+    }
+
+    namespace impl
+    {
+        template <typename Selector, typename... Its>
+        class zip_index_iterator_impl
+        {
+        private:
+            std::decay_t<Selector> m_selector;
+            std::tuple<iterator_pack<Its>...> m_its;
+            std::size_t m_index{ 0 };
+
+            using result_type = std::common_type_t<typename std::iterator_traits<Its>::value_type...>;
+            std::optional<result_type> m_result{};
+
+            bool set_result()
+            {
+                bool res = is_valid();
+                if (res)
+                    m_result.emplace(std::apply([this](auto&&... pack) { return m_selector((*pack.m_begin)..., m_index); }, m_its));
+                return res;
+            }
+
+            bool is_valid() const
+            {
+                return std::apply([](auto&&... pack) { return and_all((pack.m_begin != pack.m_end)...); }, m_its);
+            }
+
+        public:
+            using traits_type = iterator_impl_traits<result_type>;
+
+            zip_index_iterator_impl(Selector&& selector, iterator_pack<Its>... its) : m_selector(std::move(selector)), m_its(std::make_tuple(its...)) { set_result(); }
+
+            typename traits_type::reference value() const { return *m_result; }
+
+            bool move_next()
+            {
+                if (is_valid())
+                {
+                    std::apply([](auto&&... pack) { return expand_tuple((++pack.m_begin)...); }, m_its);
+                    ++m_index;
+                    return set_result();
+                }
+                return false;
+            }
+        };
+
+        template <typename Selector, typename... Its>
+        using zip_index_iterator = iterator_base<zip_index_iterator_impl<Selector, Its...>>;
+    } // namespace impl
+
+    // Applies a specified function to the corresponding elements of two enumerable, producing an enumerable of the results.
+    template <typename Selector, typename... Containers>
+    constexpr auto zip_index(Selector&& selector, Containers&&... cs)
+    {
+        return [&](auto&& container) {
+            if constexpr (sizeof...(Containers) == 0)
+            {
+                return container;
+            }
+            else
+            {
+                using It = decltype(std::begin(container));
+                return impl::iterable{ impl::zip_index_iterator<Selector, It, decltype(std::begin(cs))...>{ impl::iterator_ctor, std::forward<Selector>(selector), impl::iterator_pack<It>{ std::begin(container), std::end(container) }, impl::iterator_pack<decltype(std::begin(cs))>{ std::begin(cs), std::end(cs) }... } };
+            }
+        };
+    }
 } // namespace linq
 
 #endif // !LINQ_QUERY_HPP
