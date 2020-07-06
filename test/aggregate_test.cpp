@@ -295,60 +295,60 @@ BOOST_AUTO_TEST_CASE(group_join_test)
     LINQ_CHECK_EQUAL_COLLECTIONS(a3, e);
 }
 
-//BOOST_AUTO_TEST_CASE(to_container_to_list_test)
-//{
-//    int a1[]{ 1, 2, 3, 4, 5, 6 };
-//    list<int> a2{ 2, 4, 6 };
-//    auto e{ a1 >> where([](int& a) { return a % 2 == 0; }) >> to_list<int>() };
-//    LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
-//}
-//
-//BOOST_AUTO_TEST_CASE(to_container_to_set_test)
-//{
-//    int a1[]{ 1, 1, 2, 3, 2, 4, 3, 5, 6, 2, 4, 3, 5, 2, 6, 1 };
-//    int a2[]{ 2, 4, 6 };
-//    auto s{ a1 >> to_set<int>() };
-//    auto e{ s >> where([](int a) { return a % 2 == 0; }) };
-//    LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
-//}
-//
-//BOOST_AUTO_TEST_CASE(to_container_to_multiset_test)
-//{
-//    int a1[]{ 1, 1, 2, 3, 2, 4, 3, 5, 6, 2, 4, 3, 5, 2, 6, 1 };
-//    int a2[]{ 2, 2, 2, 2, 4, 4, 6, 6 };
-//    auto s{ a1 >> to_multiset<int>() };
-//    auto e{ s >> where([](int a) { return a % 2 == 0; }) };
-//    LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
-//}
-//
-//BOOST_AUTO_TEST_CASE(to_container_to_vector_test)
-//{
-//    int a1[]{ 1, 2, 3, 4, 5, 6 };
-//    vector<int> a2{ 2, 4, 6 };
-//    auto e{ a1 >> where([](int& a) { return a % 2 == 0; }) >> to_vector<int>() };
-//    LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
-//}
-//
-//BOOST_AUTO_TEST_CASE(to_container_to_map_test)
-//{
-//    int a1[]{ 1, 2, 3 };
-//    map<int, int> a2{
-//        { 1, 1 }, { 2, 4 }, { 3, 9 }
-//    };
-//    auto e{ a1 >> to_map<int, int>([](int i) { return i; }, [](int i) { return i * i; }) };
-//    BOOST_CHECK(e >> equals(a2));
-//}
-//
-//struct to_container_pack
-//{
-//    int index;
-//    int score;
-//};
-//
-//BOOST_AUTO_TEST_CASE(to_container_to_multimap_test)
-//{
-//    to_container_pack a1[]{ { 1, 90 }, { 1, 78 }, { 3, 89 }, { 2, 68 }, { 2, 94 }, { 4, 79 } };
-//    multimap<int, int> a2{ { 1, 90 }, { 1, 78 }, { 2, 68 }, { 2, 94 }, { 3, 89 }, { 4, 79 } };
-//    auto e{ a1 >> to_multimap<int, int>([](to_container_pack& a) { return a.index; }, [](to_container_pack& a) { return a.score; }) };
-//    BOOST_CHECK(e >> equals(a2));
-//}
+BOOST_AUTO_TEST_CASE(to_container_to_list_test)
+{
+    int a1[]{ 1, 2, 3, 4, 5, 6 };
+    list<int> a2{ 2, 4, 6 };
+    auto e{ a1 >> where([](int& a) { return a % 2 == 0; }) >> to_list<int>() };
+    LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
+}
+
+BOOST_AUTO_TEST_CASE(to_container_to_set_test)
+{
+    int a1[]{ 1, 1, 2, 3, 2, 4, 3, 5, 6, 2, 4, 3, 5, 2, 6, 1 };
+    int a2[]{ 2, 4, 6 };
+    auto s{ a1 >> to_set<int>() };
+    auto e{ s >> where([](int a) { return a % 2 == 0; }) };
+    LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
+}
+
+BOOST_AUTO_TEST_CASE(to_container_to_multiset_test)
+{
+    int a1[]{ 1, 1, 2, 3, 2, 4, 3, 5, 6, 2, 4, 3, 5, 2, 6, 1 };
+    int a2[]{ 2, 2, 2, 2, 4, 4, 6, 6 };
+    auto s{ a1 >> to_multiset<int>() };
+    auto e{ s >> where([](int a) { return a % 2 == 0; }) };
+    LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
+}
+
+BOOST_AUTO_TEST_CASE(to_container_to_vector_test)
+{
+    int a1[]{ 1, 2, 3, 4, 5, 6 };
+    vector<int> a2{ 2, 4, 6 };
+    auto e{ a1 >> where([](int& a) { return a % 2 == 0; }) >> to_vector<int>() };
+    LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
+}
+
+BOOST_AUTO_TEST_CASE(to_container_to_map_test)
+{
+    int a1[]{ 1, 2, 3 };
+    map<int, int> a2{
+        { 1, 1 }, { 2, 4 }, { 3, 9 }
+    };
+    auto e{ a1 >> to_map<int, int>([](int i) { return i; }, [](int i) { return i * i; }) };
+    BOOST_CHECK(std::equal(a2.begin(), a2.end(), e.begin(), e.end()));
+}
+
+struct to_container_pack
+{
+    int index;
+    int score;
+};
+
+BOOST_AUTO_TEST_CASE(to_container_to_multimap_test)
+{
+    to_container_pack a1[]{ { 1, 90 }, { 1, 78 }, { 3, 89 }, { 2, 68 }, { 2, 94 }, { 4, 79 } };
+    multimap<int, int> a2{ { 1, 90 }, { 1, 78 }, { 2, 68 }, { 2, 94 }, { 3, 89 }, { 4, 79 } };
+    auto e{ a1 >> to_multimap<int, int>([](to_container_pack& a) { return a.index; }, [](to_container_pack& a) { return a.score; }) };
+    BOOST_CHECK(std::equal(a2.begin(), a2.end(), e.begin(), e.end()));
+}

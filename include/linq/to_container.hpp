@@ -2,7 +2,7 @@
  * 
  * MIT License
  * 
- * Copyright (c) 2019 Berrysoft
+ * Copyright (c) 2019-2020 Berrysoft
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -40,85 +40,65 @@ namespace linq
     template <typename T, typename Allocator = std::allocator<T>>
     constexpr auto to_list()
     {
-        return [](auto e) {
-            return std::list<T, Allocator>(e.begin(), e.end());
+        return [](auto&& container) {
+            return std::list<T, Allocator>(std::begin(container), std::end(container));
         };
     }
 
     template <typename T, typename Comparer = std::less<T>, typename Allocator = std::allocator<T>>
     constexpr auto to_set()
     {
-        return [](auto e) {
-            std::set<T, Comparer, Allocator> result;
-            for (auto item : e)
-            {
-                result.emplace(item);
-            }
-            return result;
+        return [](auto&& container) {
+            return std::set<T, Comparer, Allocator>(std::begin(container), std::end(container));
         };
     }
 
     template <typename T, typename Comparer = std::less<T>, typename Allocator = std::allocator<T>>
     constexpr auto to_multiset()
     {
-        return [](auto e) {
-            std::multiset<T, Comparer, Allocator> result;
-            for (auto item : e)
-            {
-                result.emplace(item);
-            }
-            return result;
+        return [](auto&& container) {
+            return std::multiset<T, Comparer, Allocator>(std::begin(container), std::end(container));
         };
     }
 
     template <typename T, typename Hash = std::hash<T>, typename KeyEq = std::equal_to<T>, typename Allocator = std::allocator<T>>
     constexpr auto to_unordered_set()
     {
-        return [](auto e) {
-            std::unordered_set<T, Hash, KeyEq, Allocator> result;
-            for (auto item : e)
-            {
-                result.emplace(item);
-            }
-            return result;
+        return [](auto&& container) {
+            return std::unordered_set<T, Hash, KeyEq, Allocator>(std::begin(container), std::end(container));
         };
     }
 
     template <typename T, typename Hash = std::hash<T>, typename KeyEq = std::equal_to<T>, typename Allocator = std::allocator<T>>
     constexpr auto to_unordered_multiset()
     {
-        return [](auto e) {
-            std::unordered_multiset<T, Hash, KeyEq, Allocator> result;
-            for (auto item : e)
-            {
-                result.emplace(item);
-            }
-            return result;
+        return [](auto&& container) {
+            return std::unordered_multiset<T, Hash, KeyEq, Allocator>(std::begin(container), std::end(container));
         };
     }
 
     template <typename T, typename Allocator = std::allocator<T>>
     constexpr auto to_vector()
     {
-        return [](auto e) {
-            return std::vector<T, Allocator>(e.begin(), e.end());
+        return [](auto&& container) {
+            return std::vector<T, Allocator>(std::begin(container), std::end(container));
         };
     }
 
     template <typename T, typename Allocator = std::allocator<T>>
     constexpr auto to_deque()
     {
-        return [](auto e) {
-            return std::deque<T, Allocator>(e.begin(), e.end());
+        return [](auto&& container) {
+            return std::deque<T, Allocator>(std::begin(container), std::end(container));
         };
     }
 
     template <typename TKey, typename TElem, typename KeySelector, typename ElementSelector, typename Comparer = std::less<TKey>, typename Allocator = std::allocator<std::pair<const TKey, TElem>>>
     constexpr auto to_map(KeySelector&& keysel, ElementSelector&& elesel)
     {
-        return [&](auto e) {
+        return [&](auto&& container) {
             std::map<TKey, TElem, Comparer, Allocator> result;
-            for (auto item : e)
+            for (auto& item : container)
             {
                 result.emplace(keysel(item), elesel(item));
             }
@@ -129,9 +109,9 @@ namespace linq
     template <typename TKey, typename TElem, typename KeySelector, typename ElementSelector, typename Hash = std::hash<TKey>, typename KeyEq = std::equal_to<TKey>, typename Allocator = std::allocator<std::pair<const TKey, TElem>>>
     constexpr auto to_unordered_map(KeySelector&& keysel, ElementSelector&& elesel)
     {
-        return [&](auto e) {
+        return [&](auto&& container) {
             std::unordered_map<TKey, TElem, Hash, KeyEq, Allocator> result;
-            for (auto item : e)
+            for (auto& item : container)
             {
                 result.emplace(keysel(item), elesel(item));
             }
@@ -142,9 +122,9 @@ namespace linq
     template <typename TKey, typename TElem, typename KeySelector, typename ElementSelector, typename Comparer = std::less<TKey>, typename Allocator = std::allocator<std::pair<const TKey, TElem>>>
     constexpr auto to_multimap(KeySelector&& keysel, ElementSelector&& elesel)
     {
-        return [&](auto e) {
+        return [&](auto&& container) {
             std::multimap<TKey, TElem, Comparer, Allocator> result;
-            for (auto item : e)
+            for (auto& item : container)
             {
                 result.emplace(keysel(item), elesel(item));
             }
@@ -155,9 +135,9 @@ namespace linq
     template <typename TKey, typename TElem, typename KeySelector, typename ElementSelector, typename Hash = std::hash<TKey>, typename KeyEq = std::equal_to<TKey>, typename Allocator = std::allocator<std::pair<const TKey, TElem>>>
     constexpr auto to_unordered_multimap(KeySelector&& keysel, ElementSelector&& elesel)
     {
-        return [&](auto e) {
+        return [&](auto&& container) {
             std::unordered_multimap<TKey, TElem, Hash, KeyEq, Allocator> result;
-            for (auto item : e)
+            for (auto& item : container)
             {
                 result.emplace(keysel(item), elesel(item));
             }
