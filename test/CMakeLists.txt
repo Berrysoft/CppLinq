@@ -2,8 +2,10 @@ find_package(Boost COMPONENTS unit_test_framework REQUIRED)
 
 function(linq_add_test name)
   add_executable(${name} "${name}.cpp")
-  target_compile_definitions(${name} PRIVATE "BOOST_TEST_DYN_LINK")
   target_link_libraries(${name} PRIVATE linq Boost::unit_test_framework)
+  if(MINGW)
+	target_link_libraries(${name} PRIVATE Boost::dynamic_linking)
+  endif()
   add_test(NAME ${name} COMMAND ${name})
 endfunction()
 
