@@ -2,6 +2,7 @@
 
 #include "test_utility.hpp"
 #include <ctime>
+#include <linq/core.hpp>
 #include <optional>
 #include <random>
 #include <vector>
@@ -9,15 +10,17 @@
 using namespace std;
 using namespace linq;
 
-template <typename T>
-class random_enumerator
+template <typename It>
+class random_iterator_impl
 {
 private:
-    vector<T> m_vec;
-    optional<T> m_current;
+    using value_type = typename std::iterator_traits<It>::value_type;
+
+    vector<value_type> m_vec;
+    optional<value_type> m_current;
     mt19937 rnd;
 
-    void move_next()
+    void move_next_impl()
     {
         if (m_vec.empty())
         {
@@ -33,35 +36,44 @@ private:
     }
 
 public:
-    template <typename Eter>
-    constexpr random_enumerator(Eter&& eter) : rnd((unsigned int)time(nullptr))
+    using traits_type = impl::iterator_impl_traits<value_type>;
+
+    random_iterator_impl(It begin, It end) : rnd((unsigned int)time(nullptr))
     {
-        for (; eter; ++eter)
+        for (; begin != end; ++begin)
         {
-            m_vec.emplace_back(*eter);
+            m_vec.emplace_back(*begin);
         }
-        move_next();
+        move_next_impl();
     }
 
-    constexpr operator bool() const { return (bool)m_current; }
-    constexpr random_enumerator& operator++()
+    typename traits_type::reference value() const { return *m_current; }
+
+    bool move_next()
     {
-        move_next();
-        return *this;
+        move_next_impl();
+        return (bool)m_current;
     }
-    constexpr decltype(auto) operator*() { return *m_current; }
 };
+
+template <typename It>
+using random_iterator = impl::iterator_base<random_iterator_impl<It>>;
 
 constexpr auto as_random()
 {
-    return [](auto e) {
-        using T = remove_cref<decltype(*e.enumerator())>;
-        return enumerable(random_enumerator<T>(e.enumerator()));
+    return [](auto&& container) {
+        using It = decltype(std::begin(container));
+        return impl::iterable{ random_iterator<It>{ impl::iterator_ctor, std::begin(container), std::end(container) } };
     };
 }
 
 BOOST_AUTO_TEST_CASE(extension_test)
 {
     auto e{ range(0, 10) >> as_random() };
+    for (int i : e)
+    {
+        cout << i << ' ';
+    }
+    cout << endl;
     BOOST_CHECK(true);
 }
