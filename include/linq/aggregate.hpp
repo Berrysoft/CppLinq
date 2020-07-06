@@ -82,7 +82,8 @@ namespace linq
         public:
             using traits_type = std::iterator_traits<It>;
 
-            peek_iterator_impl(It begin, It end, Action&& action) : m_begin(begin), m_end(end), m_action(std::forward<Action>(action)) { set_result(); }
+            peek_iterator_impl(It begin, It end, Action&& action)
+                : m_begin(begin), m_end(end), m_action(std::forward<Action>(action)) { set_result(); }
 
             typename traits_type::reference value()
             {
@@ -109,7 +110,8 @@ namespace linq
     {
         return [&](auto&& container) {
             using It = decltype(std::begin(container));
-            return impl::iterable{ impl::peek_iterator<It, Action>{ impl::iterator_ctor, std::begin(container), std::end(container), std::forward<Action>(action) } };
+            return impl::iterable{ impl::peek_iterator<It, Action>{
+                impl::iterator_ctor, std::begin(container), std::end(container), std::forward<Action>(action) } };
         };
     }
 
@@ -135,7 +137,8 @@ namespace linq
         public:
             using traits_type = std::iterator_traits<It>;
 
-            peek_index_iterator_impl(It begin, It end, Action&& action) : m_begin(begin), m_end(end), m_action(std::forward<Action>(action)) { set_result(); }
+            peek_index_iterator_impl(It begin, It end, Action&& action)
+                : m_begin(begin), m_end(end), m_action(std::forward<Action>(action)) { set_result(); }
 
             typename traits_type::reference value()
             {
@@ -162,7 +165,8 @@ namespace linq
     {
         return [&](auto&& container) {
             using It = decltype(std::begin(container));
-            return impl::iterable{ impl::peek_index_iterator<It, Action>{ impl::iterator_ctor, std::begin(container), std::end(container), std::forward<Action>(action) } };
+            return impl::iterable{ impl::peek_index_iterator<It, Action>{
+                impl::iterator_ctor, std::begin(container), std::end(container), std::forward<Action>(action) } };
         };
     }
 
@@ -383,7 +387,8 @@ namespace linq
         return [](auto&& container) {
             using It = decltype(std::begin(container));
             using T = typename std::iterator_traits<It>::value_type;
-            return impl::iterable{ impl::default_if_empty_iterator<It, T>{ impl::iterator_ctor, std::begin(container), std::end(container), T{} } };
+            return impl::iterable{ impl::default_if_empty_iterator<It, T>{
+                impl::iterator_ctor, std::begin(container), std::end(container), T{} } };
         };
     }
 
@@ -393,7 +398,8 @@ namespace linq
     {
         return [&](auto&& container) {
             using It = decltype(std::begin(container));
-            return impl::iterable{ impl::default_if_empty_iterator<It, T>{ impl::iterator_ctor, std::begin(container), std::end(container), std::forward<T>(def) } };
+            return impl::iterable{ impl::default_if_empty_iterator<It, T>{
+                impl::iterator_ctor, std::begin(container), std::end(container), std::forward<T>(def) } };
         };
     }
 
@@ -767,7 +773,8 @@ namespace linq
         return [&](auto&& container) {
             using It1 = decltype(std::begin(container));
             using It2 = decltype(std::begin(c2));
-            return impl::iterable{ impl::union_set_iterator<It1, It2, Comparer>{ impl::iterator_ctor, std::begin(container), std::end(container), std::begin(c2), std::end(c2) } };
+            return impl::iterable{ impl::union_set_iterator<It1, It2, Comparer>{
+                impl::iterator_ctor, std::begin(container), std::end(container), std::begin(c2), std::end(c2) } };
         };
     }
 
@@ -815,7 +822,8 @@ namespace linq
     {
         return [&](auto&& container) {
             using It = decltype(std::begin(container));
-            return impl::iterable{ impl::intersect_iterator<It, Comparer>{ impl::iterator_ctor, std::begin(container), std::end(container), std::begin(c2), std::end(c2) } };
+            return impl::iterable{ impl::intersect_iterator<It, Comparer>{
+                impl::iterator_ctor, std::begin(container), std::end(container), std::begin(c2), std::end(c2) } };
         };
     }
 
@@ -867,168 +875,215 @@ namespace linq
         };
     }
 
-    //namespace impl
-    //{
-    //    template <typename TKey, typename TElement, typename ResultSelector, typename Comparer>
-    //    class group_enumerator
-    //    {
-    //    private:
-    //        std::map<TKey, std::deque<TElement>, Comparer> m_lookup;
-    //        typename std::map<TKey, std::deque<TElement>, Comparer>::iterator m_begin, m_end;
-    //        ResultSelector m_rstsel;
+    namespace impl
+    {
+        template <typename TKey, typename TElement, typename ResultSelector, typename Comparer>
+        class group_iterator_impl
+        {
+        private:
+            std::map<TKey, std::vector<TElement>, Comparer> m_lookup;
+            typename std::map<TKey, std::vector<TElement>, Comparer>::iterator m_begin, m_end;
+            std::decay_t<ResultSelector> m_rstsel;
 
-    //    public:
-    //        constexpr group_enumerator(const group_enumerator& eter) : m_lookup(eter.m_lookup), m_begin(m_lookup.begin()), m_end(m_lookup.end()), m_rstsel(eter.m_rstsel) {}
-    //        constexpr group_enumerator& operator=(const group_enumerator& eter)
-    //        {
-    //            m_lookup = eter.m_lookup;
-    //            m_begin = m_lookup.begin();
-    //            m_end = m_lookup.end();
-    //            m_rstsel = eter.m_rstsel;
-    //            return *this;
-    //        }
+            using result_type = decltype(m_rstsel(m_begin->first, m_lookup[m_begin->first]));
+            std::optional<result_type> m_result{};
 
-    //        template <typename Eter, typename KeySelector, typename ElementSelector>
-    //        constexpr group_enumerator(Eter&& eter, KeySelector&& keysel, ElementSelector&& elesel, ResultSelector&& rstsel) : m_rstsel(rstsel)
-    //        {
-    //            for (; eter; ++eter)
-    //            {
-    //                m_lookup[keysel(*eter)].emplace_back(elesel(*eter));
-    //            }
-    //            m_begin = m_lookup.begin();
-    //            m_end = m_lookup.end();
-    //        }
+            void set_result()
+            {
+                if (m_begin != m_end)
+                {
+                    auto& f = m_begin->first;
+                    m_result = m_rstsel(f, m_lookup[f]);
+                }
+            }
 
-    //        constexpr operator bool() const { return m_begin != m_end; }
-    //        constexpr group_enumerator& operator++()
-    //        {
-    //            ++m_begin;
-    //            return *this;
-    //        }
-    //        constexpr decltype(auto) operator*()
-    //        {
-    //            auto&& f{ m_begin->first };
-    //            return m_rstsel(f, get_enumerable(m_lookup[f]));
-    //        }
-    //    };
-    //} // namespace impl
+        public:
+            using traits_type = iterator_impl_traits<result_type>;
 
-    //// Groups the elements according to a specified key selector function and creates a result value from each group and its key.
-    //// Key values are compared by using a specified comparer, and the elements of each group are projected by using a specified function.
-    //template <typename Comparer = std::less<void>, typename KeySelector, typename ElementSelector, typename ResultSelector>
-    //constexpr auto group(KeySelector&& keysel, ElementSelector&& elesel, ResultSelector&& rstsel)
-    //{
-    //    return [&](auto e) {
-    //        using TKey = remove_cref<decltype(keysel(*e.enumerator()))>;
-    //        using TElement = remove_cref<decltype(elesel(*e.enumerator()))>;
-    //        return enumerable(impl::group_enumerator<TKey, TElement, ResultSelector, Comparer>(e.enumerator(), std::forward<KeySelector>(keysel), std::forward<ElementSelector>(elesel), std::forward<ResultSelector>(rstsel)));
-    //    };
-    //}
+            template <typename It, typename KeySelector, typename ElementSelector>
+            group_iterator_impl(It begin, It end, KeySelector&& keysel, ElementSelector&& elesel, ResultSelector&& rstsel) : m_rstsel(std::forward<ResultSelector>(rstsel))
+            {
+                for (; begin != end; ++begin)
+                {
+                    m_lookup[keysel(*begin)].emplace_back(elesel(*begin));
+                }
+                m_begin = m_lookup.begin();
+                m_end = m_lookup.end();
+                set_result();
+            }
 
-    //namespace impl
-    //{
-    //    template <typename Eter, typename TKey, typename TElement, typename KeySelector, typename ResultSelector, typename Comparer>
-    //    class group_join_enumerator
-    //    {
-    //    private:
-    //        Eter m_eter;
-    //        std::map<TKey, std::deque<TElement>, Comparer> m_lookup;
-    //        KeySelector m_keysel;
-    //        ResultSelector m_rstsel;
+            typename traits_type::reference value() { return *m_result; }
 
-    //    public:
-    //        template <typename Eter2, typename KeySelector2, typename ElementSelector2>
-    //        constexpr group_join_enumerator(Eter&& eter, Eter2&& eter2, KeySelector&& keysel, KeySelector2&& keysel2, ElementSelector2&& elesel2, ResultSelector&& rstsel)
-    //            : m_eter(std::forward<Eter>(eter)), m_keysel(keysel), m_rstsel(rstsel)
-    //        {
-    //            for (; eter2; ++eter2)
-    //            {
-    //                m_lookup[keysel2(*eter2)].emplace_back(elesel2(*eter2));
-    //            }
-    //        }
+            void move_next()
+            {
+                ++m_begin;
+                set_result();
+            }
 
-    //        constexpr operator bool() const { return m_eter; }
-    //        constexpr group_join_enumerator& operator++()
-    //        {
-    //            ++m_eter;
-    //            return *this;
-    //        }
-    //        constexpr decltype(auto) operator*() { return m_rstsel(*m_eter, get_enumerable(m_lookup[m_keysel(*m_eter)])); }
-    //    };
-    //} // namespace impl
+            bool is_valid() const { return m_begin != m_end; }
+        };
 
-    //// Correlates the elements of two enumerable based on key comparer and groups the results.
-    //template <typename Comparer = std::less<void>, typename E2, typename KeySelector, typename KeySelector2, typename ElementSelector2, typename ResultSelector>
-    //constexpr auto group_join(E2&& e2, KeySelector&& keysel, KeySelector2&& keysel2, ElementSelector2&& elesel2, ResultSelector&& rstsel)
-    //{
-    //    return [&](auto e) {
-    //        using Eter = decltype(e.enumerator());
-    //        using TKey = remove_cref<decltype(keysel2(*get_enumerator(e2)))>;
-    //        using TElement = remove_cref<decltype(elesel2(*get_enumerator(e2)))>;
-    //        return enumerable(impl::group_join_enumerator<Eter, TKey, TElement, KeySelector, ResultSelector, Comparer>(e.enumerator(), get_enumerator(std::forward<E2>(e2)), std::forward<KeySelector>(keysel), std::forward<KeySelector2>(keysel2), std::forward<ElementSelector2>(elesel2), std::forward<ResultSelector>(rstsel)));
-    //    };
-    //}
+        template <typename TKey, typename TElement, typename ResultSelector, typename Comparer>
+        using group_iterator = iterator_base<group_iterator_impl<TKey, TElement, ResultSelector, Comparer>>;
+    } // namespace impl
 
-    //namespace impl
-    //{
-    //    template <typename Eter, typename TKey, typename TElement, typename KeySelector, typename ResultSelector, typename Comparer>
-    //    class join_enumerator
-    //    {
-    //    private:
-    //        Eter m_eter;
-    //        std::map<TKey, std::deque<TElement>, Comparer> m_lookup;
-    //        typename std::deque<TElement>::iterator m_begin, m_end;
-    //        KeySelector m_keysel;
-    //        ResultSelector m_rstsel;
+    // Groups the elements according to a specified key selector function and creates a result value from each group and its key.
+    // Key values are compared by using a specified comparer, and the elements of each group are projected by using a specified function.
+    template <typename Comparer = std::less<void>, typename KeySelector, typename ElementSelector, typename ResultSelector>
+    constexpr auto group(KeySelector&& keysel, ElementSelector&& elesel, ResultSelector&& rstsel)
+    {
+        return [&](auto&& container) {
+            using TKey = std::remove_reference_t<decltype(keysel(*std::begin(container)))>;
+            using TElement = std::remove_reference_t<decltype(elesel(*std::begin(container)))>;
+            return impl::iterable{ impl::group_iterator<TKey, TElement, ResultSelector, Comparer>{
+                impl::iterator_ctor,
+                std::begin(container), std::end(container),
+                std::forward<KeySelector>(keysel), std::forward<ElementSelector>(elesel), std::forward<ResultSelector>(rstsel) } };
+        };
+    }
 
-    //        constexpr void move_next()
-    //        {
-    //            if (m_eter)
-    //            {
-    //                decltype(auto) deq = m_lookup[m_keysel(*m_eter)];
-    //                m_begin = deq.begin();
-    //                m_end = deq.end();
-    //            }
-    //        }
+    namespace impl
+    {
+        template <typename It, typename TKey, typename TElement, typename KeySelector, typename ResultSelector, typename Comparer>
+        class group_join_iterator_impl
+        {
+        private:
+            It m_begin, m_end;
+            std::map<TKey, std::vector<TElement>, Comparer> m_lookup;
+            KeySelector m_keysel;
+            ResultSelector m_rstsel;
 
-    //    public:
-    //        template <typename Eter2, typename KeySelector2, typename ElementSelector2>
-    //        constexpr join_enumerator(Eter&& eter, Eter2&& eter2, KeySelector&& keysel, KeySelector2&& keysel2, ElementSelector2&& elesel2, ResultSelector&& rstsel)
-    //            : m_eter(std::forward<Eter>(eter)), m_keysel(keysel), m_rstsel(rstsel)
-    //        {
-    //            for (; eter2; ++eter2)
-    //            {
-    //                m_lookup[keysel2(*eter2)].emplace_back(elesel2(*eter2));
-    //            }
-    //            move_next();
-    //        }
+            using result_type = decltype(m_rstsel(*m_begin, m_lookup[m_keysel(*m_begin)]));
+            std::optional<result_type> m_result;
 
-    //        constexpr operator bool() const { return m_eter || m_begin != m_end; }
-    //        constexpr join_enumerator& operator++()
-    //        {
-    //            ++m_begin;
-    //            if (m_begin == m_end)
-    //            {
-    //                ++m_eter;
-    //                move_next();
-    //            }
-    //            return *this;
-    //        }
-    //        constexpr decltype(auto) operator*() { return m_rstsel(*m_eter, *m_begin); }
-    //    };
-    //} // namespace impl
+            void set_result()
+            {
+                if (m_begin != m_end)
+                {
+                    auto& item = *m_begin;
+                    m_result = m_rstsel(item, m_lookup[m_keysel(item)]);
+                }
+            }
 
-    //// Correlates the elements of two enumerable based on matching keys.
-    //template <typename Comparer = std::less<void>, typename E2, typename KeySelector, typename KeySelector2, typename ElementSelector2, typename ResultSelector>
-    //constexpr auto join(E2&& e2, KeySelector&& keysel, KeySelector2&& keysel2, ElementSelector2&& elesel2, ResultSelector&& rstsel)
-    //{
-    //    return [&](auto e) {
-    //        using Eter = decltype(e.enumerator());
-    //        using TKey = remove_cref<decltype(keysel2(*get_enumerator(e2)))>;
-    //        using TElement = remove_cref<decltype(elesel2(*get_enumerator(e2)))>;
-    //        return enumerable(impl::join_enumerator<Eter, TKey, TElement, KeySelector, ResultSelector, Comparer>(e.enumerator(), get_enumerator(std::forward<E2>(e2)), std::forward<KeySelector>(keysel), std::forward<KeySelector2>(keysel2), std::forward<ElementSelector2>(elesel2), std::forward<ResultSelector>(rstsel)));
-    //    };
-    //}
+        public:
+            using traits_type = iterator_impl_traits<result_type>;
+
+            template <typename It2, typename KeySelector2, typename ElementSelector2>
+            group_join_iterator_impl(It begin, It end, It2 begin2, It2 end2, KeySelector&& keysel, KeySelector2&& keysel2, ElementSelector2&& elesel2, ResultSelector&& rstsel)
+                : m_begin(begin), m_end(end), m_keysel(std::forward<KeySelector>(keysel)), m_rstsel(std::forward<ResultSelector>(rstsel))
+            {
+                for (; begin2 != end2; ++begin2)
+                {
+                    m_lookup[keysel2(*begin2)].emplace_back(elesel2(*begin2));
+                }
+                set_result();
+            }
+
+            typename traits_type::reference value() { return *m_result; }
+
+            void move_next()
+            {
+                ++m_begin;
+                set_result();
+            }
+
+            bool is_valid() const { return m_begin != m_end; }
+        };
+
+        template <typename It, typename TKey, typename TElement, typename KeySelector, typename ResultSelector, typename Comparer>
+        using group_join_iterator = iterator_base<group_join_iterator_impl<It, TKey, TElement, KeySelector, ResultSelector, Comparer>>;
+    } // namespace impl
+
+    // Correlates the elements of two enumerable based on key comparer and groups the results.
+    template <typename Comparer = std::less<void>, typename C2, typename KeySelector, typename KeySelector2, typename ElementSelector2, typename ResultSelector>
+    constexpr auto group_join(C2&& c2, KeySelector&& keysel, KeySelector2&& keysel2, ElementSelector2&& elesel2, ResultSelector&& rstsel)
+    {
+        return [&](auto&& container) {
+            using It = decltype(std::begin(container));
+            using TKey = std::remove_reference_t<decltype(keysel2(*std::begin(c2)))>;
+            using TElement = std::remove_reference_t<decltype(elesel2(*std::begin(c2)))>;
+            return impl::iterable{ impl::group_join_iterator<It, TKey, TElement, KeySelector, ResultSelector, Comparer>{
+                impl::iterator_ctor, std::begin(container), std::end(container),
+                std::begin(c2), std::end(c2),
+                std::forward<KeySelector>(keysel), std::forward<KeySelector2>(keysel2), std::forward<ElementSelector2>(elesel2),
+                std::forward<ResultSelector>(rstsel) } };
+        };
+    }
+
+    namespace impl
+    {
+        template <typename It, typename TKey, typename TElement, typename KeySelector, typename ResultSelector, typename Comparer>
+        class join_iterator_impl
+        {
+        private:
+            It m_begin, m_end;
+            std::map<TKey, std::vector<TElement>, Comparer> m_lookup;
+            typename std::vector<TElement>::iterator m_inner_begin, m_inner_end;
+            KeySelector m_keysel;
+            ResultSelector m_rstsel;
+
+            using result_type = decltype(m_rstsel(*m_begin, *m_inner_begin));
+            std::optional<result_type> m_result;
+
+            void set_result()
+            {
+                if (m_begin != m_end)
+                {
+                    auto& vec = m_lookup[m_keysel(*m_begin)];
+                    m_inner_begin = vec.begin();
+                    m_inner_end = vec.end();
+                    m_result = m_rstsel(*m_begin, *m_inner_begin);
+                }
+            }
+
+        public:
+            using traits_type = iterator_impl_traits<result_type>;
+
+            template <typename It2, typename KeySelector2, typename ElementSelector2>
+            join_iterator_impl(It begin, It end, It2 begin2, It2 end2, KeySelector&& keysel, KeySelector2&& keysel2, ElementSelector2&& elesel2, ResultSelector&& rstsel)
+                : m_begin(begin), m_end(end), m_keysel(std::forward<KeySelector>(keysel)), m_rstsel(std::forward<ResultSelector>(rstsel))
+            {
+                for (; begin2 != end2; ++begin2)
+                {
+                    m_lookup[keysel2(*begin2)].emplace_back(elesel2(*begin2));
+                }
+                set_result();
+            }
+
+            typename traits_type::reference value() { return *m_result; }
+
+            void move_next()
+            {
+                ++m_inner_begin;
+                if (m_inner_begin == m_inner_end)
+                {
+                    ++m_begin;
+                    set_result();
+                }
+            }
+
+            bool is_valid() const { return m_begin != m_end || m_inner_begin != m_inner_end; }
+        };
+
+        template <typename It, typename TKey, typename TElement, typename KeySelector, typename ResultSelector, typename Comparer>
+        using join_iterator = iterator_base<join_iterator_impl<It, TKey, TElement, KeySelector, ResultSelector, Comparer>>;
+    } // namespace impl
+
+    // Correlates the elements of two enumerable based on matching keys.
+    template <typename Comparer = std::less<void>, typename C2, typename KeySelector, typename KeySelector2, typename ElementSelector2, typename ResultSelector>
+    constexpr auto join(C2&& c2, KeySelector&& keysel, KeySelector2&& keysel2, ElementSelector2&& elesel2, ResultSelector&& rstsel)
+    {
+        return [&](auto&& container) {
+            using It = decltype(std::begin(container));
+            using TKey = std::remove_reference_t<decltype(keysel2(*std::begin(c2)))>;
+            using TElement = std::remove_reference_t<decltype(elesel2(*std::begin(c2)))>;
+            return impl::iterable{ impl::join_iterator<It, TKey, TElement, KeySelector, ResultSelector, Comparer>{
+                impl::iterator_ctor, std::begin(container), std::end(container),
+                std::begin(c2), std::end(c2),
+                std::forward<KeySelector>(keysel), std::forward<KeySelector2>(keysel2), std::forward<ElementSelector2>(elesel2),
+                std::forward<ResultSelector>(rstsel) } };
+        };
+    }
 } // namespace linq
 
 #endif // !LINQ_AGGREGATE_HPP
