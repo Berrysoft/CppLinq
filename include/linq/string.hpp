@@ -2,7 +2,7 @@
  * 
  * MIT License
  * 
- * Copyright (c) 2019 Berrysoft
+ * Copyright (c) 2019-2020 Berrysoft
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -52,13 +52,27 @@ namespace linq
     namespace impl
     {
         template <typename Char, typename Traits>
-        class split_enumerator
+        class split_iterator_impl
         {
         private:
             std::basic_string_view<Char, Traits> m_view;
             Char m_char;
-            typename Traits::off_type m_offset;
+            typename Traits::off_type m_offset{ 0 };
             std::size_t m_index;
+
+            using result_type = std::basic_string_view<Char, Traits>;
+            result_type m_result{};
+
+        public:
+            using traits_type = iterator_impl_traits<result_type>;
+
+            split_iterator_impl(std::basic_string_view<Char, Traits> view, Char split_char)
+                : m_view(view), m_char(split_char), m_index(std::basic_string_view<Char, Traits>::npos)
+            {
+                move_next();
+            }
+
+            typename traits_type::reference value() { return m_result; }
 
             void move_next()
             {
@@ -66,35 +80,25 @@ namespace linq
                 if ((std::size_t)m_offset < m_view.length())
                 {
                     m_index = m_view.find(m_char, (std::size_t)m_offset);
-                    if (m_index == std::basic_string_view<Char, Traits>::npos)
-                        m_index = m_view.length();
+                    if (m_index == std::basic_string_view<Char, Traits>::npos) m_index = m_view.length();
+                    m_result = m_view.substr((std::size_t)m_offset, (std::size_t)(m_index - m_offset));
                 }
             }
 
-        public:
-            constexpr split_enumerator(std::basic_string_view<Char, Traits> view, Char split_char) : m_view(view), m_char(split_char), m_offset(0), m_index(std::basic_string_view<Char, Traits>::npos)
-            {
-                move_next();
-            }
-
-            constexpr operator bool() const { return (std::size_t)m_offset < m_view.length(); }
-            constexpr split_enumerator& operator++()
-            {
-                move_next();
-                return *this;
-            }
-            constexpr auto operator*() { return m_view.substr((std::size_t)m_offset, (std::size_t)(m_index - m_offset)); }
+            bool is_valid() const { return (std::size_t)m_offset < m_view.length(); }
         };
+
+        template <typename Char, typename Traits>
+        using split_iterator = iterator_base<split_iterator_impl<Char, Traits>>;
     } // namespace impl
 
     // Split the string into an enumerable of string_view by a char.
     template <typename Char, typename Traits = std::char_traits<Char>>
     constexpr auto split(Char split_char = (Char)' ')
     {
-        return [=](auto e) {
-            using Container = decltype(e.enumerator().container());
-            std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
-            return enumerable(impl::split_enumerator(view, split_char));
+        return [=](auto&& container) {
+            std::basic_string_view<Char, Traits> view{ container };
+            return impl::iterable{ impl::split_iterator<Char, Traits>{ impl::iterator_ctor, view, split_char } };
         };
     }
 
@@ -103,12 +107,11 @@ namespace linq
     template <typename Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>>
     constexpr auto joinstr()
     {
-        return [](auto e) {
-            auto eter{ e.enumerator() };
+        return [](auto&& container) {
             std::basic_ostringstream<Char, Traits, Allocator> oss;
-            for (; eter; ++eter)
+            for (auto& item : container)
             {
-                oss << *eter;
+                oss << item;
             }
             return oss.str();
         };
@@ -118,15 +121,16 @@ namespace linq
     template <typename Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>, typename T>
     constexpr auto joinstr(T&& value)
     {
-        return [&](auto e) {
-            auto eter{ e.enumerator() };
+        return [&](auto&& container) {
             std::basic_ostringstream<Char, Traits, Allocator> oss;
-            if (eter)
+            auto begin = std::begin(container);
+            auto end = std::end(container);
+            if (begin != end)
             {
-                oss << *eter;
-                for (++eter; eter; ++eter)
+                oss << *begin;
+                for (++begin; begin != end; ++begin)
                 {
-                    oss << value << *eter;
+                    oss << value << *begin;
                 }
             }
             return oss.str();
@@ -138,9 +142,8 @@ namespace linq
     template <typename Char, typename Traits = std::char_traits<Char>, typename T>
     constexpr auto instr(T&& t)
     {
-        return [&](auto e) {
-            using Container = decltype(e.enumerator().container());
-            std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
+        return [&](auto&& container) {
+            std::basic_string_view<Char, Traits> view{ container };
             return view.find(std::forward<T>(t)) != std::basic_string_view<Char, Traits>::npos;
         };
     }
@@ -149,9 +152,8 @@ namespace linq
     template <typename Char, typename Traits = std::char_traits<Char>, typename = std::enable_if_t<is_char_v<Char>>>
     constexpr auto starts_with(Char value)
     {
-        return [=](auto e) {
-            using Container = decltype(e.enumerator().container());
-            std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
+        return [=](auto&& container) {
+            std::basic_string_view<Char, Traits> view{ container };
             return view.front() == value;
         };
     }
@@ -160,9 +162,8 @@ namespace linq
     template <typename Char, typename Traits = std::char_traits<Char>, typename T>
     constexpr auto starts_with(T&& t)
     {
-        return [&](auto e) {
-            using Container = decltype(e.enumerator().container());
-            std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
+        return [&](auto&& container) {
+            std::basic_string_view<Char, Traits> view{ container };
             std::basic_string_view<Char, Traits> value{ std::forward<T>(t) };
             if (view.length() < value.length())
                 return false;
@@ -174,9 +175,8 @@ namespace linq
     template <typename Char, typename Traits = std::char_traits<Char>, typename = std::enable_if_t<is_char_v<Char>>>
     constexpr auto ends_with(Char value)
     {
-        return [=](auto e) {
-            using Container = decltype(e.enumerator().container());
-            std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
+        return [=](auto&& container) {
+            std::basic_string_view<Char, Traits> view{ container };
             return view.back() == value;
         };
     }
@@ -185,9 +185,8 @@ namespace linq
     template <typename Char, typename Traits = std::char_traits<Char>, typename T>
     constexpr auto ends_with(T&& t)
     {
-        return [&](auto e) {
-            using Container = decltype(e.enumerator().container());
-            std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
+        return [&](auto&& container) {
+            std::basic_string_view<Char, Traits> view{ container };
             std::basic_string_view<Char, Traits> value{ std::forward<T>(t) };
             if (view.length() < value.length())
                 return false;
@@ -199,9 +198,8 @@ namespace linq
     template <typename Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>>
     constexpr auto remove(Char value)
     {
-        return [=](auto e) {
-            using Container = decltype(e.enumerator().container());
-            std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
+        return [=](auto&& container) {
+            std::basic_string_view<Char, Traits> view{ container };
             std::basic_ostringstream<Char, Traits, Allocator> oss;
             std::size_t offset{ 0 };
             for (std::size_t i{ 0 }; i < view.length(); i++)
@@ -224,9 +222,8 @@ namespace linq
     template <typename Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>, typename T>
     constexpr auto remove(T&& t)
     {
-        return [&](auto e) {
-            using Container = decltype(e.enumerator().container());
-            std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
+        return [&](auto&& container) {
+            std::basic_string_view<Char, Traits> view{ container };
             std::basic_string_view<Char, Traits> value{ std::forward<T>(t) };
             std::basic_ostringstream<Char, Traits, Allocator> oss;
             std::size_t offset{ 0 };
@@ -250,9 +247,8 @@ namespace linq
     template <typename Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>, typename TNew>
     constexpr auto replace(Char oldc, TNew&& news)
     {
-        return [oldc, &news](auto e) {
-            using Container = decltype(e.enumerator().container());
-            std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
+        return [oldc, &news](auto&& container) {
+            std::basic_string_view<Char, Traits> view{ container };
             std::basic_ostringstream<Char, Traits, Allocator> oss;
             std::size_t offset{ 0 };
             for (std::size_t i{ 0 }; i < view.length(); i++)
@@ -275,9 +271,8 @@ namespace linq
     template <typename Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>, typename TOld, typename TNew>
     constexpr auto replace(TOld&& olds, TNew&& news)
     {
-        return [&](auto e) {
-            using Container = decltype(e.enumerator().container());
-            std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
+        return [&](auto&& container) {
+            std::basic_string_view<Char, Traits> view{ container };
             std::basic_string_view<Char, Traits> value{ std::forward<TOld>(olds) };
             std::basic_ostringstream<Char, Traits, Allocator> oss;
             std::size_t offset{ 0 };
@@ -301,9 +296,8 @@ namespace linq
     template <typename Char, typename Traits = std::char_traits<Char>>
     constexpr auto trim(Char value = (Char)' ')
     {
-        return [=](auto e) {
-            using Container = decltype(e.enumerator().container());
-            std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
+        return [=](auto&& container) {
+            std::basic_string_view<Char, Traits> view{ container };
             auto begin{ view.find_first_not_of(value) };
             auto end{ view.find_last_not_of(value) };
             if (begin == std::basic_string_view<Char, Traits>::npos)
@@ -316,9 +310,8 @@ namespace linq
     template <typename Char, typename Traits = std::char_traits<Char>>
     constexpr auto trim_left(Char value = (Char)' ')
     {
-        return [=](auto e) {
-            using Container = decltype(e.enumerator().container());
-            std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
+        return [=](auto&& container) {
+            std::basic_string_view<Char, Traits> view{ container };
             auto begin{ view.find_first_not_of(value) };
             if (begin == std::basic_string_view<Char, Traits>::npos)
                 return std::basic_string_view<Char, Traits>{};
@@ -330,9 +323,8 @@ namespace linq
     template <typename Char, typename Traits = std::char_traits<Char>>
     constexpr auto trim_right(Char value = (Char)' ')
     {
-        return [=](auto e) {
-            using Container = decltype(e.enumerator().container());
-            std::basic_string_view<Char, Traits> view{ e.enumerator().container() };
+        return [=](auto&& container) {
+            std::basic_string_view<Char, Traits> view{ container };
             auto end{ view.find_last_not_of(value) };
             if (end == std::basic_string_view<Char, Traits>::npos)
                 return std::basic_string_view<Char, Traits>{};
@@ -344,13 +336,23 @@ namespace linq
     namespace impl
     {
         template <typename Char, typename Traits, typename Allocator>
-        class read_lines_enumerator
+        class read_lines_iterator_impl
         {
         private:
             std::basic_istream<Char, Traits>& m_stream;
             std::optional<std::basic_string<Char, Traits, Allocator>> m_str;
 
-            constexpr void move_next()
+        public:
+            using traits_type = iterator_impl_traits<std::basic_string<Char, Traits, Allocator>>;
+
+            read_lines_iterator_impl(std::basic_istream<Char, Traits>& stream) : m_stream(stream)
+            {
+                move_next();
+            }
+
+            typename traits_type::reference value() { return *m_str; }
+
+            void move_next()
             {
                 std::basic_string<Char, Traits, Allocator> str;
                 if (std::getline(m_stream, str))
@@ -359,37 +361,27 @@ namespace linq
                     m_str = std::nullopt;
             }
 
-        public:
-            constexpr read_lines_enumerator(std::basic_istream<Char, Traits>& stream) : m_stream(stream)
-            {
-                move_next();
-            }
-
-            constexpr operator bool() const { return (bool)m_str; }
-            constexpr read_lines_enumerator& operator++()
-            {
-                move_next();
-                return *this;
-            }
-            constexpr auto operator*() { return *m_str; }
+            bool is_valid() const { return (bool)m_str; }
         };
+
+        template <typename Char, typename Traits, typename Allocator>
+        using read_lines_iterator = iterator_base<read_lines_iterator_impl<Char, Traits, Allocator>>;
     } // namespace impl
 
     // Read lines of string from a stream.
     template <typename Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>>
     constexpr auto read_lines(std::basic_istream<Char, Traits>& stream)
     {
-        return enumerable(impl::read_lines_enumerator<Char, Traits, Allocator>(stream));
+        return impl::iterable{ impl::read_lines_iterator<Char, Traits, Allocator>{ impl::iterator_ctor, stream } };
     }
 
     // Write lines of string to a stream.
-    template <typename Char, typename Traits = std::char_traits<Char>, typename E>
-    constexpr decltype(auto) write_lines(std::basic_ostream<Char, Traits>& stream, E&& e)
+    template <typename Char, typename Traits = std::char_traits<Char>, typename C>
+    constexpr decltype(auto) write_lines(std::basic_ostream<Char, Traits>& stream, C&& c)
     {
-        auto eter{ get_enumerator(e) };
-        for (; eter; ++eter)
+        for (auto& item : c)
         {
-            stream << *eter << stream.widen('\n');
+            stream << item << stream.widen('\n');
         }
         return stream;
     }

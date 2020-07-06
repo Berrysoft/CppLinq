@@ -11,7 +11,7 @@ BOOST_AUTO_TEST_CASE(string_split_test)
     string str{ "Hello world !" };
     string_view views[]{ "Hello", "world", "!" };
     auto e{ str >> split(' ') };
-    test_equals(views, e);
+    LINQ_CHECK_EQUAL_COLLECTIONS(views, e);
 }
 
 BOOST_AUTO_TEST_CASE(string_joinstr_test)
