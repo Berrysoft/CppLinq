@@ -22,7 +22,7 @@ BOOST_AUTO_TEST_CASE(winrt_vector_test)
 {
     auto a1{ single_threaded_vector(vector<int>{ 1, 2, 3, 4, 5, 6 }) };
     int a2[]{ 2, 4, 6 };
-    auto e{ a1 >> where([](int a) { return a % 2 == 0; }) };
+    auto e{ to_iterable(a1) >> where([](int a) { return a % 2 == 0; }) };
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 }
 
@@ -48,9 +48,9 @@ BOOST_AUTO_TEST_CASE(winrt_map_test)
     auto a1{ single_threaded_map(map<int, hstring>{ { 1, L"Gates" }, { 2, L"Jobs" }, { 3, L"Trump" } }) };
     auto a2{ single_threaded_map(map<int, int>{ { 2, 88 }, { 1, 92 }, { 3, 61 } }) };
     pack a3[]{ { L"Gates", 92 }, { L"Jobs", 88 }, { L"Trump", 61 } };
-    auto e{ a1 >>
+    auto e{ to_iterable(a1) >>
             join(
-                a2,
+                to_iterable(a2),
                 [](auto a) { return a.Key(); },
                 [](auto a) { return a.Key(); },
                 [](auto a) { return a.Value(); },

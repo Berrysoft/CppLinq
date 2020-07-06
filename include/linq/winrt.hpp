@@ -34,27 +34,51 @@ namespace linq
 {
     namespace impl
     {
-        template <typename Container, typename = decltype(winrt::impl::begin(std::declval<Container>())), typename = decltype(winrt::impl::end(std::declval<Container>()))>
-        class winrt_iterable
+        // We have to write our own iterator for WinRT collections
+        // because of the wrong typedefs of current implementation
+
+        template <typename It>
+        class winrt_iterator_impl
         {
         private:
-            Container m_container;
+            It m_begin, m_end;
+
+            using result_type = std::remove_reference_t<decltype(*m_begin)>;
+            std::optional<result_type> m_result;
+
+            void set_result()
+            {
+                if (m_begin != m_end) m_result = *m_begin;
+            }
 
         public:
-            winrt_iterable(Container&& container) : m_container(std::forward<Container>(container)) {}
+            using traits_type = iterator_impl_traits<result_type>;
 
-            auto begin() const { return winrt::impl::begin(m_container); }
-            auto end() const { return winrt::impl::end(m_container); }
+            winrt_iterator_impl(It begin, It end) : m_begin(begin), m_end(end) { set_result(); }
+
+            typename traits_type::reference value() { return *m_result; }
+
+            void move_next()
+            {
+                ++m_begin;
+                set_result();
+            }
+
+            bool is_valid() const { return m_begin != m_end; }
         };
+
+        template <typename It>
+        using winrt_iterator = iterator_base<winrt_iterator_impl<It>>;
     } // namespace impl
 
-    template <typename Container, typename Query, typename = decltype(winrt::impl::begin(std::declval<Container>())), typename = decltype(winrt::impl::end(std::declval<Container>()))>
-    constexpr decltype(auto) operator>>(Container&& container, Query&& query)
+    template <typename Container, typename = decltype(std::declval<Container>().First())>
+    auto to_iterable(Container&& container)
     {
-        return std::forward<Query>(query)(impl::winrt_iterable<Container>{ std::forward<Container>(container) });
+        using It = decltype(winrt::impl::begin(container));
+        return impl::iterable{ impl::winrt_iterator<It>{ impl::iterator_ctor, winrt::impl::begin(container), winrt::impl::end(container) } };
     }
 } // namespace linq
 
-#endif // CPPWINRT_VERSION
+#endif // LINQ_USE_WINRT
 
 #endif // !LINQ_WINRT_HPP
