@@ -296,7 +296,9 @@ namespace linq
             It2 m_begin2, m_end2;
 
         public:
-            using traits_type = iterator_impl_traits<std::common_type_t<typename std::iterator_traits<It1>::value_type, typename std::iterator_traits<It2>::value_type>>;
+            using traits_type = iterator_impl_traits<std::common_type_t<
+                typename std::iterator_traits<It1>::value_type,
+                typename std::iterator_traits<It2>::value_type>>;
 
             concat_iterator_impl(It1 begin1, It1 end1, It2 begin2, It2 end2)
                 : m_begin1(begin1), m_end1(end1), m_begin2(begin2), m_end2(end2) {}
@@ -328,10 +330,11 @@ namespace linq
     template <typename Container2>
     constexpr auto concat(Container2&& container2)
     {
-        return [container2 = std::forward<Container2>(container2)](auto&& container) {
+        return [&](auto&& container) {
             using It1 = decltype(std::begin(container));
             using It2 = decltype(std::begin(container2));
-            return impl::iterable{ impl::concat_iterator<It1, It2>{ impl::iterator_ctor, std::begin(container), std::end(container), std::begin(container2), std::end(container2) } };
+            return impl::iterable{ impl::concat_iterator<It1, It2>{
+                impl::iterator_ctor, std::begin(container), std::end(container), std::begin(container2), std::end(container2) } };
         };
     }
 } // namespace linq
