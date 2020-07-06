@@ -189,33 +189,33 @@ BOOST_AUTO_TEST_CASE(set_distinct_test)
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 }
 
-//BOOST_AUTO_TEST_CASE(set_union_set_test)
-//{
-//    int a1[]{ 1, 1, 2, 3, 3, 4, 5, 6 };
-//    int a2[]{ 3, 4, 5, 6, 7, 7, 8 };
-//    int a3[]{ 1, 2, 3, 4, 5, 6, 7, 8 };
-//    auto e{ a1 >> union_set(a2) };
-//    test_equals(a3, e);
-//}
-//
-//BOOST_AUTO_TEST_CASE(set_intersect_test)
-//{
-//    int a1[]{ 1, 1, 2, 3, 3, 4, 5, 6 };
-//    int a2[]{ 3, 4, 5, 6, 7, 7, 8 };
-//    int a3[]{ 3, 4, 5, 6 };
-//    auto e{ a1 >> intersect(a2) };
-//    test_equals(a3, e);
-//}
-//
-//BOOST_AUTO_TEST_CASE(set_except_test)
-//{
-//    int a1[]{ 1, 1, 2, 3, 3, 4, 5, 6 };
-//    int a2[]{ 3, 4, 5, 6, 7, 7, 8 };
-//    int a3[]{ 1, 2 };
-//    auto e{ a1 >> except(a2) };
-//    test_equals(a3, e);
-//}
-//
+BOOST_AUTO_TEST_CASE(set_union_set_test)
+{
+    int a1[]{ 1, 1, 2, 3, 3, 4, 5, 6 };
+    int a2[]{ 3, 4, 5, 6, 7, 7, 8 };
+    int a3[]{ 1, 2, 3, 4, 5, 6, 7, 8 };
+    auto e{ a1 >> union_set(a2) };
+    LINQ_CHECK_EQUAL_COLLECTIONS(a3, e);
+}
+
+BOOST_AUTO_TEST_CASE(set_intersect_test)
+{
+    int a1[]{ 1, 1, 2, 3, 3, 4, 5, 6 };
+    int a2[]{ 3, 4, 5, 6, 7, 7, 8 };
+    int a3[]{ 3, 4, 5, 6 };
+    auto e{ a1 >> intersect(a2) };
+    LINQ_CHECK_EQUAL_COLLECTIONS(a3, e);
+}
+
+BOOST_AUTO_TEST_CASE(set_except_test)
+{
+    int a1[]{ 1, 1, 2, 3, 3, 4, 5, 6 };
+    int a2[]{ 3, 4, 5, 6, 7, 7, 8 };
+    int a3[]{ 1, 2 };
+    auto e{ a1 >> except(a2) };
+    LINQ_CHECK_EQUAL_COLLECTIONS(a3, e);
+}
+
 //struct group_test_pack
 //{
 //    int index;
@@ -262,7 +262,7 @@ BOOST_AUTO_TEST_CASE(set_distinct_test)
 //            group([](group_test_pack& a) { return a.index; },
 //                  [](group_test_pack& a) { return a.score; },
 //                  [](int key, auto e) { return group_test_pack{ key, e >> average() }; }) };
-//    test_equals(a2, e);
+//    LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 //}
 //
 //BOOST_AUTO_TEST_CASE(group_group_join_test)
@@ -277,7 +277,7 @@ BOOST_AUTO_TEST_CASE(set_distinct_test)
 //                [](group_test_pack& a) { return a.index; },
 //                [](group_test_pack& a) { return a.score; },
 //                [](group_test_pack2& a, auto e) { return group_test_pack3{ a.name, e >> average() }; }) };
-//    test_equals(a3, e);
+//    LINQ_CHECK_EQUAL_COLLECTIONS(a3, e);
 //}
 //
 //BOOST_AUTO_TEST_CASE(group_join_test)
@@ -292,7 +292,7 @@ BOOST_AUTO_TEST_CASE(set_distinct_test)
 //                [](group_test_pack& a) { return a.index; },
 //                [](group_test_pack& a) { return a.score; },
 //                [](group_test_pack2& a, auto e) { return group_test_pack3{ a.name, e }; }) };
-//    test_equals(a3, e);
+//    LINQ_CHECK_EQUAL_COLLECTIONS(a3, e);
 //}
 //
 //BOOST_AUTO_TEST_CASE(to_container_to_list_test)
@@ -300,7 +300,7 @@ BOOST_AUTO_TEST_CASE(set_distinct_test)
 //    int a1[]{ 1, 2, 3, 4, 5, 6 };
 //    list<int> a2{ 2, 4, 6 };
 //    auto e{ a1 >> where([](int& a) { return a % 2 == 0; }) >> to_list<int>() };
-//    test_equals(a2, e);
+//    LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 //}
 //
 //BOOST_AUTO_TEST_CASE(to_container_to_set_test)
@@ -309,7 +309,7 @@ BOOST_AUTO_TEST_CASE(set_distinct_test)
 //    int a2[]{ 2, 4, 6 };
 //    auto s{ a1 >> to_set<int>() };
 //    auto e{ s >> where([](int a) { return a % 2 == 0; }) };
-//    test_equals(a2, e);
+//    LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 //}
 //
 //BOOST_AUTO_TEST_CASE(to_container_to_multiset_test)
@@ -318,7 +318,7 @@ BOOST_AUTO_TEST_CASE(set_distinct_test)
 //    int a2[]{ 2, 2, 2, 2, 4, 4, 6, 6 };
 //    auto s{ a1 >> to_multiset<int>() };
 //    auto e{ s >> where([](int a) { return a % 2 == 0; }) };
-//    test_equals(a2, e);
+//    LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 //}
 //
 //BOOST_AUTO_TEST_CASE(to_container_to_vector_test)
@@ -326,7 +326,7 @@ BOOST_AUTO_TEST_CASE(set_distinct_test)
 //    int a1[]{ 1, 2, 3, 4, 5, 6 };
 //    vector<int> a2{ 2, 4, 6 };
 //    auto e{ a1 >> where([](int& a) { return a % 2 == 0; }) >> to_vector<int>() };
-//    test_equals(a2, e);
+//    LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 //}
 //
 //BOOST_AUTO_TEST_CASE(to_container_to_map_test)

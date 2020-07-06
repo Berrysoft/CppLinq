@@ -595,8 +595,7 @@ namespace linq
     {
         return [&](auto&& container) {
             using It = decltype(std::begin(container));
-            using T = typename std::iterator_traits<It>::value_type;
-            T result{ std::forward<T>(def) };
+            std::common_type_t<T, typename std::iterator_traits<It>::value_type> result{ std::forward<T>(def) };
             for (auto& item : container)
             {
                 if (!comparer(result, item))
@@ -715,160 +714,158 @@ namespace linq
         };
     }
 
-    //namespace impl
-    //{
-    //    template <typename Eter1, typename Eter2, typename T, typename Comparer>
-    //    class union_set_enumerator
-    //    {
-    //    private:
-    //        std::set<T, Comparer> m_set;
-    //        Eter1 m_eter1;
-    //        Eter2 m_eter2;
+    namespace impl
+    {
+        template <typename It1, typename It2, typename Comparer>
+        class union_set_iterator_impl
+        {
+        private:
+            using value_type = std::common_type_t<typename std::iterator_traits<It1>::value_type, typename std::iterator_traits<It2>::value_type>;
 
-    //        template <typename Eter>
-    //        constexpr bool move_next(Eter& eter)
-    //        {
-    //            for (; eter; ++eter)
-    //            {
-    //                if (m_set.emplace(*eter).second)
-    //                    return true;
-    //            }
-    //            return false;
-    //        }
+            std::set<value_type, Comparer> m_set;
+            It1 m_begin1, m_end1;
+            It2 m_begin2, m_end2;
 
-    //        constexpr void move_next()
-    //        {
-    //            if (!m_eter1 || (m_eter1 && !move_next(m_eter1)))
-    //                move_next(m_eter2);
-    //        }
+            template <typename It>
+            bool move_next(It& begin, const It& end)
+            {
+                for (; begin != end; ++begin)
+                {
+                    if (m_set.emplace(*begin).second)
+                        return true;
+                }
+                return false;
+            }
 
-    //    public:
-    //        constexpr union_set_enumerator(Eter1&& eter1, Eter2&& eter2) : m_eter1(std::forward<Eter1>(eter1)), m_eter2(std::forward<Eter2>(eter2))
-    //        {
-    //            move_next();
-    //        }
+        public:
+            using traits_type = iterator_impl_traits<value_type>;
 
-    //        constexpr operator bool() const { return m_eter1 || m_eter2; }
-    //        constexpr union_set_enumerator& operator++()
-    //        {
-    //            move_next();
-    //            return *this;
-    //        }
-    //        constexpr decltype(auto) operator*() { return m_eter1 ? *m_eter1 : *m_eter2; }
-    //    };
-    //} // namespace impl
+            union_set_iterator_impl(It1 begin1, It1 end1, It2 begin2, It2 end2) : m_begin1(begin1), m_end1(end1), m_begin2(begin2), m_end2(end2)
+            {
+                move_next();
+            }
 
-    //// Produces the set union of two enumerable.
-    //template <typename Comparer = std::less<void>, typename E2>
-    //constexpr auto union_set(E2&& e2)
-    //{
-    //    return [&](auto e) {
-    //        using Eter1 = decltype(e.enumerator());
-    //        using Eter2 = decltype(get_enumerator(std::forward<E2>(e2)));
-    //        using T = remove_cref<decltype(*e.enumerator())>;
-    //        return enumerable(impl::union_set_enumerator<Eter1, Eter2, T, Comparer>(e.enumerator(), get_enumerator(std::forward<E2>(e2))));
-    //    };
-    //}
+            typename traits_type::reference value() { return m_begin1 != m_end1 ? *m_begin1 : *m_begin2; }
 
-    //namespace impl
-    //{
-    //    template <typename Eter1, typename T, typename Comparer>
-    //    class intersect_enumerator
-    //    {
-    //    private:
-    //        std::set<T, Comparer> m_set;
-    //        Eter1 m_eter1;
+            void move_next()
+            {
+                if (m_begin1 == m_end1 || (m_begin1 != m_end1 && !move_next(m_begin1, m_end1)))
+                    move_next(m_begin2, m_end2);
+            }
 
-    //        constexpr void move_next()
-    //        {
-    //            for (; m_eter1; ++m_eter1)
-    //            {
-    //                if (m_set.erase(*m_eter1))
-    //                    break;
-    //            }
-    //        }
+            bool is_valid() const { return m_begin1 != m_end1 || m_begin2 != m_end2; }
+        };
 
-    //    public:
-    //        template <typename Eter2>
-    //        constexpr intersect_enumerator(Eter1&& eter1, Eter2&& eter2) : m_eter1(std::forward<Eter1>(eter1))
-    //        {
-    //            for (; eter2; ++eter2)
-    //            {
-    //                m_set.emplace(*eter2);
-    //            }
-    //            move_next();
-    //        }
+        template <typename It1, typename It2, typename Comparer>
+        using union_set_iterator = iterator_base<union_set_iterator_impl<It1, It2, Comparer>>;
+    } // namespace impl
 
-    //        constexpr operator bool() const { return m_eter1; }
-    //        constexpr intersect_enumerator& operator++()
-    //        {
-    //            move_next();
-    //            return *this;
-    //        }
-    //        constexpr decltype(auto) operator*() { return *m_eter1; }
-    //    };
-    //} // namespace impl
+    // Produces the set union of two enumerable.
+    template <typename Comparer = std::less<void>, typename Container2>
+    constexpr auto union_set(Container2&& c2)
+    {
+        return [&](auto&& container) {
+            using It1 = decltype(std::begin(container));
+            using It2 = decltype(std::begin(c2));
+            return impl::iterable{ impl::union_set_iterator<It1, It2, Comparer>{ impl::iterator_ctor, std::begin(container), std::end(container), std::begin(c2), std::end(c2) } };
+        };
+    }
 
-    //// Produces the set intersection of two enumerable.
-    //template <typename Comparer = std::less<void>, typename E2>
-    //constexpr auto intersect(E2&& e2)
-    //{
-    //    return [&](auto e) {
-    //        using Eter1 = decltype(e.enumerator());
-    //        using T = remove_cref<decltype(*e.enumerator())>;
-    //        return enumerable(impl::intersect_enumerator<Eter1, T, Comparer>(e.enumerator(), get_enumerator(std::forward<E2>(e2))));
-    //    };
-    //}
+    namespace impl
+    {
+        template <typename It, typename Comparer>
+        class intersect_iterator_impl
+        {
+        private:
+            using value_type = typename std::iterator_traits<It>::value_type;
 
-    //namespace impl
-    //{
-    //    template <typename Eter1, typename T, typename Comparer>
-    //    class except_enumerator
-    //    {
-    //    private:
-    //        std::set<T, Comparer> m_set;
-    //        Eter1 m_eter1;
+            std::set<value_type, Comparer> m_set;
+            It m_begin, m_end;
 
-    //        constexpr void move_next()
-    //        {
-    //            for (; m_eter1; ++m_eter1)
-    //            {
-    //                if (m_set.emplace(*m_eter1).second)
-    //                    break;
-    //            }
-    //        }
+        public:
+            using traits_type = std::iterator_traits<It>;
 
-    //    public:
-    //        template <typename Eter2>
-    //        constexpr except_enumerator(Eter1&& eter1, Eter2&& eter2) : m_eter1(std::forward<Eter1>(eter1))
-    //        {
-    //            for (; eter2; ++eter2)
-    //            {
-    //                m_set.emplace(*eter2);
-    //            }
-    //            move_next();
-    //        }
+            template <typename It2>
+            intersect_iterator_impl(It begin, It end, It2 begin2, It2 end2) : m_set(begin2, end2), m_begin(begin), m_end(end)
+            {
+                move_next();
+            }
 
-    //        constexpr operator bool() const { return m_eter1; }
-    //        constexpr except_enumerator& operator++()
-    //        {
-    //            move_next();
-    //            return *this;
-    //        }
-    //        constexpr decltype(auto) operator*() { return *m_eter1; }
-    //    };
-    //} // namespace impl
+            typename traits_type::reference value() { return *m_begin; }
 
-    //// Produces the set difference of two enumerable.
-    //template <typename Comparer = std::less<void>, typename E2>
-    //constexpr auto except(E2&& e2)
-    //{
-    //    return [&](auto e) {
-    //        using Eter1 = decltype(e.enumerator());
-    //        using T = remove_cref<decltype(*e.enumerator())>;
-    //        return enumerable(impl::except_enumerator<Eter1, T, Comparer>(e.enumerator(), get_enumerator(std::forward<E2>(e2))));
-    //    };
-    //}
+            void move_next()
+            {
+                for (; m_begin != m_end; ++m_begin)
+                {
+                    if (m_set.erase(*m_begin))
+                        break;
+                }
+            }
+
+            bool is_valid() const { return m_begin != m_end; }
+        };
+
+        template <typename It, typename Comparer>
+        using intersect_iterator = iterator_base<intersect_iterator_impl<It, Comparer>>;
+    } // namespace impl
+
+    // Produces the set intersection of two enumerable.
+    template <typename Comparer = std::less<void>, typename C2>
+    constexpr auto intersect(C2&& c2)
+    {
+        return [&](auto&& container) {
+            using It = decltype(std::begin(container));
+            return impl::iterable{ impl::intersect_iterator<It, Comparer>{ impl::iterator_ctor, std::begin(container), std::end(container), std::begin(c2), std::end(c2) } };
+        };
+    }
+
+    namespace impl
+    {
+        template <typename It, typename Comparer>
+        class except_iterator_impl
+        {
+        private:
+            using value_type = typename std::iterator_traits<It>::value_type;
+
+            std::set<value_type, Comparer> m_set;
+            It m_begin, m_end;
+
+        public:
+            using traits_type = std::iterator_traits<It>;
+
+            template <typename It2>
+            except_iterator_impl(It begin, It end, It2 begin2, It2 end2) : m_set(begin2, end2), m_begin(begin), m_end(end)
+            {
+                move_next();
+            }
+
+            typename traits_type::reference value() { return *m_begin; }
+
+            void move_next()
+            {
+                for (; m_begin != m_end; ++m_begin)
+                {
+                    if (m_set.emplace(*m_begin).second)
+                        break;
+                }
+            }
+
+            bool is_valid() const { return m_begin != m_end; }
+        };
+
+        template <typename It, typename Comparer>
+        using except_iterator = iterator_base<except_iterator_impl<It, Comparer>>;
+    } // namespace impl
+
+    // Produces the set difference of two enumerable.
+    template <typename Comparer = std::less<void>, typename C2>
+    constexpr auto except(C2&& c2)
+    {
+        return [&](auto&& container) {
+            using It = decltype(std::begin(container));
+            return impl::iterable{ impl::except_iterator<It, Comparer>{ impl::iterator_ctor, std::begin(container), std::end(container), std::begin(c2), std::end(c2) } };
+        };
+    }
 
     //namespace impl
     //{
