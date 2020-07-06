@@ -23,7 +23,7 @@ BOOST_AUTO_TEST_CASE(winrt_vector_test)
     auto a1{ single_threaded_vector(vector<int>{ 1, 2, 3, 4, 5, 6 }) };
     int a2[]{ 2, 4, 6 };
     auto e{ a1 >> where([](int a) { return a % 2 == 0; }) };
-    test_equals(a2, e);
+    LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 }
 
 struct pack
@@ -55,5 +55,5 @@ BOOST_AUTO_TEST_CASE(winrt_map_test)
                 [](auto a) { return a.Key(); },
                 [](auto a) { return a.Value(); },
                 [](auto a, auto e) { return pack{ a.Value(), e }; }) };
-    test_equals(a3, e);
+    LINQ_CHECK_EQUAL_COLLECTIONS(a3, e);
 }

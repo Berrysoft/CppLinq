@@ -40,28 +40,29 @@ namespace linq
             It m_begin, m_end;
             std::decay_t<Pred> m_pred;
 
-            bool move_next_impl()
+            void move_next_impl()
             {
                 for (; m_begin != m_end; ++m_begin)
                 {
                     if (m_pred(*m_begin)) break;
                 }
-                return m_begin != m_end;
             }
 
         public:
             using traits_type = std::iterator_traits<It>;
 
             where_iterator_impl(It begin, It end, Pred&& pred)
-                : m_begin(begin), m_end(end), m_pred(std::move(pred)) { move_next_impl(); }
+                : m_begin(begin), m_end(end), m_pred(std::forward<Pred>(pred)) { move_next_impl(); }
 
             typename traits_type::reference value() const noexcept { return *m_begin; }
 
-            bool move_next()
+            void move_next()
             {
                 ++m_begin;
-                return move_next_impl();
+                move_next_impl();
             }
+
+            bool is_valid() const { return m_begin != m_end; }
         };
 
         template <typename It, typename Pred>
@@ -88,29 +89,30 @@ namespace linq
             std::decay_t<Pred> m_pred;
             std::size_t m_index{ 0 };
 
-            bool move_next_impl()
+            void move_next_impl()
             {
                 for (; m_begin != m_end; ++m_begin, ++m_index)
                 {
                     if (m_pred(*m_begin, m_index)) break;
                 }
-                return m_begin != m_end;
             }
 
         public:
             using traits_type = std::iterator_traits<It>;
 
             where_index_iterator_impl(It begin, It end, Pred&& pred)
-                : m_begin(begin), m_end(end), m_pred(std::move(pred)) { move_next_impl(); }
+                : m_begin(begin), m_end(end), m_pred(std::forward<Pred>(pred)) { move_next_impl(); }
 
             typename traits_type::reference value() const noexcept { return *m_begin; }
 
-            bool move_next()
+            void move_next()
             {
                 ++m_begin;
                 ++m_index;
-                return move_next_impl();
+                move_next_impl();
             }
+
+            bool is_valid() const { return m_begin != m_end; }
         };
 
         template <typename It, typename Pred>
@@ -150,19 +152,17 @@ namespace linq
             using traits_type = iterator_impl_traits<result_type>;
 
             select_iterator_impl(It begin, It end, Selector&& selector)
-                : m_begin(begin), m_end(end), m_selector(std::move(selector)) { set_result(); }
+                : m_begin(begin), m_end(end), m_selector(std::forward<Selector>(selector)) { set_result(); }
 
             typename traits_type::reference value() const noexcept { return *m_result; }
 
-            bool move_next()
+            void move_next()
             {
-                if (m_begin != m_end)
-                {
-                    ++m_begin;
-                    set_result();
-                }
-                return m_begin != m_end;
+                ++m_begin;
+                set_result();
             }
+
+            bool is_valid() const { return m_begin != m_end; }
         };
 
         template <typename It, typename Selector>
@@ -203,20 +203,18 @@ namespace linq
             using traits_type = iterator_impl_traits<result_type>;
 
             select_index_iterator_impl(It begin, It end, Selector&& selector)
-                : m_begin(begin), m_end(end), m_selector(std::move(selector)) { set_result(); }
+                : m_begin(begin), m_end(end), m_selector(std::forward<Selector>(selector)) { set_result(); }
 
             typename traits_type::reference value() const noexcept { return *m_result; }
 
-            bool move_next()
+            void move_next()
             {
-                if (m_begin != m_end)
-                {
-                    ++m_begin;
-                    ++m_index;
-                    set_result();
-                }
-                return m_begin != m_end;
+                ++m_begin;
+                ++m_index;
+                set_result();
             }
+
+            bool is_valid() const { return m_begin != m_end; }
         };
 
         template <typename It, typename Selector>
@@ -256,7 +254,7 @@ namespace linq
             {
                 if (m_begin1 != m_end1)
                 {
-                    m_result1 = &*m_begin1;
+                    m_result1 = std::pointer_traits<result1_type>::pointer_to(*m_begin1);
                     m_container.emplace(m_cselector(*m_result1));
                     m_begin2 = std::begin(*m_container);
                     m_end2 = std::end(*m_container);
@@ -278,7 +276,7 @@ namespace linq
 
             select_many_iterator_impl(It1 begin, It1 end, CSelector&& cselector, RSelector&& rselector)
                 : m_begin1(begin), m_end1(end),
-                  m_cselector(std::move(cselector)), m_rselector(std::move(rselector))
+                  m_cselector(std::forward<CSelector>(cselector)), m_rselector(std::forward<RSelector>(rselector))
             {
                 set_container();
                 set_result();
@@ -286,7 +284,7 @@ namespace linq
 
             typename traits_type::reference value() const noexcept { return *m_result; }
 
-            bool move_next()
+            void move_next()
             {
                 ++m_begin2;
                 if (m_begin2 == m_end2)
@@ -295,8 +293,9 @@ namespace linq
                     set_container();
                 }
                 set_result();
-                return m_begin1 != m_end1 || m_begin2 != m_end2;
             }
+
+            bool is_valid() const { return m_begin1 != m_end1 || m_begin2 != m_end2; }
         };
 
         template <typename It1, typename It2, typename CSelector, typename RSelector>
@@ -338,7 +337,7 @@ namespace linq
             {
                 if (m_begin1 != m_end1)
                 {
-                    m_result1 = &*m_begin1;
+                    m_result1 = std::pointer_traits<result1_type>::pointer_to(*m_begin1);
                     m_container.emplace(m_cselector(*m_result1, m_index));
                     m_index++;
                     m_begin2 = std::begin(*m_container);
@@ -361,7 +360,7 @@ namespace linq
 
             select_many_index_iterator_impl(It1 begin, It1 end, CSelector&& cselector, RSelector&& rselector)
                 : m_begin1(begin), m_end1(end),
-                  m_cselector(std::move(cselector)), m_rselector(std::move(rselector))
+                  m_cselector(std::forward<CSelector>(cselector)), m_rselector(std::forward<RSelector>(rselector))
             {
                 set_container();
                 set_result();
@@ -369,7 +368,7 @@ namespace linq
 
             typename traits_type::reference value() const noexcept { return *m_result; }
 
-            bool move_next()
+            void move_next()
             {
                 ++m_begin2;
                 if (m_begin2 == m_end2)
@@ -378,8 +377,9 @@ namespace linq
                     set_container();
                 }
                 set_result();
-                return m_begin1 != m_end1 || m_begin2 != m_end2;
             }
+
+            bool is_valid() const { return m_begin1 != m_end1 || m_begin2 != m_end2; }
         };
 
         template <typename It1, typename It2, typename CSelector, typename RSelector>
@@ -416,12 +416,9 @@ namespace linq
 
             typename traits_type::reference value() const noexcept { return *m_begin; }
 
-            bool move_next()
-            {
-                if (m_begin != m_end)
-                    ++m_begin;
-                return m_begin != m_end;
-            }
+            void move_next() { ++m_begin; }
+
+            bool is_valid() const { return m_begin != m_end; }
         };
 
         template <typename It>
@@ -457,12 +454,9 @@ namespace linq
 
             typename traits_type::reference value() const noexcept { return *m_begin; }
 
-            bool move_next()
-            {
-                if (m_begin != m_end)
-                    ++m_begin;
-                return m_begin != m_end;
-            }
+            void move_next() { ++m_begin; }
+
+            bool is_valid() const { return m_begin != m_end; }
         };
 
         template <typename It>
@@ -499,12 +493,9 @@ namespace linq
 
             typename traits_type::reference value() const noexcept { return *m_begin; }
 
-            bool move_next()
-            {
-                if (m_begin != m_end)
-                    ++m_begin;
-                return m_begin != m_end;
-            }
+            void move_next() { ++m_begin; }
+
+            bool is_valid() const { return m_begin != m_end; }
         };
 
         template <typename It>
@@ -538,15 +529,13 @@ namespace linq
 
             typename traits_type::reference value() { return *m_begin; }
 
-            bool move_next()
+            void move_next()
             {
-                if (m_begin != m_end)
-                {
-                    ++m_begin;
-                    --m_taken;
-                }
-                return m_begin != m_end && m_taken;
+                ++m_begin;
+                --m_taken;
             }
+
+            bool is_valid() const { return m_begin != m_end && m_taken; }
         };
 
         template <typename It>
@@ -574,16 +563,13 @@ namespace linq
         public:
             using traits_type = std::iterator_traits<It>;
 
-            take_while_iterator_impl(It begin, It end, Pred&& pred) : m_begin(begin), m_end(end), m_pred(pred) {}
+            take_while_iterator_impl(It begin, It end, Pred&& pred) : m_begin(begin), m_end(end), m_pred(std::forward<Pred>(pred)) {}
 
             typename traits_type::reference value() { return *m_begin; }
 
-            bool move_next()
-            {
-                if (m_begin != m_end)
-                    ++m_begin;
-                return m_begin != m_end && m_pred(*m_begin);
-            }
+            void move_next() { ++m_begin; }
+
+            bool is_valid() const { return m_begin != m_end && m_pred(*m_begin); }
         };
 
         template <typename It, typename Pred>
@@ -613,19 +599,17 @@ namespace linq
         public:
             using traits_type = std::iterator_traits<It>;
 
-            take_while_index_iterator_impl(It begin, It end, Pred&& pred) : m_begin(begin), m_end(end), m_pred(pred) {}
+            take_while_index_iterator_impl(It begin, It end, Pred&& pred) : m_begin(begin), m_end(end), m_pred(std::forward<Pred>(pred)) {}
 
             typename traits_type::reference value() { return *m_begin; }
 
-            bool move_next()
+            void move_next()
             {
-                if (m_begin != m_end)
-                {
-                    ++m_begin;
-                    ++m_index;
-                }
-                return m_begin != m_end && m_pred(*m_begin, m_index);
+                ++m_begin;
+                ++m_index;
             }
+
+            bool is_valid() const { return m_begin != m_end && m_pred(*m_begin, m_index); }
         };
 
         template <typename It, typename Pred>
@@ -678,34 +662,28 @@ namespace linq
             using result_type = std::common_type_t<typename std::iterator_traits<Its>::value_type...>;
             std::optional<result_type> m_result{};
 
-            bool set_result()
+            void set_result()
             {
-                bool res = is_valid();
-                if (res)
+                if (is_valid())
                     m_result.emplace(std::apply([this](auto&&... pack) { return m_selector((*pack.m_begin)...); }, m_its));
-                return res;
-            }
-
-            bool is_valid() const
-            {
-                return std::apply([](auto&&... pack) { return and_all((pack.m_begin != pack.m_end)...); }, m_its);
             }
 
         public:
             using traits_type = iterator_impl_traits<result_type>;
 
-            zip_iterator_impl(Selector&& selector, iterator_pack<Its>... its) : m_selector(std::move(selector)), m_its(std::make_tuple(its...)) { set_result(); }
+            zip_iterator_impl(Selector&& selector, iterator_pack<Its>... its) : m_selector(std::forward<Selector>(selector)), m_its(std::make_tuple(its...)) { set_result(); }
 
             typename traits_type::reference value() const { return *m_result; }
 
-            bool move_next()
+            void move_next()
             {
-                if (is_valid())
-                {
-                    std::apply([](auto&&... pack) { return expand_tuple((++pack.m_begin)...); }, m_its);
-                    return set_result();
-                }
-                return false;
+                std::apply([](auto&&... pack) { return expand_tuple((++pack.m_begin)...); }, m_its);
+                set_result();
+            }
+
+            bool is_valid() const
+            {
+                return std::apply([](auto&&... pack) { return and_all((pack.m_begin != pack.m_end)...); }, m_its);
             }
         };
 
@@ -743,17 +721,10 @@ namespace linq
             using result_type = std::common_type_t<typename std::iterator_traits<Its>::value_type...>;
             std::optional<result_type> m_result{};
 
-            bool set_result()
+            void set_result()
             {
-                bool res = is_valid();
-                if (res)
+                if (is_valid())
                     m_result.emplace(std::apply([this](auto&&... pack) { return m_selector((*pack.m_begin)..., m_index); }, m_its));
-                return res;
-            }
-
-            bool is_valid() const
-            {
-                return std::apply([](auto&&... pack) { return and_all((pack.m_begin != pack.m_end)...); }, m_its);
             }
 
         public:
@@ -763,15 +734,16 @@ namespace linq
 
             typename traits_type::reference value() const { return *m_result; }
 
-            bool move_next()
+            void move_next()
             {
-                if (is_valid())
-                {
-                    std::apply([](auto&&... pack) { return expand_tuple((++pack.m_begin)...); }, m_its);
-                    ++m_index;
-                    return set_result();
-                }
-                return false;
+                std::apply([](auto&&... pack) { return expand_tuple((++pack.m_begin)...); }, m_its);
+                ++m_index;
+                set_result();
+            }
+
+            bool is_valid() const
+            {
+                return std::apply([](auto&&... pack) { return and_all((pack.m_begin != pack.m_end)...); }, m_its);
             }
         };
 

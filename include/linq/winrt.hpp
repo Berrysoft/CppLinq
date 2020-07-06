@@ -2,7 +2,7 @@
  * 
  * MIT License
  * 
- * Copyright (c) 2019 Berrysoft
+ * Copyright (c) 2019-2020 Berrysoft
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,77 +26,32 @@
 #ifndef LINQ_WINRT_HPP
 #define LINQ_WINRT_HPP
 
-#ifdef LINQ_USE_WINRT
-
 #include <linq/core.hpp>
+
+#ifdef LINQ_USE_WINRT
 
 namespace linq
 {
     namespace impl
     {
-        template <typename Collection, typename Iter = decltype(std::declval<Collection>().First())>
-        class winrt_container_enumerator
+        template <typename Container, typename = decltype(winrt::impl::begin(std::declval<Container>())), typename = decltype(winrt::impl::end(std::declval<Container>()))>
+        class winrt_iterable
         {
         private:
-            Collection m_collection;
-            Iter m_iter;
+            Container m_container;
 
         public:
-            constexpr winrt_container_enumerator(Collection const& collection) : m_collection(collection), m_iter(m_collection.First()) {}
+            winrt_iterable(Container&& container) : m_container(std::forward<Container>(container)) {}
 
-            constexpr operator bool() const { return m_iter.HasCurrent(); }
-            constexpr winrt_container_enumerator& operator++()
-            {
-                m_iter.MoveNext();
-                return *this;
-            }
-            constexpr decltype(auto) operator*() { return m_iter.Current(); }
-        };
-
-        template <typename Collection>
-        class winrt_fast_container_enumerator
-        {
-        private:
-            Collection m_collection;
-            std::uint32_t m_index, m_size;
-
-        public:
-            constexpr winrt_fast_container_enumerator(Collection const& collection) : m_collection(collection), m_index(0), m_size(m_collection.Size()) {}
-
-            constexpr operator bool() const { return m_index < m_size; }
-            constexpr winrt_fast_container_enumerator& operator++()
-            {
-                ++m_index;
-                return *this;
-            }
-            constexpr decltype(auto) operator*() { return m_collection.GetAt(m_index); }
+            auto begin() const { return winrt::impl::begin(m_container); }
+            auto end() const { return winrt::impl::end(m_container); }
         };
     } // namespace impl
 
-    // SFINAE to determine whether the container has GetAt member function.
-    template <typename C, typename = void>
-    constexpr bool has_GetAt_v{ false };
-
-    template <typename C>
-    constexpr bool has_GetAt_v<C, std::void_t<decltype(std::declval<C>().GetAt(0))>>{ true };
-
-    template <typename Collection, typename = decltype(std::declval<Collection>().First())>
-    constexpr auto get_enumerator(Collection&& c)
+    template <typename Container, typename Query, typename = decltype(winrt::impl::begin(std::declval<Container>())), typename = decltype(winrt::impl::end(std::declval<Container>()))>
+    constexpr decltype(auto) operator>>(Container&& container, Query&& query)
     {
-        if constexpr (has_GetAt_v<Collection>)
-        {
-            return impl::winrt_fast_container_enumerator<Collection>(c);
-        }
-        else
-        {
-            return impl::winrt_container_enumerator<Collection>(c);
-        }
-    }
-
-    template <typename Collection, typename Query, typename = decltype(std::declval<Collection>().First())>
-    constexpr auto operator>>(Collection&& c, Query&& q)
-    {
-        return std::forward<Query>(q)(enumerable(get_enumerator<Collection>(std::forward<Collection>(c))));
+        return std::forward<Query>(query)(impl::winrt_iterable<Container>{ std::forward<Container>(container) });
     }
 } // namespace linq
 

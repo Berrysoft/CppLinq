@@ -66,12 +66,13 @@ namespace linq
             template <typename... Args>
             iterator_base(iterator_ctor_t, Args&&... args) : m_impl(std::make_shared<Impl>(std::forward<Args>(args)...))
             {
+                if (!(m_impl->is_valid())) m_impl = nullptr;
             }
             iterator_base(const iterator_base&) noexcept(std::is_nothrow_copy_constructible_v<std::shared_ptr<Impl>>) = default;
             iterator_base& operator=(const iterator_base&) noexcept(std::is_nothrow_copy_assignable_v<std::shared_ptr<Impl>>) = default;
 
-            reference operator*() const noexcept(noexcept(m_impl->value())) { return m_impl->value(); }
-            pointer operator->() const noexcept(noexcept(&m_impl->value())) { return &m_impl->value(); }
+            reference operator*() const { return m_impl->value(); }
+            pointer operator->() const { return std::pointer_traits<pointer>::pointer_to(m_impl->value()); }
 
             constexpr operator bool() const noexcept { return static_cast<bool>(m_impl); }
 
@@ -81,12 +82,13 @@ namespace linq
             }
             bool operator!=(const iterator_base& it) const noexcept { return !operator==(it); }
 
-            iterator_base& operator++() noexcept(noexcept(m_impl->move_next()))
+            iterator_base& operator++()
             {
-                if (!m_impl->move_next()) m_impl = nullptr;
+                m_impl->move_next();
+                if (!(m_impl->is_valid())) m_impl = nullptr;
                 return *this;
             }
-            iterator_base operator++(int) noexcept(noexcept(operator++()) && std::is_nothrow_copy_constructible_v<iterator_base>)
+            iterator_base operator++(int)
             {
                 iterator_base it = this;
                 operator++();
@@ -101,7 +103,6 @@ namespace linq
             It m_begin{}, m_end{};
 
         public:
-            iterable() noexcept(std::is_nothrow_constructible_v<It>) {}
             iterable(It&& begin) noexcept(std::is_nothrow_move_constructible_v<It>&& std::is_nothrow_constructible_v<It>)
                 : m_begin(std::move(begin)), m_end()
             {
@@ -144,11 +145,9 @@ namespace linq
 
             typename traits_type::reference value() const noexcept { return m_current; }
 
-            bool move_next()
-            {
-                m_current = m_func(m_current);
-                return m_current < m_end;
-            }
+            void move_next() { m_current = m_func(m_current); }
+
+            bool is_valid() const noexcept { return m_current < m_end; }
         };
 
         template <typename T, typename Func>
@@ -178,11 +177,9 @@ namespace linq
 
             typename traits_type::reference value() const noexcept { return m_value; }
 
-            bool move_next()
-            {
-                --m_count;
-                return m_count > 0;
-            }
+            void move_next() { --m_count; }
+
+            bool is_valid() const noexcept { return m_count > 0; }
         };
 
         template <typename T>
@@ -201,7 +198,7 @@ namespace linq
         class append_iterator_impl
         {
         private:
-            T m_value;
+            std::optional<T> m_value;
             It m_begin, m_end;
 
         public:
@@ -214,18 +211,18 @@ namespace linq
                 if (m_begin != m_end)
                     return *m_begin;
                 else
-                    return m_value;
+                    return *m_value;
             }
 
-            bool move_next()
+            void move_next()
             {
                 if (m_begin != m_end)
-                {
                     ++m_begin;
-                    return true;
-                }
-                return false;
+                else
+                    m_value = std::nullopt;
             }
+
+            bool is_valid() const { return m_begin != m_end || m_value; }
         };
 
         template <typename T, typename It>
@@ -264,17 +261,15 @@ namespace linq
                     return *m_begin;
             }
 
-            bool move_next()
+            void move_next()
             {
                 if (m_value)
                     m_value = std::nullopt;
                 else
-                {
                     ++m_begin;
-                    if (m_begin == m_end) return false;
-                }
-                return true;
             }
+
+            bool is_valid() const { return m_value || m_begin != m_end; }
         };
 
         template <typename T, typename It>
@@ -314,17 +309,15 @@ namespace linq
                     return *m_begin2;
             }
 
-            bool move_next()
+            void move_next()
             {
                 if (m_begin1 != m_end1)
                     ++m_begin1;
                 else
-                {
                     ++m_begin2;
-                    if (m_begin2 == m_end2) return false;
-                }
-                return true;
             }
+
+            bool is_valid() const { return m_begin1 != m_end1 || m_begin2 != m_end2; }
         };
 
         template <typename It1, typename It2>

@@ -20,7 +20,21 @@ private:
     optional<value_type> m_current;
     mt19937 rnd;
 
-    void move_next_impl()
+public:
+    using traits_type = impl::iterator_impl_traits<value_type>;
+
+    random_iterator_impl(It begin, It end) : rnd((unsigned int)time(nullptr))
+    {
+        for (; begin != end; ++begin)
+        {
+            m_vec.emplace_back(*begin);
+        }
+        move_next();
+    }
+
+    typename traits_type::reference value() const { return *m_current; }
+
+    void move_next()
     {
         if (m_vec.empty())
         {
@@ -35,25 +49,7 @@ private:
         }
     }
 
-public:
-    using traits_type = impl::iterator_impl_traits<value_type>;
-
-    random_iterator_impl(It begin, It end) : rnd((unsigned int)time(nullptr))
-    {
-        for (; begin != end; ++begin)
-        {
-            m_vec.emplace_back(*begin);
-        }
-        move_next_impl();
-    }
-
-    typename traits_type::reference value() const { return *m_current; }
-
-    bool move_next()
-    {
-        move_next_impl();
-        return (bool)m_current;
-    }
+    bool is_valid() const { return (bool)m_current; }
 };
 
 template <typename It>
