@@ -17,14 +17,11 @@ For extension sample, see [extension_test.cpp](test/extension_test.cpp).
 ### Core
 * append
 * concat
-* equals
-* equals_weak
 * insert
 * prepend
 * range
 * repeat
 ### Query
-* cast
 * select
 * select_index
 * select_many
@@ -75,7 +72,12 @@ For extension sample, see [extension_test.cpp](test/extension_test.cpp).
 * to_list
 * to_map
 * to_multimap
+* to_multiset
 * to_set
+* to_unordered_map
+* to_unordered_multimap
+* to_unordered_multiset
+* to_unordered_set
 * to_vector
 ### String
 * ends_with
