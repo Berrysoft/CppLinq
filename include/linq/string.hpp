@@ -43,6 +43,11 @@ namespace linq
     template <>
     inline constexpr bool is_char_v<wchar_t>{ true };
 
+#ifdef __cpp_char8_t
+    template <>
+    inline constexpr bool is_char_v<char8_t>{ true };
+#endif // __cpp_char8_t
+
     template <>
     inline constexpr bool is_char_v<char16_t>{ true };
 
