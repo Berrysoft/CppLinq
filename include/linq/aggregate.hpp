@@ -434,7 +434,7 @@ namespace linq
             typename std::vector<T>::const_reverse_iterator m_begin, m_end;
 
         public:
-            using traits_type = iterator_impl_traits<T>;
+            using traits_type = std::iterator_traits<typename std::vector<T>::const_reverse_iterator>;
 
             template <typename It>
             reverse_iterator_impl(It begin, It end) : m_vec(begin, end)

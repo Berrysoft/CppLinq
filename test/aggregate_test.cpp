@@ -42,8 +42,10 @@ BOOST_AUTO_TEST_CASE(aggregate_reverse_test)
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     int a2[]{ 6, 5, 4, 3, 2, 1 };
-    auto e{ a1 >> reverse() };
-    LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
+    auto e1{ a1 >> reverse() };
+    LINQ_CHECK_EQUAL_COLLECTIONS(a2, e1);
+    auto e2{ a1 >> reverse() >> reverse() };
+    LINQ_CHECK_EQUAL_COLLECTIONS(a1, e2);
 }
 
 BOOST_AUTO_TEST_CASE(aggregate_sort_test)
@@ -324,10 +326,26 @@ BOOST_AUTO_TEST_CASE(to_container_to_multiset_test)
 BOOST_AUTO_TEST_CASE(to_container_to_vector_test)
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
-    vector<int> a2{ 2, 4, 6 };
+    int a2[]{ 2, 4, 6 };
     auto e{ a1 >> where([](int& a) { return a % 2 == 0; }) >> to_vector<int>() };
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 }
+
+BOOST_AUTO_TEST_CASE(to_container_to_deque_test)
+{
+    int a1[]{ 1, 2, 3, 4, 5, 6 };
+    int a2[]{ 2, 4, 6 };
+    auto e{ a1 >> where([](int& a) { return a % 2 == 0; }) >> to_deque<int>() };
+    LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
+}
+
+namespace std
+{
+    ostream& operator<<(ostream& stream, const pair<const int, int>& p)
+    {
+        return stream << '(' << p.first << ", " << p.second << ')';
+    }
+} // namespace std
 
 BOOST_AUTO_TEST_CASE(to_container_to_map_test)
 {
@@ -336,7 +354,7 @@ BOOST_AUTO_TEST_CASE(to_container_to_map_test)
         { 1, 1 }, { 2, 4 }, { 3, 9 }
     };
     auto e{ a1 >> to_map<int, int>([](int i) { return i; }, [](int i) { return i * i; }) };
-    BOOST_CHECK(std::equal(a2.begin(), a2.end(), e.begin(), e.end()));
+    LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 }
 
 struct to_container_pack
@@ -350,5 +368,5 @@ BOOST_AUTO_TEST_CASE(to_container_to_multimap_test)
     to_container_pack a1[]{ { 1, 90 }, { 1, 78 }, { 3, 89 }, { 2, 68 }, { 2, 94 }, { 4, 79 } };
     multimap<int, int> a2{ { 1, 90 }, { 1, 78 }, { 2, 68 }, { 2, 94 }, { 3, 89 }, { 4, 79 } };
     auto e{ a1 >> to_multimap<int, int>([](to_container_pack& a) { return a.index; }, [](to_container_pack& a) { return a.score; }) };
-    BOOST_CHECK(std::equal(a2.begin(), a2.end(), e.begin(), e.end()));
+    LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 }
