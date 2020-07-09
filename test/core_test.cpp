@@ -17,6 +17,8 @@ BOOST_AUTO_TEST_CASE(construct_range_test)
     int a2[]{ 2, 4, 6, 8 };
     auto e2{ range(2, 10, [](int i) { return i + 2; }) };
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, e2);
+    auto e3{ range(2, 10, 2) };
+    LINQ_CHECK_EQUAL_COLLECTIONS(a2, e3);
 }
 
 BOOST_AUTO_TEST_CASE(construct_repeat_test)
