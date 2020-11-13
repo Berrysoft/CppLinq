@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.1)
 project(cpplinq CXX)
 if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD 20)
 endif()
 
 if(WIN32 AND NOT MINGW)
@@ -20,6 +20,10 @@ target_include_directories(linq
     $<INSTALL_INTERFACE:include>    
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  target_compile_options(linq INTERFACE "-fcoroutines")
+endif()
 
 if(IS_WINDOWS_10)
   target_compile_definitions(linq INTERFACE "LINQ_USE_WINRT")
