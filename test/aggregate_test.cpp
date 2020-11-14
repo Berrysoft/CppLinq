@@ -46,6 +46,9 @@ BOOST_AUTO_TEST_CASE(aggregate_reverse_test)
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, e1);
     auto e2{ a1 >> reverse() >> reverse() };
     LINQ_CHECK_EQUAL_COLLECTIONS(a1, e2);
+    set<int> a3{ 1, 2, 3, 4, 5, 6 };
+    auto e3{ a3 >> reverse() };
+    LINQ_CHECK_EQUAL_COLLECTIONS(a2, e3);
 }
 
 BOOST_AUTO_TEST_CASE(aggregate_sort_test)

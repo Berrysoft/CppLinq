@@ -29,6 +29,7 @@
 #include <coroutine>
 #include <iterator>
 #include <ranges>
+#include <span>
 #include <string_view>
 
 namespace linq
@@ -165,24 +166,39 @@ namespace linq
 
     // SFINAE for character type
     template <typename Char>
-    inline constexpr bool is_char_v{ false };
+    struct is_char : std::false_type
+    {
+    };
 
     template <>
-    inline constexpr bool is_char_v<char>{ true };
+    struct is_char<char> : std::true_type
+    {
+    };
 
     template <>
-    inline constexpr bool is_char_v<wchar_t>{ true };
+    struct is_char<wchar_t> : std::true_type
+    {
+    };
 
 #ifdef __cpp_char8_t
     template <>
-    inline constexpr bool is_char_v<char8_t>{ true };
+    struct is_char<char8_t> : std::true_type
+    {
+    };
 #endif // __cpp_char8_t
 
     template <>
-    inline constexpr bool is_char_v<char16_t>{ true };
+    struct is_char<char16_t> : std::true_type
+    {
+    };
 
     template <>
-    inline constexpr bool is_char_v<char32_t>{ true };
+    struct is_char<char32_t> : std::true_type
+    {
+    };
+
+    template <typename Char>
+    inline constexpr bool is_char_v = is_char<Char>::value;
 
     namespace impl
     {
@@ -226,19 +242,6 @@ namespace linq
         template <typename T>
         inline constexpr bool is_reversible_container_v = is_reversible_container<T>::value;
 
-        template <typename T>
-        struct is_wrapped_reversible_container : std::false_type
-        {
-        };
-
-        template <reversible_container T>
-        struct is_wrapped_reversible_container<std::ranges::ref_view<T>> : std::true_type
-        {
-        };
-
-        template <typename T>
-        inline constexpr bool is_wrapped_reversible_container_v = is_wrapped_reversible_container<T>::value;
-
         template <container T>
         decltype(auto) decay_container(T&& c)
         {
@@ -246,11 +249,15 @@ namespace linq
             {
                 if constexpr (is_char_v<typename std::iterator_traits<decltype(std::begin(c))>::value_type>)
                 {
-                    return std::string_view{ c };
+                    return std::string_view(c);
+                }
+                else if constexpr (std::is_base_of_v<std::random_access_iterator_tag, typename std::iterator_traits<decltype(std::begin(c))>::iterator_category>)
+                {
+                    return std::span<typename std::iterator_traits<decltype(std::begin(c))>::value_type>(c);
                 }
                 else
                 {
-                    return std::ranges::ref_view{ c };
+                    return std::ranges::ref_view(c);
                 }
             }
             else

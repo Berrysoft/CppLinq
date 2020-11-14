@@ -289,6 +289,22 @@ namespace linq
         };
     }
 
+    namespace impl
+    {
+        template <typename T>
+        struct is_wrapped_reversible_container : std::false_type
+        {
+        };
+
+        template <reversible_container T>
+        struct is_wrapped_reversible_container<std::ranges::ref_view<T>> : std::true_type
+        {
+        };
+
+        template <typename T>
+        inline constexpr bool is_wrapped_reversible_container_v = is_wrapped_reversible_container<T>::value;
+    } // namespace impl
+
     // Inverts the order of the elements.
     constexpr auto reverse()
     {
