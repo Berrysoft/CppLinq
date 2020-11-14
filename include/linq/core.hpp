@@ -165,38 +165,57 @@ namespace linq
     namespace impl
     {
         template <typename T>
-        concept container = requires(T const& c)
+        concept container = requires(T&& t)
         {
-            std::begin(c);
-            std::end(c);
+            std::begin(t);
+            std::end(t);
         };
 
         template <typename T>
-        struct reference_decay
+        struct is_container : std::false_type
         {
-            using type = T;
+        };
+
+        template <container T>
+        struct is_container<T> : std::true_type
+        {
         };
 
         template <typename T>
-        struct reference_decay<T&>
+        inline constexpr bool is_container_v = is_container<T>::value;
+
+        template <typename T>
+        concept reversible_container = container<T>&& requires(T&& t)
         {
-            using type = T&;
+            std::rbegin(t);
+            std::rend(t);
         };
 
         template <typename T>
-        struct reference_decay<T&&>
+        struct is_reversible_container : std::false_type
         {
-            using type = T;
+        };
+
+        template <reversible_container T>
+        struct is_reversible_container<T> : std::true_type
+        {
         };
 
         template <typename T>
-        using reference_decay_t = typename reference_decay<T>::type;
+        inline constexpr bool is_reversible_container_v = is_reversible_container<T>::value;
 
         template <typename T>
-        reference_decay_t<T&&> decay(T&& value)
+        struct is_wrapped_reversible_container : std::false_type
         {
-            return std::forward<T>(value);
-        }
+        };
+
+        template <reversible_container T>
+        struct is_wrapped_reversible_container<std::ranges::ref_view<T>> : std::true_type
+        {
+        };
+
+        template <typename T>
+        inline constexpr bool is_wrapped_reversible_container_v = is_wrapped_reversible_container<T>::value;
 
         template <container T>
         decltype(auto) decay_container(T&& c)
@@ -256,8 +275,9 @@ namespace linq
     template <typename T>
     constexpr auto append(T&& value)
     {
-        return [value = impl::decay(std::forward<T>(value))]<impl::container Container>(Container container)
-                   -> generator<std::remove_reference_t<std::common_type_t<decltype(*std::begin(container)), T>>> {
+        return [=]<impl::container Container>(Container container)
+                   -> generator<std::remove_cvref_t<std::common_type_t<
+                       typename std::iterator_traits<decltype(std::begin(container))>::value_type, T>>> {
             for (auto&& item : container)
             {
                 co_yield item;
@@ -270,8 +290,9 @@ namespace linq
     template <typename T>
     constexpr auto prepend(T&& value)
     {
-        return [value = impl::decay(std::forward<T>(value))]<impl::container Container>(Container container)
-                   -> generator<std::remove_reference_t<std::common_type_t<decltype(*std::begin(container)), T>>> {
+        return [=]<impl::container Container>(Container container)
+                   -> generator<std::remove_cvref_t<std::common_type_t<
+                       typename std::iterator_traits<decltype(std::begin(container))>::value_type, T>>> {
             co_yield value;
             for (auto&& item : container)
             {
@@ -284,8 +305,10 @@ namespace linq
     template <impl::container Container2>
     constexpr auto concat(Container2&& container2)
     {
-        return [container2 = impl::decay_container<Container2>(std::forward<Container2>(container2))]<impl::container Container>(Container container)
-                   -> generator<std::remove_reference_t<std::common_type_t<decltype(*std::begin(container)), decltype(*std::begin(container2))>>> {
+        return [container2 = impl::decay_container(std::forward<Container2>(container2))]<impl::container Container>(Container container)
+                   -> generator<std::remove_cvref_t<std::common_type_t<
+                       typename std::iterator_traits<decltype(std::begin(container))>::value_type,
+                       typename std::iterator_traits<decltype(std::begin(container2))>::value_type>>> {
             for (auto&& item : container)
             {
                 co_yield item;

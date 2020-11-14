@@ -117,20 +117,6 @@ BOOST_AUTO_TEST_CASE(aggregate_for_each_index_test)
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, a1);
 }
 
-BOOST_AUTO_TEST_CASE(aggregate_peek_test)
-{
-    int a1[]{ 1, 2, 3 };
-    auto e{ a1 >> peek([](int i) { i *= 2; }) };
-    LINQ_CHECK_EQUAL_COLLECTIONS(a1, e);
-}
-
-BOOST_AUTO_TEST_CASE(aggregate_peek_index_test)
-{
-    int a1[]{ 1, 2, 3 };
-    auto e{ a1 >> peek_index([](int i, size_t index) { i *= (int)index; }) };
-    LINQ_CHECK_EQUAL_COLLECTIONS(a1, e);
-}
-
 BOOST_AUTO_TEST_CASE(find_get_at_test)
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };

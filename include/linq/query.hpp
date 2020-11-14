@@ -35,8 +35,8 @@ namespace linq
     template <typename Pred>
     constexpr auto where(Pred&& pred)
     {
-        return [pred = impl::decay(std::forward<Pred>(pred))]<impl::container Container>(Container container)
-                   -> generator<std::remove_reference_t<decltype(*std::begin(container))>> {
+        return [=]<impl::container Container>(Container container) mutable
+               -> generator<typename std::iterator_traits<decltype(std::begin(container))>::value_type> {
             for (auto&& item : container)
             {
                 if (pred(item)) co_yield item;
@@ -48,8 +48,8 @@ namespace linq
     template <typename Pred>
     constexpr auto where_index(Pred&& pred)
     {
-        return [pred = impl::decay(std::forward<Pred>(pred))]<impl::container Container>(Container container)
-                   -> generator<std::remove_reference_t<decltype(*std::begin(container))>> {
+        return [=]<impl::container Container>(Container container) mutable
+               -> generator<typename std::iterator_traits<decltype(std::begin(container))>::value_type> {
             std::size_t index{ 0 };
             for (auto&& item : container)
             {
@@ -63,8 +63,8 @@ namespace linq
     template <typename Selector>
     constexpr auto select(Selector&& selector)
     {
-        return [selector = impl::decay(std::forward<Selector>(selector))]<impl::container Container>(Container container)
-                   -> generator<std::remove_reference_t<decltype(selector(*std::begin(container)))>> {
+        return [=]<impl::container Container>(Container container) mutable
+               -> generator<std::remove_cvref_t<decltype(selector(*std::begin(container)))>> {
             for (auto&& item : container)
             {
                 co_yield selector(item);
@@ -76,8 +76,8 @@ namespace linq
     template <typename Selector>
     constexpr auto select_index(Selector&& selector)
     {
-        return [selector = impl::decay(std::forward<Selector>(selector))]<impl::container Container>(Container container)
-                   -> generator<std::remove_reference_t<decltype(selector(*std::begin(container), std::size_t{}))>> {
+        return [=]<impl::container Container>(Container container) mutable
+               -> generator<std::remove_cvref_t<decltype(selector(*std::begin(container), std::size_t{}))>> {
             std::size_t index{ 0 };
             for (auto&& item : container)
             {
@@ -91,9 +91,8 @@ namespace linq
     template <typename CSelector, typename RSelector>
     constexpr auto select_many(CSelector&& cselector, RSelector&& rselector)
     {
-        return [cselector = impl::decay(std::forward<CSelector>(cselector)),
-                rselector = impl::decay(std::forward<RSelector>(rselector))]<impl::container Container>(Container container)
-                   -> generator<std::remove_reference_t<decltype(rselector(*std::begin(container), *std::begin(cselector(*std::begin(container)))))>> {
+        return [=]<impl::container Container>(Container container) mutable
+               -> generator<std::remove_cvref_t<decltype(rselector(*std::begin(container), *std::begin(cselector(*std::begin(container)))))>> {
             for (auto&& c : container)
             {
                 for (auto&& item : cselector(c))
@@ -108,9 +107,8 @@ namespace linq
     template <typename CSelector, typename RSelector>
     constexpr auto select_many_index(CSelector&& cselector, RSelector&& rselector)
     {
-        return [cselector = impl::decay(std::forward<CSelector>(cselector)),
-                rselector = impl::decay(std::forward<RSelector>(rselector))]<impl::container Container>(Container container)
-                   -> generator<std::remove_reference_t<decltype(rselector(*std::begin(container), *std::begin(cselector(*std::begin(container), std::size_t{}))))>> {
+        return [=]<impl::container Container>(Container container) mutable
+               -> generator<std::remove_cvref_t<decltype(rselector(*std::begin(container), *std::begin(cselector(*std::begin(container), std::size_t{}))))>> {
             std::size_t index{ 0 };
             for (auto&& c : container)
             {
@@ -127,7 +125,7 @@ namespace linq
     constexpr auto skip(std::size_t skipn)
     {
         return [=]<impl::container Container>(Container container) mutable
-               -> generator<std::remove_reference_t<decltype(*std::begin(container))>> {
+               -> generator<typename std::iterator_traits<decltype(std::begin(container))>::value_type> {
             auto begin = std::begin(container);
             auto end = std::end(container);
             for (; begin != end && skipn--; ++begin)
@@ -143,8 +141,8 @@ namespace linq
     template <typename Pred>
     constexpr auto skip_while(Pred&& pred)
     {
-        return [pred = impl::decay(std::forward<Pred>(pred))]<impl::container Container>(Container container)
-                   -> generator<std::remove_reference_t<decltype(*std::begin(container))>> {
+        return [=]<impl::container Container>(Container container) mutable
+               -> generator<typename std::iterator_traits<decltype(std::begin(container))>::value_type> {
             auto begin = std::begin(container);
             auto end = std::end(container);
             for (; begin != end && pred(*begin); ++begin)
@@ -160,8 +158,8 @@ namespace linq
     template <typename Pred>
     constexpr auto skip_while_index(Pred&& pred)
     {
-        return [pred = impl::decay(std::forward<Pred>(pred))]<impl::container Container>(Container container)
-                   -> generator<std::remove_reference_t<decltype(*std::begin(container))>> {
+        return [=]<impl::container Container>(Container container) mutable
+               -> generator<typename std::iterator_traits<decltype(std::begin(container))>::value_type> {
             auto begin = std::begin(container);
             auto end = std::end(container);
             for (std::size_t i{ 0 }; begin != end && pred(*begin, i); ++i, ++begin)
@@ -177,7 +175,7 @@ namespace linq
     constexpr auto take(std::size_t taken)
     {
         return [=]<impl::container Container>(Container container) mutable
-               -> generator<std::remove_reference_t<decltype(*std::begin(container))>> {
+               -> generator<typename std::iterator_traits<decltype(std::begin(container))>::value_type> {
             auto begin = std::begin(container);
             auto end = std::end(container);
             for (; begin != end && taken--; ++begin)
@@ -191,8 +189,8 @@ namespace linq
     template <typename Pred>
     constexpr auto take_while(Pred&& pred)
     {
-        return [pred = impl::decay(std::forward<Pred>(pred))]<impl::container Container>(Container container)
-                   -> generator<std::remove_reference_t<decltype(*std::begin(container))>> {
+        return [=]<impl::container Container>(Container container) mutable
+               -> generator<typename std::iterator_traits<decltype(std::begin(container))>::value_type> {
             auto begin = std::begin(container);
             auto end = std::end(container);
             for (; begin != end && pred(*begin); ++begin)
@@ -206,8 +204,8 @@ namespace linq
     template <typename Pred>
     constexpr auto take_while_index(Pred&& pred)
     {
-        return [pred = impl::decay(std::forward<Pred>(pred))]<impl::container Container>(Container container)
-                   -> generator<std::remove_reference_t<decltype(*std::begin(container))>> {
+        return [=]<impl::container Container>(Container container) mutable
+               -> generator<typename std::iterator_traits<decltype(std::begin(container))>::value_type> {
             auto begin = std::begin(container);
             auto end = std::end(container);
             for (std::size_t i{ 0 }; begin != end && pred(*begin, i); ++i, ++begin)
@@ -255,9 +253,8 @@ namespace linq
     template <typename Selector, typename... Containers>
     constexpr auto zip(Selector&& selector, Containers&&... cs)
     {
-        return [selector = impl::decay(std::forward<Selector>(selector)),
-                ... cs = impl::decay_container<Containers>(std::forward<Containers>(cs))]<impl::container Container>(Container container)
-                   -> generator<std::remove_reference_t<decltype(selector(*std::begin(container), *std::begin(cs)...))>> {
+        return [selector, ... cs = impl::decay_container(std::forward<Containers>(cs))]<impl::container Container>(Container container) mutable
+               -> generator<std::remove_cvref_t<decltype(selector(*std::begin(container), *std::begin(cs)...))>> {
             auto its = std::make_tuple(
                 impl::iterator_pack{ std::begin(container), std::end(container) },
                 impl::iterator_pack{ std::begin(cs), std::end(cs) }...);
@@ -274,9 +271,8 @@ namespace linq
     template <typename Selector, typename... Containers>
     constexpr auto zip_index(Selector&& selector, Containers&&... cs)
     {
-        return [selector = impl::decay(std::forward<Selector>(selector)),
-                ... cs = impl::decay_container<Containers>(std::forward<Containers>(cs))]<impl::container Container>(Container container)
-                   -> generator<std::remove_reference_t<decltype(selector(*std::begin(container), *std::begin(cs)..., std::size_t{}))>> {
+        return [selector, ... cs = impl::decay_container(std::forward<Containers>(cs))]<impl::container Container>(Container container) mutable
+               -> generator<std::remove_cvref_t<decltype(selector(*std::begin(container), *std::begin(cs)..., std::size_t{}))>> {
             auto its = std::make_tuple(
                 impl::iterator_pack{ std::begin(container), std::end(container) },
                 impl::iterator_pack{ std::begin(cs), std::end(cs) }...);

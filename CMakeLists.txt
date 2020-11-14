@@ -4,15 +4,6 @@ if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 20)
 endif()
 
-if(WIN32 AND NOT MINGW)
-  string(REGEX MATCH "10.0[.[0-9]+]?" MATCH_WINDOWS_10 ${CMAKE_SYSTEM_VERSION})
-  string(LENGTH "${MATCH_WINDOWS_10}" MATCH_WINDOWS_10_LENGTH)
-  if(${MATCH_WINDOWS_10_LENGTH})
-    message("You are running on Windows 10")
-    set(IS_WINDOWS_10 true)
-  endif()
-endif()
-
 file(GLOB LINQ_HEADERS "include/linq/*.hpp")
 add_library(linq INTERFACE)
 target_include_directories(linq
@@ -23,10 +14,6 @@ target_include_directories(linq
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_compile_options(linq INTERFACE "-fcoroutines")
-endif()
-
-if(IS_WINDOWS_10)
-  target_compile_definitions(linq INTERFACE "LINQ_USE_WINRT")
 endif()
 
 option(LINQ_INSTALL "Install CppLinq" OFF)

@@ -14,8 +14,3 @@ linq_add_test(query_test)
 linq_add_test(aggregate_test)
 linq_add_test(string_test)
 linq_add_test(extension_test)
-
-if(IS_WINDOWS_10)
-  #linq_add_test(winrt_test)
-  #target_link_libraries(winrt_test PRIVATE WindowsApp.lib)
-endif()
