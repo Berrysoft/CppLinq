@@ -64,7 +64,7 @@ namespace linq
     constexpr auto select(Selector&& selector)
     {
         return [selector = impl::decay(std::forward<Selector>(selector))]<impl::container Container>(Container container)
-                   -> generator<decltype(selector(*std::begin(container)))> {
+                   -> generator<std::remove_reference_t<decltype(selector(*std::begin(container)))>> {
             for (auto&& item : container)
             {
                 co_yield selector(item);
@@ -77,7 +77,7 @@ namespace linq
     constexpr auto select_index(Selector&& selector)
     {
         return [selector = impl::decay(std::forward<Selector>(selector))]<impl::container Container>(Container container)
-                   -> generator<decltype(selector(*std::begin(container), std::size_t{}))> {
+                   -> generator<std::remove_reference_t<decltype(selector(*std::begin(container), std::size_t{}))>> {
             std::size_t index{ 0 };
             for (auto&& item : container)
             {
@@ -93,12 +93,12 @@ namespace linq
     {
         return [cselector = impl::decay(std::forward<CSelector>(cselector)),
                 rselector = impl::decay(std::forward<RSelector>(rselector))]<impl::container Container>(Container container)
-                   -> generator<decltype(rselector(*std::begin(cselector(*std::begin(container)))))> {
+                   -> generator<std::remove_reference_t<decltype(rselector(*std::begin(container), *std::begin(cselector(*std::begin(container)))))>> {
             for (auto&& c : container)
             {
                 for (auto&& item : cselector(c))
                 {
-                    co_yield rselector(item);
+                    co_yield rselector(c, item);
                 }
             }
         };
@@ -110,13 +110,13 @@ namespace linq
     {
         return [cselector = impl::decay(std::forward<CSelector>(cselector)),
                 rselector = impl::decay(std::forward<RSelector>(rselector))]<impl::container Container>(Container container)
-                   -> generator<decltype(rselector(*std::begin(cselector(*std::begin(container), std::size_t{}))))> {
+                   -> generator<std::remove_reference_t<decltype(rselector(*std::begin(container), *std::begin(cselector(*std::begin(container), std::size_t{}))))>> {
             std::size_t index{ 0 };
             for (auto&& c : container)
             {
                 for (auto&& item : cselector(c, index))
                 {
-                    co_yield rselector(item);
+                    co_yield rselector(c, item);
                 }
                 index++;
             }
@@ -126,8 +126,8 @@ namespace linq
     // Bypasses a specified number of elements and then returns the remaining elements.
     constexpr auto skip(std::size_t skipn)
     {
-        return [=]<impl::container Container>(Container container)
-                   -> generator<decltype(*std::begin(container))> {
+        return [=]<impl::container Container>(Container container) mutable
+               -> generator<std::remove_reference_t<decltype(*std::begin(container))>> {
             auto begin = std::begin(container);
             auto end = std::end(container);
             for (; begin != end && skipn--; ++begin)
@@ -144,7 +144,7 @@ namespace linq
     constexpr auto skip_while(Pred&& pred)
     {
         return [pred = impl::decay(std::forward<Pred>(pred))]<impl::container Container>(Container container)
-                   -> generator<decltype(*std::begin(container))> {
+                   -> generator<std::remove_reference_t<decltype(*std::begin(container))>> {
             auto begin = std::begin(container);
             auto end = std::end(container);
             for (; begin != end && pred(*begin); ++begin)
@@ -161,7 +161,7 @@ namespace linq
     constexpr auto skip_while_index(Pred&& pred)
     {
         return [pred = impl::decay(std::forward<Pred>(pred))]<impl::container Container>(Container container)
-                   -> generator<decltype(*std::begin(container))> {
+                   -> generator<std::remove_reference_t<decltype(*std::begin(container))>> {
             auto begin = std::begin(container);
             auto end = std::end(container);
             for (std::size_t i{ 0 }; begin != end && pred(*begin, i); ++i, ++begin)
@@ -176,8 +176,8 @@ namespace linq
     // Returns a specified number of contiguous elements from the start.
     constexpr auto take(std::size_t taken)
     {
-        return [=]<impl::container Container>(Container container)
-                   -> generator<decltype(*std::begin(container))> {
+        return [=]<impl::container Container>(Container container) mutable
+               -> generator<std::remove_reference_t<decltype(*std::begin(container))>> {
             auto begin = std::begin(container);
             auto end = std::end(container);
             for (; begin != end && taken--; ++begin)
@@ -192,7 +192,7 @@ namespace linq
     constexpr auto take_while(Pred&& pred)
     {
         return [pred = impl::decay(std::forward<Pred>(pred))]<impl::container Container>(Container container)
-                   -> generator<decltype(*std::begin(container))> {
+                   -> generator<std::remove_reference_t<decltype(*std::begin(container))>> {
             auto begin = std::begin(container);
             auto end = std::end(container);
             for (; begin != end && pred(*begin); ++begin)
@@ -207,7 +207,7 @@ namespace linq
     constexpr auto take_while_index(Pred&& pred)
     {
         return [pred = impl::decay(std::forward<Pred>(pred))]<impl::container Container>(Container container)
-                   -> generator<decltype(*std::begin(container))> {
+                   -> generator<std::remove_reference_t<decltype(*std::begin(container))>> {
             auto begin = std::begin(container);
             auto end = std::end(container);
             for (std::size_t i{ 0 }; begin != end && pred(*begin, i); ++i, ++begin)
@@ -237,11 +237,18 @@ namespace linq
         {
         }
 
-        template <typename It>
+        template <typename It1, typename It2>
         struct iterator_pack
         {
-            It m_begin, m_end;
+            It1 m_begin;
+            It2 m_end;
+
+            iterator_pack() {}
+            iterator_pack(It1 begin, It2 end) : m_begin(begin), m_end(end) {}
         };
+
+        template <typename It1, typename It2>
+        iterator_pack(It1, It2) -> iterator_pack<It1, It2>;
     } // namespace impl
 
     // Applies a specified function to the corresponding elements of two enumerable, producing an enumerable of the results.
@@ -250,7 +257,7 @@ namespace linq
     {
         return [selector = impl::decay(std::forward<Selector>(selector)),
                 ... cs = impl::decay(std::forward<Containers>(cs))]<impl::container Container>(Container container)
-                   -> generator<decltype(selector(*std::begin(container), *std::begin(cs)...))> {
+                   -> generator<std::remove_reference_t<decltype(selector(*std::begin(container), *std::begin(cs)...))>> {
             auto its = std::make_tuple(
                 impl::iterator_pack{ std::begin(container), std::end(container) },
                 impl::iterator_pack{ std::begin(cs), std::end(cs) }...);
@@ -258,7 +265,7 @@ namespace linq
                  std::apply([](auto&&... pack) { return impl::and_all((pack.m_begin != pack.m_end)...); }, its);
                  std::apply([](auto&&... pack) { return impl::expand_tuple((++pack.m_begin)...); }, its))
             {
-                co_yield std::apply([](auto&&... pack) { return selector((*pack.m_begin)...); }, its);
+                co_yield std::apply([selector](auto&&... pack) { return selector((*pack.m_begin)...); }, its);
             }
         };
     }
@@ -269,7 +276,7 @@ namespace linq
     {
         return [selector = impl::decay(std::forward<Selector>(selector)),
                 ... cs = impl::decay(std::forward<Containers>(cs))]<impl::container Container>(Container container)
-                   -> generator<decltype(selector(*std::begin(container), *std::begin(cs)...))> {
+                   -> generator<std::remove_reference_t<decltype(selector(*std::begin(container), *std::begin(cs)..., std::size_t{}))>> {
             auto its = std::make_tuple(
                 impl::iterator_pack{ std::begin(container), std::end(container) },
                 impl::iterator_pack{ std::begin(cs), std::end(cs) }...);
@@ -277,7 +284,7 @@ namespace linq
                  std::apply([](auto&&... pack) { return impl::and_all((pack.m_begin != pack.m_end)...); }, its);
                  ++i, std::apply([](auto&&... pack) { return impl::expand_tuple((++pack.m_begin)...); }, its))
             {
-                co_yield std::apply([](auto&&... pack) { return selector((*pack.m_begin)..., i); }, its);
+                co_yield std::apply([selector, i](auto&&... pack) { return selector((*pack.m_begin)..., i); }, its);
             }
         };
     }

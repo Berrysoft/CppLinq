@@ -3,9 +3,11 @@
 #include "test_utility.hpp"
 #include <cmath>
 #include <linq/query.hpp>
+#include <ranges>
 
 using namespace std;
 using namespace linq;
+using std::ranges::ref_view;
 
 struct pack
 {
@@ -27,7 +29,7 @@ BOOST_AUTO_TEST_CASE(where_select_where_test)
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     int a2[]{ 2, 4, 6 };
-    auto e{ a1 >> where([](int a) { return a % 2 == 0; }) };
+    auto e{ ref_view{ a1 } >> where([](int a) { return a % 2 == 0; }) };
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 }
 
@@ -35,7 +37,7 @@ BOOST_AUTO_TEST_CASE(where_select_where_index_test)
 {
     int a1[]{ 1, 1, 2, 4, 4, 5 };
     int a2[]{ 1, 2, 4, 5 };
-    auto e{ a1 >> where_index([](int a, size_t i) { return a == (int)i; }) };
+    auto e{ ref_view{ a1 } >> where_index([](int a, size_t i) { return a == (int)i; }) };
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 }
 
@@ -43,7 +45,7 @@ BOOST_AUTO_TEST_CASE(where_select_select_test)
 {
     int a1[]{ 1, 4, 9, 16, 25 };
     double a2[]{ 1, 2, 3, 4, 5 };
-    auto e{ a1 >> select([](int a) { return sqrt(a); }) };
+    auto e{ ref_view{ a1 } >> select([](int a) { return sqrt(a); }) };
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 }
 
@@ -51,7 +53,7 @@ BOOST_AUTO_TEST_CASE(where_select_select_index_test)
 {
     int a1[]{ 1, 4, 9, 16, 25 };
     pack a2[]{ { 0, 1 }, { 1, 2 }, { 2, 3 }, { 3, 4 }, { 4, 5 } };
-    auto e{ a1 >> select_index([](int a, size_t i) { return pack{ (int)i, (int)sqrt(a) }; }) };
+    auto e{ ref_view{ a1 } >> select_index([](int a, size_t i) { return pack{ (int)i, (int)sqrt(a) }; }) };
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 }
 
@@ -59,7 +61,7 @@ BOOST_AUTO_TEST_CASE(where_select_select_many_test)
 {
     pack a1[]{ { 1, 1 }, { 2, 4 }, { 3, 9 } };
     int a2[]{ 1, 1, 4, 16, 9, 81 };
-    auto e{ a1 >> select_many([](const pack& a) { return vector<int>{ a.arr[0], a.arr[1] }; }, [](const pack&, int a) { return a * a; }) };
+    auto e{ ref_view{ a1 } >> select_many([](const pack& a) { return vector<int>{ a.arr[0], a.arr[1] }; }, [](const pack&, int a) { return a * a; }) };
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 }
 
@@ -67,7 +69,7 @@ BOOST_AUTO_TEST_CASE(where_select_select_many_index_test)
 {
     pack a1[]{ { 1, 1 }, { 2, 4 }, { 3, 9 } };
     int a2[]{ 0, 1, 1, 1, 4, 16, 4, 9, 81 };
-    auto e{ a1 >> select_many_index([](const pack& a, size_t i) { return vector<int>{ (int)i, a.arr[0], a.arr[1] }; }, [](const pack&, int a) { return a * a; }) };
+    auto e{ ref_view{ a1 } >> select_many_index([](const pack& a, size_t i) { return vector<int>{ (int)i, a.arr[0], a.arr[1] }; }, [](const pack&, int a) { return a * a; }) };
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 }
 
@@ -75,7 +77,7 @@ BOOST_AUTO_TEST_CASE(skip_take_skip_test)
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     int a2[]{ 4, 5, 6 };
-    auto e{ a1 >> skip(3) };
+    auto e{ ref_view{ a1 } >> skip(3) };
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 }
 
@@ -83,7 +85,7 @@ BOOST_AUTO_TEST_CASE(skip_take_skip_while_test)
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     int a2[]{ 4, 5, 6 };
-    auto e{ a1 >> skip_while([](int i) { return i < 4; }) };
+    auto e{ ref_view{ a1 } >> skip_while([](int i) { return i < 4; }) };
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 }
 
@@ -91,7 +93,7 @@ BOOST_AUTO_TEST_CASE(skip_take_skip_while_index_test)
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     int a2[]{ 4, 5, 6 };
-    auto e{ a1 >> skip_while_index([](int, size_t i) { return i < 3; }) };
+    auto e{ ref_view{ a1 } >> skip_while_index([](int, size_t i) { return i < 3; }) };
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 }
 
@@ -99,7 +101,7 @@ BOOST_AUTO_TEST_CASE(skip_take_take_test)
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     int a2[]{ 1, 2, 3 };
-    auto e{ a1 >> take(3) };
+    auto e{ ref_view{ a1 } >> take(3) };
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 }
 
@@ -107,7 +109,7 @@ BOOST_AUTO_TEST_CASE(skip_take_take_while_test)
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     int a2[]{ 1, 2, 3 };
-    auto e{ a1 >> take_while([](int i) { return i < 4; }) };
+    auto e{ ref_view{ a1 } >> take_while([](int i) { return i < 4; }) };
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 }
 
@@ -115,7 +117,7 @@ BOOST_AUTO_TEST_CASE(skip_take_take_while_index_test)
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     int a2[]{ 1, 2, 3 };
-    auto e{ a1 >> take_while_index([](int, size_t i) { return i < 3; }) };
+    auto e{ ref_view{ a1 } >> take_while_index([](int, size_t i) { return i < 3; }) };
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 }
 
@@ -124,7 +126,7 @@ BOOST_AUTO_TEST_CASE(linear_zip_test)
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     vector<int> v{ 100, 200, 300, 400, 500, 600 };
     int a2[]{ 101, 202, 303, 404, 505, 606 };
-    auto e{ a1 >> zip([](int i1, int i2) { return i1 + i2; }, v) };
+    auto e{ ref_view{ a1 } >> zip([](int i1, int i2) { return i1 + i2; }, ref_view{ v }) };
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 }
 
@@ -133,6 +135,6 @@ BOOST_AUTO_TEST_CASE(linear_zip_index_test)
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     vector<int> v{ 1, 2, 3, 4, 5, 6 };
     int a2[]{ 1, 4, 9, 16, 25, 36 };
-    auto e{ a1 >> zip_index([](int i1, int i2, size_t index) { return (int)(i1 + i2 * index); }, v) };
+    auto e{ ref_view{ a1 } >> zip_index([](int i1, int i2, size_t index) { return (int)(i1 + i2 * index); }, ref_view{ v }) };
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 }
