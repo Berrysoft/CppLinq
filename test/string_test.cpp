@@ -32,7 +32,7 @@ BOOST_AUTO_TEST_CASE(string_joinstr_test)
 
 BOOST_AUTO_TEST_CASE(string_instr_test)
 {
-    BOOST_CHECK("Hello world!" >> instr<char>('o'));
+    BOOST_CHECK("Hello world!" >> instr('o'));
     BOOST_CHECK("Hello world!" >> instr<char>("world"));
 }
 

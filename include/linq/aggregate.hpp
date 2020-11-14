@@ -241,8 +241,8 @@ namespace linq
     template <typename T>
     constexpr auto default_if_empty(T&& def)
     {
-        return [=]<impl::container Container>(Container container) mutable
-               -> generator<std::remove_cvref_t<std::common_type_t<typename std::iterator_traits<decltype(std::begin(container))>::value_type, T>>> {
+        return [=]<impl::container Container>(Container container)
+                   -> generator<std::remove_cvref_t<std::common_type_t<typename std::iterator_traits<decltype(std::begin(container))>::value_type, T>>> {
             auto begin = std::begin(container);
             auto end = std::end(container);
             if (begin == end) { co_yield def; }
@@ -497,7 +497,7 @@ namespace linq
     template <typename T>
     constexpr auto get_at(std::size_t index, T&& def)
     {
-        return [=]<impl::container Container>(Container container) mutable {
+        return [=, &def]<impl::container Container>(Container container) {
             auto begin = std::begin(container);
             auto end = std::end(container);
             for (std::size_t i{ 0 }; begin != end && i < index; ++begin, ++i)
@@ -512,7 +512,7 @@ namespace linq
     // Returns the element at a specified index.
     constexpr auto get_at(std::size_t index)
     {
-        return [=]<impl::container Container>(Container container) mutable {
+        return [=]<impl::container Container>(Container container) {
             using It = decltype(std::begin(container));
             using T = typename std::iterator_traits<It>::value_type;
             return get_at<T>(index, {})(container);

@@ -29,6 +29,7 @@
 #include <coroutine>
 #include <iterator>
 #include <ranges>
+#include <string_view>
 
 namespace linq
 {
@@ -162,6 +163,27 @@ namespace linq
         std::coroutine_handle<promise_type> coro = nullptr;
     };
 
+    // SFINAE for character type
+    template <typename Char>
+    inline constexpr bool is_char_v{ false };
+
+    template <>
+    inline constexpr bool is_char_v<char>{ true };
+
+    template <>
+    inline constexpr bool is_char_v<wchar_t>{ true };
+
+#ifdef __cpp_char8_t
+    template <>
+    inline constexpr bool is_char_v<char8_t>{ true };
+#endif // __cpp_char8_t
+
+    template <>
+    inline constexpr bool is_char_v<char16_t>{ true };
+
+    template <>
+    inline constexpr bool is_char_v<char32_t>{ true };
+
     namespace impl
     {
         template <typename T>
@@ -222,7 +244,14 @@ namespace linq
         {
             if constexpr (std::is_lvalue_reference_v<T&&>)
             {
-                return std::ranges::ref_view{ c };
+                if constexpr (is_char_v<typename std::iterator_traits<decltype(std::begin(c))>::value_type>)
+                {
+                    return std::string_view{ c };
+                }
+                else
+                {
+                    return std::ranges::ref_view{ c };
+                }
             }
             else
             {
