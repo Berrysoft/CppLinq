@@ -256,7 +256,7 @@ namespace linq
     constexpr auto zip(Selector&& selector, Containers&&... cs)
     {
         return [selector = impl::decay(std::forward<Selector>(selector)),
-                ... cs = impl::decay(std::forward<Containers>(cs))]<impl::container Container>(Container container)
+                ... cs = impl::decay_container<Containers>(std::forward<Containers>(cs))]<impl::container Container>(Container container)
                    -> generator<std::remove_reference_t<decltype(selector(*std::begin(container), *std::begin(cs)...))>> {
             auto its = std::make_tuple(
                 impl::iterator_pack{ std::begin(container), std::end(container) },
@@ -275,7 +275,7 @@ namespace linq
     constexpr auto zip_index(Selector&& selector, Containers&&... cs)
     {
         return [selector = impl::decay(std::forward<Selector>(selector)),
-                ... cs = impl::decay(std::forward<Containers>(cs))]<impl::container Container>(Container container)
+                ... cs = impl::decay_container<Containers>(std::forward<Containers>(cs))]<impl::container Container>(Container container)
                    -> generator<std::remove_reference_t<decltype(selector(*std::begin(container), *std::begin(cs)..., std::size_t{}))>> {
             auto its = std::make_tuple(
                 impl::iterator_pack{ std::begin(container), std::end(container) },

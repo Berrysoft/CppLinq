@@ -28,6 +28,7 @@
 
 #include <coroutine>
 #include <iterator>
+#include <ranges>
 
 namespace linq
 {
@@ -196,12 +197,25 @@ namespace linq
         {
             return std::forward<T>(value);
         }
+
+        template <container T>
+        decltype(auto) decay_container(T&& c)
+        {
+            if constexpr (std::is_lvalue_reference_v<T&&>)
+            {
+                return std::ranges::ref_view{ c };
+            }
+            else
+            {
+                return std::forward<T>(c);
+            }
+        }
     } // namespace impl
 
     template <impl::container Container, typename Query>
     decltype(auto) operator>>(Container&& container, Query&& query)
     {
-        return std::forward<Query>(query)(std::forward<Container>(container));
+        return std::forward<Query>(query)(impl::decay_container<Container>(std::forward<Container>(container)));
     }
 
     namespace impl
@@ -270,7 +284,7 @@ namespace linq
     template <impl::container Container2>
     constexpr auto concat(Container2&& container2)
     {
-        return [container2 = impl::decay(std::forward<Container2>(container2))]<impl::container Container>(Container container)
+        return [container2 = impl::decay_container<Container2>(std::forward<Container2>(container2))]<impl::container Container>(Container container)
                    -> generator<std::remove_reference_t<std::common_type_t<decltype(*std::begin(container)), decltype(*std::begin(container2))>>> {
             for (auto&& item : container)
             {
