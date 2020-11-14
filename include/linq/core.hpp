@@ -27,7 +27,6 @@
 #define LINQ_CORE_HPP
 
 #include <coroutine>
-#include <functional>
 #include <iterator>
 
 namespace linq
@@ -243,54 +242,45 @@ namespace linq
     template <typename T>
     constexpr auto append(T&& value)
     {
-        return std::bind(
-            []<impl::container Container>(Container container, impl::reference_decay_t<T> value)
-                -> generator<std::common_type_t<decltype(*std::begin(container)), T>> {
-                for (auto&& item : container)
-                {
-                    co_yield item;
-                }
-                co_yield value;
-            },
-            std::placeholders::_1,
-            impl::decay(std::forward<T>(value)));
+        return [value = impl::decay(std::forward<T>(value))]<impl::container Container>(Container container)
+                   -> generator<std::remove_reference_t<std::common_type_t<decltype(*std::begin(container)), T>>> {
+            for (auto&& item : container)
+            {
+                co_yield item;
+            }
+            co_yield value;
+        };
     }
 
     // Prepends an element to the enumerable.
     template <typename T>
     constexpr auto prepend(T&& value)
     {
-        return std::bind(
-            []<impl::container Container>(Container container, impl::reference_decay_t<T> value)
-                -> generator<std::common_type_t<decltype(*std::begin(container)), T>> {
-                co_yield value;
-                for (auto&& item : container)
-                {
-                    co_yield item;
-                }
-            },
-            std::placeholders::_1,
-            impl::decay(std::forward<T>(value)));
+        return [value = impl::decay(std::forward<T>(value))]<impl::container Container>(Container container)
+                   -> generator<std::remove_reference_t<std::common_type_t<decltype(*std::begin(container)), T>>> {
+            co_yield value;
+            for (auto&& item : container)
+            {
+                co_yield item;
+            }
+        };
     }
 
     // Concatenates two enumerable.
     template <impl::container Container2>
     constexpr auto concat(Container2&& container2)
     {
-        return std::bind(
-            []<impl::container Container>(Container container, Container2 container2)
-                -> generator<std::common_type_t<decltype(*std::begin(container)), decltype(*std::begin(container2))>> {
-                for (auto&& item : container)
-                {
-                    co_yield item;
-                }
-                for (auto&& item : container2)
-                {
-                    co_yield item;
-                }
-            },
-            std::placeholders::_1,
-            std::forward<Container2>(container2));
+        return [container2 = impl::decay(std::forward<Container2>(container2))]<impl::container Container>(Container container)
+                   -> generator<std::remove_reference_t<std::common_type_t<decltype(*std::begin(container)), decltype(*std::begin(container2))>>> {
+            for (auto&& item : container)
+            {
+                co_yield item;
+            }
+            for (auto&& item : container2)
+            {
+                co_yield item;
+            }
+        };
     }
 } // namespace linq
 
