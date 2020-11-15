@@ -98,7 +98,7 @@ namespace linq
     {
         return [&, alloc](auto&& container) {
             std::map<TKey, TElem, Comparer, Allocator> result{ alloc };
-            for (auto& item : container)
+            for (auto&& item : container)
             {
                 result.emplace(keysel(item), elesel(item));
             }
@@ -111,7 +111,7 @@ namespace linq
     {
         return [&, alloc](auto&& container) {
             std::unordered_map<TKey, TElem, Hash, KeyEq, Allocator> result{ alloc };
-            for (auto& item : container)
+            for (auto&& item : container)
             {
                 result.emplace(keysel(item), elesel(item));
             }
@@ -124,7 +124,7 @@ namespace linq
     {
         return [&, alloc](auto&& container) {
             std::multimap<TKey, TElem, Comparer, Allocator> result{ alloc };
-            for (auto& item : container)
+            for (auto&& item : container)
             {
                 result.emplace(keysel(item), elesel(item));
             }
@@ -137,7 +137,7 @@ namespace linq
     {
         return [&, alloc](auto&& container) {
             std::unordered_multimap<TKey, TElem, Hash, KeyEq, Allocator> result{ alloc };
-            for (auto& item : container)
+            for (auto&& item : container)
             {
                 result.emplace(keysel(item), elesel(item));
             }

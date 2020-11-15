@@ -40,7 +40,7 @@ namespace linq
     constexpr auto for_each(Action&& action)
     {
         return [=]<impl::container Container>(Container container) mutable {
-            for (auto& item : container)
+            for (auto&& item : container)
                 action(item);
             return container;
         };
@@ -52,7 +52,7 @@ namespace linq
     {
         return [=]<impl::container Container>(Container container) mutable {
             std::size_t i = 0;
-            for (auto& item : container)
+            for (auto&& item : container)
             {
                 action(item, i);
                 i++;
@@ -289,22 +289,6 @@ namespace linq
         };
     }
 
-    namespace impl
-    {
-        template <typename T>
-        struct is_wrapped_reversible_container : std::false_type
-        {
-        };
-
-        template <reversible_container T>
-        struct is_wrapped_reversible_container<container_view<T>> : std::true_type
-        {
-        };
-
-        template <typename T>
-        inline constexpr bool is_wrapped_reversible_container_v = is_wrapped_reversible_container<T>::value;
-    } // namespace impl
-
     // Inverts the order of the elements.
     constexpr auto reverse()
     {
@@ -314,14 +298,6 @@ namespace linq
             {
                 auto end = std::rend(container);
                 for (auto it = std::rbegin(container); it != end; ++it)
-                {
-                    co_yield* it;
-                }
-            }
-            else if constexpr (impl::is_wrapped_reversible_container_v<Container>)
-            {
-                auto end = std::rend(container.base());
-                for (auto it = std::rbegin(container.base()); it != end; ++it)
                 {
                     co_yield* it;
                 }

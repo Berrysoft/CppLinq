@@ -257,23 +257,42 @@ namespace linq
         template <typename T>
         inline constexpr bool is_reversible_container_v = is_reversible_container<T>::value;
 
-        template <container T>
-        class container_view
+        template <typename T>
+        class container_view_base
         {
         private:
             T* m_container_ptr;
 
         public:
-            container_view(T& container) : m_container_ptr(std::addressof(container)) {}
+            container_view_base(T& container) : m_container_ptr(std::addressof(container)) {}
 
-            constexpr T& base() noexcept { return *m_container_ptr; }
-            constexpr T const& base() const noexcept { return *m_container_ptr; }
+            constexpr T& base() const noexcept { return *m_container_ptr; }
 
-            auto begin() const noexcept(noexcept(m_container_ptr->begin())) { return m_container_ptr->begin(); }
-            auto end() const noexcept(noexcept(m_container_ptr->end())) { return m_container_ptr->end(); }
+            auto begin() const noexcept(noexcept(std::begin(this->base()))) { return std::begin(this->base()); }
+            auto end() const noexcept(noexcept(std::end(this->base()))) { return std::end(this->base()); }
         };
 
+        template <typename T>
+        class container_view;
+
         template <container T>
+        class container_view<T> : public container_view_base<T>
+        {
+        public:
+            using container_view_base<T>::container_view_base;
+        };
+
+        template <reversible_container T>
+        class container_view<T> : public container_view_base<T>
+        {
+        public:
+            using container_view_base<T>::container_view_base;
+
+            auto rbegin() const noexcept(noexcept(std::rbegin(this->base()))) { return std::rbegin(this->base()); }
+            auto rend() const noexcept(noexcept(std::rend(this->base()))) { return std::rend(this->base()); }
+        };
+
+        template <typename T>
         container_view(T&) -> container_view<T>;
 
         template <container T>

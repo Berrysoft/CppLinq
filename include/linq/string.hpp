@@ -85,7 +85,7 @@ namespace linq
     {
         return []<impl::container Container>(Container container) {
             std::basic_ostringstream<Char, Traits, Allocator> oss;
-            for (auto& item : container)
+            for (auto&& item : container)
             {
                 oss << item;
             }
