@@ -60,8 +60,6 @@ For extension sample, see [extension_test.cpp](test/extension_test.cpp).
 * limit
 * max
 * min
-* peek
-* peek_index
 * reverse
 * single
 * sort

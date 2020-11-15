@@ -26,13 +26,22 @@
 #ifndef LINQ_CORE_HPP
 #define LINQ_CORE_HPP
 
-#include <coroutine>
 #include <iterator>
-#include <ranges>
 #include <span>
 #include <string_view>
+#include <version>
 
-namespace linq
+#if __cpp_lib_coroutine >= 201902L || __has_include(<coroutine>)
+    #include <coroutine>
+#else
+    #include <experimental/coroutine>
+#endif
+
+#if __has_include(<experimental/generator>)
+    #include <experimental/generator>
+
+#else
+namespace std::experimental
 {
     template <typename T>
     struct generator
@@ -43,17 +52,17 @@ namespace linq
 
             auto get_return_object() { return generator{ *this }; }
 
-            std::suspend_always initial_suspend() noexcept { return {}; }
+            suspend_always initial_suspend() noexcept { return {}; }
 
-            std::suspend_always final_suspend() noexcept { return {}; }
+            suspend_always final_suspend() noexcept { return {}; }
 
             void unhandled_exception() { throw; }
 
-            std::suspend_always yield_value(T const& value)
+            suspend_always yield_value(T const& value)
             {
-                if constexpr (std::is_move_assignable_v<T>)
+                if constexpr (is_move_assignable_v<T>)
                 {
-                    current_value = std::move(value);
+                    current_value = move(value);
                 }
                 else
                 {
@@ -70,18 +79,18 @@ namespace linq
 
         struct iterator
         {
-            using iterator_category = std::input_iterator_tag;
-            using difference_type = std::ptrdiff_t;
+            using iterator_category = input_iterator_tag;
+            using difference_type = ptrdiff_t;
             using value_type = T;
             using reference = T const&;
             using pointer = T const*;
 
-            std::coroutine_handle<promise_type> coro = nullptr;
+            coroutine_handle<promise_type> coro = nullptr;
 
             iterator() = default;
-            iterator(std::nullptr_t) : coro(nullptr) {}
+            iterator(nullptr_t) : coro(nullptr) {}
 
-            iterator(std::coroutine_handle<promise_type> coro) : coro(coro) {}
+            iterator(coroutine_handle<promise_type> coro) : coro(coro) {}
 
             iterator& operator++()
             {
@@ -113,7 +122,7 @@ namespace linq
             }
         };
 
-        [[nodiscard]] iterator begin() const
+        [[nodiscard]] iterator begin()
         {
             if (coro)
             {
@@ -126,12 +135,12 @@ namespace linq
             return { coro };
         }
 
-        [[nodiscard]] iterator end() const
+        [[nodiscard]] iterator end()
         {
             return { nullptr };
         }
 
-        explicit generator(promise_type& prom) : coro(std::coroutine_handle<promise_type>::from_promise(prom)) {}
+        explicit generator(promise_type& prom) : coro(coroutine_handle<promise_type>::from_promise(prom)) {}
 
         generator() = default;
         generator(generator const&) = delete;
@@ -161,8 +170,14 @@ namespace linq
         }
 
     private:
-        std::coroutine_handle<promise_type> coro = nullptr;
+        coroutine_handle<promise_type> coro = nullptr;
     };
+} // namespace std::experimental
+#endif
+
+namespace linq
+{
+    using std::experimental::generator;
 
     // SFINAE for character type
     template <typename Char>
@@ -243,6 +258,25 @@ namespace linq
         inline constexpr bool is_reversible_container_v = is_reversible_container<T>::value;
 
         template <container T>
+        class container_view
+        {
+        private:
+            T* m_container_ptr;
+
+        public:
+            container_view(T& container) : m_container_ptr(std::addressof(container)) {}
+
+            constexpr T& base() noexcept { return *m_container_ptr; }
+            constexpr T const& base() const noexcept { return *m_container_ptr; }
+
+            auto begin() const noexcept(noexcept(m_container_ptr->begin())) { return m_container_ptr->begin(); }
+            auto end() const noexcept(noexcept(m_container_ptr->end())) { return m_container_ptr->end(); }
+        };
+
+        template <container T>
+        container_view(T&) -> container_view<T>;
+
+        template <container T>
         decltype(auto) decay_container(T&& c)
         {
             if constexpr (std::is_lvalue_reference_v<T&&>)
@@ -257,7 +291,7 @@ namespace linq
                 }
                 else
                 {
-                    return std::ranges::ref_view(c);
+                    return container_view(c);
                 }
             }
             else

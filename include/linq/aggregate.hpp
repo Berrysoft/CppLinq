@@ -297,7 +297,7 @@ namespace linq
         };
 
         template <reversible_container T>
-        struct is_wrapped_reversible_container<std::ranges::ref_view<T>> : std::true_type
+        struct is_wrapped_reversible_container<container_view<T>> : std::true_type
         {
         };
 
