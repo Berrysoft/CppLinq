@@ -42,6 +42,8 @@ BOOST_AUTO_TEST_CASE(string_replace_test)
     string_view str2{ "Hellooo wooorld!ooo" };
     auto e{ str >> replace('o', "ooo") };
     BOOST_CHECK_EQUAL(str2, e);
+    auto e2{ e >> replace<char>("ooo", "o") };
+    BOOST_CHECK_EQUAL(str, e2);
 }
 
 BOOST_AUTO_TEST_CASE(string_remove_test)

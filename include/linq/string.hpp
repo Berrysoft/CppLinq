@@ -50,7 +50,7 @@ namespace linq
     } // namespace impl
 
     // Split the string into an enumerable of string_view by a char.
-    template <typename Char, typename Traits = std::char_traits<Char>>
+    template <impl::character Char, typename Traits = std::char_traits<Char>>
     constexpr auto split(Char split_char = (Char)' ')
     {
         return [=]<impl::container Container>(Container container)
@@ -80,7 +80,7 @@ namespace linq
 
     // Contacts the string elements into a new string.
     // Named join to distinguish from concat.
-    template <typename Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>>
+    template <impl::character Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>>
     constexpr auto joinstr()
     {
         return []<impl::container Container>(Container container) {
@@ -94,7 +94,7 @@ namespace linq
     }
 
     // Inserts something between every two string elements when contacting.
-    template <typename Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>, typename T>
+    template <impl::character Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>, typename T>
     constexpr auto joinstr(T&& value)
     {
         return [=]<impl::container Container>(Container container) {
@@ -115,7 +115,7 @@ namespace linq
 
     // Determines whether a char is in the string.
     // Named instr to distinguish from contains, although the latter doesn't exist now.
-    template <typename Char, typename Traits = std::char_traits<Char>, typename = std::enable_if_t<is_char_v<Char>>>
+    template <impl::character Char, typename Traits = std::char_traits<Char>>
     constexpr auto instr(Char t)
     {
         return [=]<impl::container Container>(Container&& container) {
@@ -126,8 +126,8 @@ namespace linq
 
     // Determines whether a string span is in the string.
     // Named instr to distinguish from contains, although the latter doesn't exist now.
-    template <typename Char, typename Traits = std::char_traits<Char>, typename T>
-    constexpr auto instr(T&& t)
+    template <impl::character Char, typename Traits = std::char_traits<Char>, typename T>
+    constexpr auto instr(T&& t) requires(!impl::is_char_v<std::remove_cvref_t<T>>)
     {
         return [&]<impl::container Container>(Container&& container) {
             std::basic_string_view<Char, Traits> view = impl::get_string_view<Container, Char, Traits>(std::forward<Container>(container));
@@ -137,7 +137,7 @@ namespace linq
     }
 
     // Determines whether a char is in the start of the string.
-    template <typename Char, typename Traits = std::char_traits<Char>, typename = std::enable_if_t<is_char_v<Char>>>
+    template <impl::character Char, typename Traits = std::char_traits<Char>>
     constexpr auto starts_with(Char value)
     {
         return [=]<impl::container Container>(Container&& container) {
@@ -147,8 +147,8 @@ namespace linq
     }
 
     // Determines whether a string span is in the start of the string.
-    template <typename Char, typename Traits = std::char_traits<Char>, typename T>
-    constexpr auto starts_with(T&& t)
+    template <impl::character Char, typename Traits = std::char_traits<Char>, typename T>
+    constexpr auto starts_with(T&& t) requires(!impl::is_char_v<std::remove_cvref_t<T>>)
     {
         return [&]<impl::container Container>(Container&& container) {
             std::basic_string_view<Char, Traits> view = impl::get_string_view<Container, Char, Traits>(std::forward<Container>(container));
@@ -160,7 +160,7 @@ namespace linq
     }
 
     // Determines whether a char is in the end of the string.
-    template <typename Char, typename Traits = std::char_traits<Char>, typename = std::enable_if_t<is_char_v<Char>>>
+    template <impl::character Char, typename Traits = std::char_traits<Char>>
     constexpr auto ends_with(Char value)
     {
         return [=]<impl::container Container>(Container&& container) {
@@ -170,8 +170,8 @@ namespace linq
     }
 
     // Determines whether a string span is in the end of the string.
-    template <typename Char, typename Traits = std::char_traits<Char>, typename T>
-    constexpr auto ends_with(T&& t)
+    template <impl::character Char, typename Traits = std::char_traits<Char>, typename T>
+    constexpr auto ends_with(T&& t) requires(!impl::is_char_v<std::remove_cvref_t<T>>)
     {
         return [&]<impl::container Container>(Container&& container) {
             std::basic_string_view<Char, Traits> view = impl::get_string_view<Container, Char, Traits>(std::forward<Container>(container));
@@ -183,7 +183,7 @@ namespace linq
     }
 
     // Returns a new string with no specified char.
-    template <typename Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>>
+    template <impl::character Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>>
     constexpr auto remove(Char value)
     {
         return [=]<impl::container Container>(Container&& container) {
@@ -207,8 +207,8 @@ namespace linq
     }
 
     // Returns a new string with no specified string span.
-    template <typename Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>, typename T>
-    constexpr auto remove(T&& t)
+    template <impl::character Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>, typename T>
+    constexpr auto remove(T&& t) requires(!impl::is_char_v<std::remove_cvref_t<T>>)
     {
         return [&]<impl::container Container>(Container&& container) {
             std::basic_string_view<Char, Traits> view = impl::get_string_view<Container, Char, Traits>(std::forward<Container>(container));
@@ -232,7 +232,7 @@ namespace linq
         };
     }
 
-    template <typename Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>, typename TNew>
+    template <impl::character Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>, typename TNew>
     constexpr auto replace(Char oldc, TNew&& news)
     {
         return [=]<impl::container Container>(Container&& container) {
@@ -256,8 +256,8 @@ namespace linq
     }
 
     // Returns a new string which the specified string span is replaced by the new one.
-    template <typename Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>, typename TOld, typename TNew>
-    constexpr auto replace(TOld&& olds, TNew&& news)
+    template <impl::character Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>, typename TOld, typename TNew>
+    constexpr auto replace(TOld&& olds, TNew&& news) requires(!impl::is_char_v<std::remove_cvref_t<TOld>>)
     {
         return [&]<impl::container Container>(Container&& container) {
             std::basic_string_view<Char, Traits> view = impl::get_string_view<Container, Char, Traits>(std::forward<Container>(container));
@@ -281,7 +281,7 @@ namespace linq
         };
     }
 
-    template <typename Char, typename Traits = std::char_traits<Char>>
+    template <impl::character Char, typename Traits = std::char_traits<Char>>
     constexpr auto trim(Char value = (Char)' ')
     {
         return [=]<impl::container Container>(Container&& container) {
@@ -295,7 +295,7 @@ namespace linq
         };
     }
 
-    template <typename Char, typename Traits = std::char_traits<Char>>
+    template <impl::character Char, typename Traits = std::char_traits<Char>>
     constexpr auto trim_left(Char value = (Char)' ')
     {
         return [=]<impl::container Container>(Container&& container) {
@@ -308,7 +308,7 @@ namespace linq
         };
     }
 
-    template <typename Char, typename Traits = std::char_traits<Char>>
+    template <impl::character Char, typename Traits = std::char_traits<Char>>
     constexpr auto trim_right(Char value = (Char)' ')
     {
         return [=]<impl::container Container>(Container&& container) {
@@ -322,7 +322,7 @@ namespace linq
     }
 
     // Read lines of string from a stream.
-    template <typename Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>>
+    template <impl::character Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>>
     generator<std::basic_string<Char, Traits, Allocator>> read_lines(std::basic_istream<Char, Traits>& stream)
     {
         std::basic_string<Char, Traits, Allocator> str;
@@ -333,7 +333,7 @@ namespace linq
     }
 
     // Write lines of string to a stream.
-    template <typename Char, typename Traits = std::char_traits<Char>, typename C>
+    template <impl::character Char, typename Traits = std::char_traits<Char>, typename C>
     decltype(auto) write_lines(std::basic_ostream<Char, Traits>& stream, C&& c)
     {
         for (auto& item : c)

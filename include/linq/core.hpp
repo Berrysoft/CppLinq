@@ -179,44 +179,48 @@ namespace linq
 {
     using std::experimental::generator;
 
-    // SFINAE for character type
-    template <typename Char>
-    struct is_char : std::false_type
-    {
-    };
-
-    template <>
-    struct is_char<char> : std::true_type
-    {
-    };
-
-    template <>
-    struct is_char<wchar_t> : std::true_type
-    {
-    };
-
-#ifdef __cpp_char8_t
-    template <>
-    struct is_char<char8_t> : std::true_type
-    {
-    };
-#endif // __cpp_char8_t
-
-    template <>
-    struct is_char<char16_t> : std::true_type
-    {
-    };
-
-    template <>
-    struct is_char<char32_t> : std::true_type
-    {
-    };
-
-    template <typename Char>
-    inline constexpr bool is_char_v = is_char<Char>::value;
-
     namespace impl
     {
+
+        // SFINAE for character type
+        template <typename Char>
+        struct is_char : std::false_type
+        {
+        };
+
+        template <>
+        struct is_char<char> : std::true_type
+        {
+        };
+
+        template <>
+        struct is_char<wchar_t> : std::true_type
+        {
+        };
+
+#ifdef __cpp_char8_t
+        template <>
+        struct is_char<char8_t> : std::true_type
+        {
+        };
+#endif // __cpp_char8_t
+
+        template <>
+        struct is_char<char16_t> : std::true_type
+        {
+        };
+
+        template <>
+        struct is_char<char32_t> : std::true_type
+        {
+        };
+
+        template <typename Char>
+        inline constexpr bool is_char_v = is_char<Char>::value;
+
+        template <typename Char>
+        concept character = is_char_v<Char>;
+
         template <typename T>
         concept container = requires(T&& t)
         {
