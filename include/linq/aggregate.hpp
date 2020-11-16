@@ -162,8 +162,7 @@ namespace linq
     constexpr auto front(Pred&& pred = {})
     {
         return [=]<impl::container Container>(Container container) mutable {
-            using It = decltype(std::begin(container));
-            using T = typename std::iterator_traits<It>::value_type;
+            using T = typename impl::container_traits<Container>::value_type;
             return front<Pred, T>(std::forward<Pred>(pred))(container);
         };
     }
@@ -187,8 +186,7 @@ namespace linq
     constexpr auto back(Pred&& pred = {})
     {
         return [=]<impl::container Container>(Container container) mutable {
-            using It = decltype(std::begin(container));
-            using T = typename std::iterator_traits<It>::value_type;
+            using T = typename impl::container_traits<Container>::value_type;
             return back<Pred, T>(std::forward<Pred>(pred))(container);
         };
     }
@@ -231,49 +229,41 @@ namespace linq
     constexpr auto single(Pred&& pred = {})
     {
         return [=]<impl::container Container>(Container container) mutable {
-            using It = decltype(std::begin(container));
-            using T = typename std::iterator_traits<It>::value_type;
+            using T = typename impl::container_traits<Container>::value_type;
             return single<Pred, T>(std::forward<Pred>(pred))(container);
         };
     }
 
     // Returns the elements of the specified enumerable or the specified value in a singleton collection if the enumerable is empty.
     template <typename T>
-    constexpr auto default_if_empty(T&& def)
+    struct default_if_empty
     {
-        return [=]<impl::container Container>(Container container)
-                   -> generator<std::remove_cvref_t<std::common_type_t<typename std::iterator_traits<decltype(std::begin(container))>::value_type, T>>> {
-            auto begin = std::begin(container);
-            auto end = std::end(container);
-            if (begin == end) { co_yield def; }
-            else
-            {
-                for (; begin != end; ++begin) co_yield* begin;
-            }
-        };
-    }
+        T m_def;
 
-    // Returns the elements of the specified enumerable or the element type's default value in a singleton collection if the enumerable is empty.
-    constexpr auto default_if_empty()
-    {
-        return []<impl::container Container>(Container container)
-                   -> generator<typename std::iterator_traits<decltype(std::begin(container))>::value_type> {
+        default_if_empty(T&& def = {}) : m_def(std::forward<T>(def)) {}
+
+        template <impl::container Container>
+        auto operator()(Container container) const
+            -> generator<std::remove_cvref_t<std::common_type_t<typename impl::container_traits<Container>::value_type, T>>>
+        {
             auto begin = std::begin(container);
             auto end = std::end(container);
-            if (begin == end) { co_yield {}; }
+            if (begin == end) { co_yield m_def; }
             else
             {
                 for (; begin != end; ++begin) co_yield* begin;
             }
-        };
-    }
+        }
+    };
+
+    template <typename T>
+    default_if_empty(T &&) -> default_if_empty<T>;
 
     // Calculates the average value of the elements.
     constexpr auto average()
     {
         return []<impl::container Container>(Container container) {
-            using It = decltype(std::begin(container));
-            using T = typename std::iterator_traits<It>::value_type;
+            using T = typename impl::container_traits<Container>::value_type;
             std::size_t num{ 0 };
             return aggregate<T>({}, [&num](auto& a, auto& b) { ++num; return a + b; })(container) / static_cast<T>(num);
         };
@@ -283,17 +273,18 @@ namespace linq
     constexpr auto sum()
     {
         return []<impl::container Container>(Container container) {
-            using It = decltype(std::begin(container));
-            using T = typename std::iterator_traits<It>::value_type;
+            using T = typename impl::container_traits<Container>::value_type;
             return aggregate<T>({}, [](auto& a, auto& b) { return a + b; })(container);
         };
     }
 
     // Inverts the order of the elements.
-    constexpr auto reverse()
+    struct reversed
     {
-        return []<impl::container Container>(Container container)
-                   -> generator<typename std::iterator_traits<decltype(std::begin(container))>::value_type> {
+        template <impl::container Container>
+        auto operator()(Container container) const
+            -> generator<typename impl::container_traits<Container>::value_type>
+        {
             if constexpr (impl::is_reversible_container_v<Container>)
             {
                 auto end = std::rend(container);
@@ -304,7 +295,7 @@ namespace linq
             }
             else
             {
-                std::vector<typename std::iterator_traits<decltype(std::begin(container))>::value_type> vec(std::begin(container), std::end(container));
+                std::vector<typename impl::container_traits<Container>::value_type> vec(std::begin(container), std::end(container));
                 auto end = vec.rend();
                 for (auto it = vec.rbegin(); it != end; ++it)
                 {
@@ -312,7 +303,7 @@ namespace linq
                 }
             }
         };
-    }
+    };
 
     // Always returns the param itself.
     struct identity
@@ -419,8 +410,7 @@ namespace linq
     constexpr auto sort(Comparer&&... comparer)
     {
         return [=]<impl::container Container>(Container container) mutable {
-            using It = decltype(std::begin(container));
-            using T = typename std::iterator_traits<It>::value_type;
+            using T = typename impl::container_traits<Container>::value_type;
             std::vector<T> result(std::begin(container), std::end(container));
             std::sort(result.begin(), result.end(), make_sorter<Comparer...>(std::forward<Comparer>(comparer)...));
             return result;
@@ -432,8 +422,7 @@ namespace linq
     constexpr auto limit(Comparer&& comparer)
     {
         return [=]<impl::container Container>(Container container) mutable {
-            using It = decltype(std::begin(container));
-            using T = typename std::iterator_traits<It>::value_type;
+            using T = typename impl::container_traits<Container>::value_type;
             auto begin = std::begin(container);
             auto end = std::end(container);
             if (begin == end)
@@ -452,9 +441,8 @@ namespace linq
     constexpr auto limit(Comparer&& comparer, T&& def)
     {
         return [=]<impl::container Container>(Container container) mutable {
-            using It = decltype(std::begin(container));
-            std::common_type_t<T, typename std::iterator_traits<It>::value_type> result{ std::forward<T>(def) };
-            for (auto& item : container)
+            std::common_type_t<T, typename impl::container_traits<Container>::value_type> result{ std::forward<T>(def) };
+            for (auto&& item : container)
             {
                 if (!comparer(result, item))
                     result = item;
@@ -505,8 +493,7 @@ namespace linq
     constexpr auto get_at(std::size_t index)
     {
         return [=]<impl::container Container>(Container container) {
-            using It = decltype(std::begin(container));
-            using T = typename std::iterator_traits<It>::value_type;
+            using T = typename impl::container_traits<Container>::value_type;
             return get_at<T>(index, {})(container);
         };
     }
@@ -530,89 +517,155 @@ namespace linq
 
     // Returns distinct elements.
     template <typename Comparer = std::less<void>>
-    constexpr auto distinct()
+    struct distinct
     {
-        return []<impl::container Container>(Container container)
-                   -> generator<typename std::iterator_traits<decltype(std::begin(container))>::value_type> {
-            std::set<typename std::iterator_traits<decltype(std::begin(container))>::value_type, Comparer> set;
+        template <impl::container Container>
+        auto operator()(Container container) const
+            -> generator<typename impl::container_traits<Container>::value_type>
+        {
+            std::set<typename impl::container_traits<Container>::value_type, Comparer> set;
             for (auto&& item : container)
             {
                 if (set.emplace(item).second) co_yield item;
             }
+        }
+    };
+
+    namespace impl
+    {
+        template <typename Comparer, typename Container2>
+        struct union_set
+        {
+            impl::decay_container_t<Container2> m_c2;
+
+            union_set(Container2&& c2) : m_c2(impl::decay_container(std::forward<Container2>(c2))) {}
+
+            template <impl::container Container>
+            auto operator()(Container container) const
+                -> generator<std::remove_cvref_t<std::common_type_t<
+                    typename impl::container_traits<Container>::value_type,
+                    typename impl::container_traits<Container2>::value_type>>>
+            {
+                std::set<typename impl::container_traits<Container>::value_type, Comparer> set;
+                for (auto&& item : container)
+                {
+                    if (set.emplace(item).second) co_yield item;
+                }
+                for (auto&& item : m_c2)
+                {
+                    if (set.emplace(item).second) co_yield item;
+                }
+            }
         };
-    }
+    } // namespace impl
 
     // Produces the set union of two enumerable.
-    template <typename Comparer = std::less<void>, typename Container2>
-    constexpr auto union_set(Container2&& c2)
+    template <typename Comparer = std::less<void>, typename C2>
+    auto union_set(C2&& c2)
     {
-        return [c2 = impl::decay_container(std::forward<Container2>(c2))]<impl::container Container>(Container container)
-                   -> generator<std::remove_cvref_t<std::common_type_t<
-                       typename std::iterator_traits<decltype(std::begin(container))>::value_type,
-                       typename std::iterator_traits<decltype(std::begin(c2))>::value_type>>> {
-            std::set<typename std::iterator_traits<decltype(std::begin(container))>::value_type, Comparer> set;
-            for (auto&& item : container)
+        return impl::union_set<Comparer, C2>(std::forward<C2>(c2));
+    }
+
+    namespace impl
+    {
+        template <typename Comparer, typename C2>
+        struct intersect
+        {
+            impl::decay_container_t<C2> m_c2;
+
+            intersect(C2&& c2) : m_c2(impl::decay_container(std::forward<C2>(c2))) {}
+
+            template <impl::container Container>
+            auto operator()(Container container) const -> generator<std::remove_cvref_t<std::common_type_t<
+                typename impl::container_traits<Container>::value_type,
+                typename impl::container_traits<C2>::value_type>>>
             {
-                if (set.emplace(item).second) co_yield item;
-            }
-            for (auto&& item : c2)
-            {
-                if (set.emplace(item).second) co_yield item;
+                std::set<typename impl::container_traits<Container>::value_type, Comparer> set(std::begin(container), std::end(container));
+                for (auto&& item : m_c2)
+                {
+                    if (set.erase(item)) co_yield item;
+                }
             }
         };
-    }
+    } // namespace impl
 
     // Produces the set intersection of two enumerable.
     template <typename Comparer = std::less<void>, typename C2>
-    constexpr auto intersect(C2&& c2)
+    auto intersect(C2&& c2)
     {
-        return [c2 = impl::decay_container(std::forward<C2>(c2))]<impl::container Container>(Container container)
-                   -> generator<std::remove_cvref_t<std::common_type_t<
-                       typename std::iterator_traits<decltype(std::begin(container))>::value_type,
-                       typename std::iterator_traits<decltype(std::begin(c2))>::value_type>>> {
-            std::set<typename std::iterator_traits<decltype(std::begin(container))>::value_type, Comparer> set(std::begin(container), std::end(container));
-            for (auto&& item : c2)
+        return impl::intersect<Comparer, C2>(std::forward<C2>(c2));
+    }
+
+    namespace impl
+    {
+        template <typename Comparer, typename C2>
+        struct except
+        {
+            impl::decay_container_t<C2> m_c2;
+
+            except(C2&& c2) : m_c2(impl::decay_container(std::forward<C2>(c2))) {}
+
+            template <impl::container Container>
+            auto operator()(Container container) const
+                -> generator<std::remove_cvref_t<std::common_type_t<
+                    typename impl::container_traits<Container>::value_type,
+                    typename impl::container_traits<C2>::value_type>>>
             {
-                if (set.erase(item)) co_yield item;
+                std::set<typename impl::container_traits<C2>::value_type, Comparer> set(std::begin(m_c2), std::end(m_c2));
+                for (auto&& item : container)
+                {
+                    if (set.emplace(item).second) co_yield item;
+                }
             }
         };
-    }
+    } // namespace impl
 
     // Produces the set difference of two enumerable.
     template <typename Comparer = std::less<void>, typename C2>
     constexpr auto except(C2&& c2)
     {
-        return [c2 = impl::decay_container(std::forward<C2>(c2))]<impl::container Container>(Container container)
-                   -> generator<std::remove_cvref_t<std::common_type_t<
-                       typename std::iterator_traits<decltype(std::begin(container))>::value_type,
-                       typename std::iterator_traits<decltype(std::begin(c2))>::value_type>>> {
-            std::set<typename std::iterator_traits<decltype(std::begin(c2))>::value_type, Comparer> set(std::begin(c2), std::end(c2));
-            for (auto&& item : container)
+        return impl::except<Comparer, C2>(std::forward<C2>(c2));
+    }
+
+    namespace impl
+    {
+        template <typename Comparer, typename KeySelector, typename ElementSelector, typename ResultSelector>
+        struct group
+        {
+            mutable KeySelector m_keysel;
+            mutable ElementSelector m_elesel;
+            mutable ResultSelector m_rstsel;
+
+            group(KeySelector&& keysel, ElementSelector&& elesel, ResultSelector&& rstsel)
+                : m_keysel(std::forward<KeySelector>(keysel)),
+                  m_elesel(std::forward<ElementSelector>(elesel)),
+                  m_rstsel(std::forward<ResultSelector>(rstsel)) {}
+
+            template <impl::container Container>
+            auto operator()(Container container) const
+                -> generator<std::remove_cvref_t<decltype(m_rstsel(m_keysel(*std::begin(container)), std::vector<std::remove_cvref_t<decltype(m_elesel(*std::begin(container)))>>{}))>>
             {
-                if (set.emplace(item).second) co_yield item;
+                using TKey = std::remove_cvref_t<decltype(m_keysel(*std::begin(container)))>;
+                using TElement = std::remove_cvref_t<decltype(m_elesel(*std::begin(container)))>;
+                std::map<TKey, std::vector<TElement>, Comparer> lookup;
+                for (auto&& item : container)
+                {
+                    lookup[m_keysel(item)].emplace_back(m_elesel(item));
+                }
+                for (auto&& pair : lookup)
+                {
+                    co_yield m_rstsel(pair.first, pair.second);
+                }
             }
         };
-    }
+    } // namespace impl
 
     // Groups the elements according to a specified key selector function and creates a result value from each group and its key.
     // Key values are compared by using a specified comparer, and the elements of each group are projected by using a specified function.
     template <typename Comparer = std::less<void>, typename KeySelector, typename ElementSelector, typename ResultSelector>
-    constexpr auto group(KeySelector&& keysel, ElementSelector&& elesel, ResultSelector&& rstsel)
+    auto group(KeySelector&& keysel, ElementSelector&& elesel, ResultSelector&& rstsel)
     {
-        return [=]<impl::container Container>(Container container) mutable
-               -> generator<std::remove_cvref_t<decltype(rstsel(keysel(*std::begin(container)), std::vector<std::remove_cvref_t<decltype(elesel(*std::begin(container)))>>{}))>> {
-            using TKey = std::remove_cvref_t<decltype(keysel(*std::begin(container)))>;
-            using TElement = std::remove_cvref_t<decltype(elesel(*std::begin(container)))>;
-            std::map<TKey, std::vector<TElement>, Comparer> lookup;
-            for (auto&& item : container)
-            {
-                lookup[keysel(item)].emplace_back(elesel(item));
-            }
-            for (auto&& pair : lookup)
-            {
-                co_yield rstsel(pair.first, pair.second);
-            }
-        };
+        return impl::group<Comparer, KeySelector, ElementSelector, ResultSelector>(std::forward<KeySelector>(keysel), std::forward<ElementSelector>(elesel), std::forward<ResultSelector>(rstsel));
     }
 
     // Correlates the elements of two enumerable based on key comparer and groups the results.

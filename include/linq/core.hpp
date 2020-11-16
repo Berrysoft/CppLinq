@@ -73,8 +73,8 @@ namespace std::experimental
 
             void return_void() {}
 
-            template <typename _Uty>
-            _Uty&& await_transform(_Uty&& _Whatever) = delete;
+            template <typename U>
+            U&& await_transform(U&&) = delete;
         };
 
         struct iterator

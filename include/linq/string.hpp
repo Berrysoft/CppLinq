@@ -51,10 +51,16 @@ namespace linq
 
     // Split the string into an enumerable of string_view by a char.
     template <impl::character Char, typename Traits = std::char_traits<Char>>
-    constexpr auto split(Char split_char = (Char)' ')
+    struct split
     {
-        return [=]<impl::container Container>(Container container)
-                   -> generator<std::basic_string_view<Char, Traits>> {
+        Char m_char;
+
+        constexpr split(Char split_char = (Char)' ') noexcept : m_char(split_char) {}
+
+        template <impl::container Container>
+        auto operator()(Container container) const
+            -> generator<std::basic_string_view<Char, Traits>>
+        {
             std::basic_string_view<Char, Traits> view = impl::get_string_view<Container, Char, Traits>(std::move(container));
             if (!view.empty())
             {
@@ -65,7 +71,7 @@ namespace linq
                     offset = index + 1;
                     if ((std::size_t)offset < view.length())
                     {
-                        index = view.find(split_char, (std::size_t)offset);
+                        index = view.find(m_char, (std::size_t)offset);
                         if (index == std::basic_string_view<Char, Traits>::npos) index = view.length();
                         co_yield view.substr((std::size_t)offset, (std::size_t)(index - offset));
                     }
@@ -75,8 +81,11 @@ namespace linq
                     }
                 }
             }
-        };
-    }
+        }
+    };
+
+    template <typename Char>
+    split(Char) -> split<Char>;
 
     // Contacts the string elements into a new string.
     // Named join to distinguish from concat.
@@ -321,22 +330,39 @@ namespace linq
         };
     }
 
+    template <impl::character Char>
+    struct read_lines
+    {
+        Char m_delim;
+
+        constexpr read_lines(Char delim = (Char)'\n') noexcept : m_delim(delim) {}
+    };
+
+    template <typename Char>
+    read_lines(Char) -> read_lines<Char>;
+
     // Read lines of string from a stream.
     template <impl::character Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>>
-    generator<std::basic_string<Char, Traits, Allocator>> read_lines(std::basic_istream<Char, Traits>& stream)
+    generator<std::basic_string<Char, Traits, Allocator>> operator>>(std::basic_istream<Char, Traits>& stream, read_lines<Char> r)
     {
         std::basic_string<Char, Traits, Allocator> str;
-        while (std::getline(stream, str))
+        while (std::getline(stream, str, r.m_delim))
         {
             co_yield str;
         }
     }
 
     // Write lines of string to a stream.
-    template <impl::character Char, typename Traits = std::char_traits<Char>, typename C>
-    decltype(auto) write_lines(std::basic_ostream<Char, Traits>& stream, C&& c)
+    template <impl::character Char, typename Traits = std::char_traits<Char>, impl::container C>
+    decltype(auto) operator<<(std::basic_ostream<Char, Traits>& stream, C&& c) requires requires(typename impl::container_traits<C>::value_type item)
     {
-        for (auto& item : c)
+        {
+            stream << item
+        }
+        ->std::convertible_to<decltype(stream)>;
+    }
+    {
+        for (auto&& item : c)
         {
             stream << item << stream.widen('\n');
         }
