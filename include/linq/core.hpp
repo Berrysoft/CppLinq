@@ -39,7 +39,6 @@
 
 #if __has_include(<experimental/generator>)
     #include <experimental/generator>
-
 #else
 namespace std::experimental
 {
@@ -48,7 +47,7 @@ namespace std::experimental
     {
         struct promise_type
         {
-            T current_value;
+            T m_current;
 
             auto get_return_object() { return generator{ *this }; }
 
@@ -60,13 +59,14 @@ namespace std::experimental
 
             suspend_always yield_value(T const& value)
             {
+                static_assert(is_move_assignable_v<T> || is_copy_assignable_v<T>);
                 if constexpr (is_move_assignable_v<T>)
                 {
-                    current_value = move(value);
+                    m_current = move(value);
                 }
                 else
                 {
-                    current_value = value;
+                    m_current = value;
                 }
                 return {};
             }
@@ -85,54 +85,54 @@ namespace std::experimental
             using reference = T const&;
             using pointer = T const*;
 
-            coroutine_handle<promise_type> coro = nullptr;
+            coroutine_handle<promise_type> m_coro = nullptr;
 
             iterator() = default;
-            iterator(nullptr_t) : coro(nullptr) {}
+            iterator(nullptr_t) : m_coro(nullptr) {}
 
-            iterator(coroutine_handle<promise_type> coro) : coro(coro) {}
+            iterator(coroutine_handle<promise_type> coro) : m_coro(coro) {}
 
             iterator& operator++()
             {
-                coro.resume();
-                if (coro.done())
+                m_coro.resume();
+                if (m_coro.done())
                 {
-                    coro = nullptr;
+                    m_coro = nullptr;
                 }
                 return *this;
             }
 
             void operator++(int) { ++*this; }
 
-            [[nodiscard]] operator bool() const { return coro && !coro.done(); }
+            [[nodiscard]] operator bool() const { return m_coro && !m_coro.done(); }
 
             [[nodiscard]] bool operator==(iterator const& right) const
             {
-                return !*this && !right;
+                return m_coro == right.m_coro;
             }
 
             [[nodiscard]] reference operator*() const
             {
-                return coro.promise().current_value;
+                return m_coro.promise().m_current;
             }
 
             [[nodiscard]] pointer operator->() const
             {
-                return &coro.promise().current_value;
+                return &m_coro.promise().m_current;
             }
         };
 
         [[nodiscard]] iterator begin()
         {
-            if (coro)
+            if (m_coro)
             {
-                coro.resume();
-                if (coro.done())
+                m_coro.resume();
+                if (m_coro.done())
                 {
                     return { nullptr };
                 }
             }
-            return { coro };
+            return { m_coro };
         }
 
         [[nodiscard]] iterator end()
@@ -140,37 +140,37 @@ namespace std::experimental
             return { nullptr };
         }
 
-        explicit generator(promise_type& prom) : coro(coroutine_handle<promise_type>::from_promise(prom)) {}
+        explicit generator(promise_type& prom) : m_coro(coroutine_handle<promise_type>::from_promise(prom)) {}
 
         generator() = default;
         generator(generator const&) = delete;
         generator& operator=(generator const&) = delete;
 
-        generator(generator&& right) : coro(right.coro)
+        generator(generator&& right) : m_coro(right.m_coro)
         {
-            right.coro = nullptr;
+            right.m_coro = nullptr;
         }
 
         generator& operator=(generator&& right)
         {
-            if (this != std::addressof(right))
+            if (this != addressof(right))
             {
-                coro = right.coro;
-                right.coro = nullptr;
+                m_coro = right.m_coro;
+                right.m_coro = nullptr;
             }
             return *this;
         }
 
         ~generator()
         {
-            if (coro)
+            if (m_coro)
             {
-                coro.destroy();
+                m_coro.destroy();
             }
         }
 
     private:
-        coroutine_handle<promise_type> coro = nullptr;
+        coroutine_handle<promise_type> m_coro = nullptr;
     };
 } // namespace std::experimental
 #endif
@@ -299,8 +299,21 @@ namespace linq
         template <typename T>
         container_view(T&) -> container_view<T>;
 
+        template <typename T>
+        struct is_generator : std::false_type
+        {
+        };
+
+        template <typename T>
+        struct is_generator<generator<T>> : std::true_type
+        {
+        };
+
+        template <typename T>
+        inline constexpr bool is_generator_v = is_generator<T>::value;
+
         template <container T>
-        decltype(auto) decay_container(T&& c)
+        auto decay_container(T&& c)
         {
             if constexpr (std::is_lvalue_reference_v<T&&>)
             {
@@ -322,6 +335,15 @@ namespace linq
                 return std::forward<T>(c);
             }
         }
+
+        template <typename T>
+        using decay_container_t = decltype(decay_container(std::declval<T&&>()));
+
+        template <typename T>
+        struct container_traits : public std::iterator_traits<decltype(std::begin(std::declval<T&>()))>
+        {
+            using iterator = decltype(std::begin(std::declval<T&>()));
+        };
     } // namespace impl
 
     template <impl::container Container, typename Query>
@@ -366,52 +388,82 @@ namespace linq
 
     // Appends an element to the enumerable.
     template <typename T>
-    constexpr auto append(T&& value)
+    struct append
     {
-        return [=]<impl::container Container>(Container container)
-                   -> generator<std::remove_cvref_t<std::common_type_t<
-                       typename std::iterator_traits<decltype(std::begin(container))>::value_type, T>>> {
+        T m_value;
+
+        append(T&& value) : m_value(std::forward<T>(value)) {}
+
+        template <impl::container Container>
+        auto operator()(Container container) const
+            -> generator<std::remove_cvref_t<std::common_type_t<
+                typename impl::container_traits<Container>::value_type,
+                T>>>
+        {
             for (auto&& item : container)
             {
                 co_yield item;
             }
-            co_yield value;
-        };
-    }
+            co_yield m_value;
+        }
+    };
+
+    template <typename T>
+    append(T &&) -> append<T>;
 
     // Prepends an element to the enumerable.
+    // Appends an element to the enumerable.
     template <typename T>
-    constexpr auto prepend(T&& value)
+    struct prepend
     {
-        return [=]<impl::container Container>(Container container)
-                   -> generator<std::remove_cvref_t<std::common_type_t<
-                       typename std::iterator_traits<decltype(std::begin(container))>::value_type, T>>> {
-            co_yield value;
+        T m_value;
+
+        prepend(T&& value) : m_value(std::forward<T>(value)) {}
+
+        template <impl::container Container>
+        auto operator()(Container container) const
+            -> generator<std::remove_cvref_t<std::common_type_t<
+                typename impl::container_traits<Container>::value_type,
+                T>>>
+        {
+            co_yield m_value;
             for (auto&& item : container)
             {
                 co_yield item;
             }
-        };
-    }
+        }
+    };
+
+    template <typename T>
+    prepend(T &&) -> prepend<T>;
 
     // Concatenates two enumerable.
     template <impl::container Container2>
-    constexpr auto concat(Container2&& container2)
+    struct concat
     {
-        return [container2 = impl::decay_container(std::forward<Container2>(container2))]<impl::container Container>(Container container)
-                   -> generator<std::remove_cvref_t<std::common_type_t<
-                       typename std::iterator_traits<decltype(std::begin(container))>::value_type,
-                       typename std::iterator_traits<decltype(std::begin(container2))>::value_type>>> {
+        impl::decay_container_t<Container2> m_container2;
+
+        concat(Container2&& container2) : m_container2(impl::decay_container(std::forward<Container2>(container2))) {}
+
+        template <impl::container Container>
+        auto operator()(Container container) const
+            -> generator<std::remove_cvref_t<std::common_type_t<
+                typename impl::container_traits<Container>::value_type,
+                typename impl::container_traits<Container2>::value_type>>>
+        {
             for (auto&& item : container)
             {
                 co_yield item;
             }
-            for (auto&& item : container2)
+            for (auto&& item : m_container2)
             {
                 co_yield item;
             }
-        };
-    }
+        }
+    };
+
+    template <typename Container2>
+    concat(Container2 &&) -> concat<Container2>;
 } // namespace linq
 
 #endif // !LINQ_CORE_HPP

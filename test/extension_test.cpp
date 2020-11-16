@@ -1,7 +1,7 @@
 #define BOOST_TEST_MODULE ExtensionTest
 
 #include "test_utility.hpp"
-#include <ctime>
+#include <chrono>
 #include <linq/core.hpp>
 #include <optional>
 #include <random>
@@ -10,11 +10,13 @@
 using namespace std;
 using namespace linq;
 
-constexpr auto as_random()
+struct as_random
 {
-    return []<impl::container Container>(Container container)
-               -> generator<typename std::iterator_traits<decltype(std::begin(container))>::value_type> {
-        mt19937 rnd;
+    template <impl::container Container>
+    auto operator()(Container container)
+        -> generator<typename impl::container_traits<Container>::value_type>
+    {
+        mt19937 rnd{ (unsigned int)std::chrono::system_clock::now().time_since_epoch().count() };
         vector<typename std::iterator_traits<decltype(std::begin(container))>::value_type> vec(std::begin(container), std::end(container));
         while (!vec.empty())
         {
@@ -23,8 +25,8 @@ constexpr auto as_random()
             co_yield vec[index];
             vec.erase(vec.begin() + index);
         }
-    };
-}
+    }
+};
 
 BOOST_AUTO_TEST_CASE(extension_test)
 {
