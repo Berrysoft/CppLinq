@@ -312,6 +312,12 @@ namespace linq
         template <typename T>
         inline constexpr bool is_generator_v = is_generator<T>::value;
 
+        template <typename T>
+        constexpr T&& move_const(T const& value) noexcept
+        {
+            return std::move(const_cast<T&>(value));
+        }
+
         template <container T>
         auto decay_container(T&& c)
         {
@@ -386,16 +392,10 @@ namespace linq
         }
     }
 
-    // Appends an element to the enumerable.
-    template <typename T>
-    struct append
+    namespace impl
     {
-        T m_value;
-
-        append(T&& value) : m_value(std::forward<T>(value)) {}
-
-        template <impl::container Container>
-        auto operator()(Container container) const
+        template <impl::container Container, typename T>
+        auto append(Container container, T value)
             -> generator<std::remove_cvref_t<std::common_type_t<
                 typename impl::container_traits<Container>::value_type,
                 T>>>
@@ -404,49 +404,48 @@ namespace linq
             {
                 co_yield item;
             }
-            co_yield m_value;
+            co_yield value;
         }
-    };
+    } // namespace impl
 
+    // Appends an element to the enumerable.
     template <typename T>
-    append(T &&) -> append<T>;
+    auto append(T&& value)
+    {
+        return [=]<impl::container Container>(Container&& container) {
+            return impl::append<Container, T>(std::forward<Container>(container), std::move(value));
+        };
+    }
+
+    namespace impl
+    {
+        template <impl::container Container, typename T>
+        auto prepend(Container container, T value)
+            -> generator<std::remove_cvref_t<std::common_type_t<
+                typename impl::container_traits<Container>::value_type,
+                T>>>
+        {
+            co_yield value;
+            for (auto&& item : container)
+            {
+                co_yield item;
+            }
+        }
+    } // namespace impl
 
     // Prepends an element to the enumerable.
-    // Appends an element to the enumerable.
     template <typename T>
-    struct prepend
+    auto prepend(T&& value)
     {
-        T m_value;
+        return [=]<impl::container Container>(Container&& container) {
+            return impl::prepend<Container, T>(std::forward<Container>(container), std::move(value));
+        };
+    }
 
-        prepend(T&& value) : m_value(std::forward<T>(value)) {}
-
-        template <impl::container Container>
-        auto operator()(Container container) const
-            -> generator<std::remove_cvref_t<std::common_type_t<
-                typename impl::container_traits<Container>::value_type,
-                T>>>
-        {
-            co_yield m_value;
-            for (auto&& item : container)
-            {
-                co_yield item;
-            }
-        }
-    };
-
-    template <typename T>
-    prepend(T &&) -> prepend<T>;
-
-    // Concatenates two enumerable.
-    template <impl::container Container2>
-    struct concat
+    namespace impl
     {
-        impl::decay_container_t<Container2> m_container2;
-
-        concat(Container2&& container2) : m_container2(impl::decay_container(std::forward<Container2>(container2))) {}
-
-        template <impl::container Container>
-        auto operator()(Container container) const
+        template <impl::container Container, container Container2>
+        auto concat(Container container, Container2 container2)
             -> generator<std::remove_cvref_t<std::common_type_t<
                 typename impl::container_traits<Container>::value_type,
                 typename impl::container_traits<Container2>::value_type>>>
@@ -455,15 +454,21 @@ namespace linq
             {
                 co_yield item;
             }
-            for (auto&& item : m_container2)
+            for (auto&& item : container2)
             {
                 co_yield item;
             }
         }
-    };
+    } // namespace impl
 
-    template <typename Container2>
-    concat(Container2 &&) -> concat<Container2>;
+    // Concatenates two enumerable.
+    template <impl::container Container2>
+    auto concat(Container2&& container2)
+    {
+        return [container2 = impl::decay_container(std::forward<Container2>(container2))]<impl::container Container>(Container&& container) {
+            return impl::concat<Container, impl::decay_container_t<Container2>>(std::forward<Container>(container), impl::move_const(container2));
+        };
+    }
 } // namespace linq
 
 #endif // !LINQ_CORE_HPP

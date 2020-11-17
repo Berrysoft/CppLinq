@@ -31,9 +31,8 @@ BOOST_AUTO_TEST_CASE(calculate_concat_test)
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     int a2[]{ 1, 3, 5, 2, 4, 6 };
-    auto e1{ a1 >> where([](int a) { return a % 2 == 0; }) };
-    auto e2{ a1 >> where([](int a) { return a % 2 != 0; }) >> concat(e1) };
-    LINQ_CHECK_EQUAL_COLLECTIONS(a2, e2);
+    auto e{ a1 >> where([](int a) { return a % 2 != 0; }) >> concat(a1 >> where([](int a) { return a % 2 == 0; })) };
+    LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 }
 
 BOOST_AUTO_TEST_CASE(calculate_pend_test)
