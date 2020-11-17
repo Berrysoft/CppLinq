@@ -42,12 +42,12 @@ BOOST_AUTO_TEST_CASE(aggregate_reverse_test)
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };
     int a2[]{ 6, 5, 4, 3, 2, 1 };
-    auto e1{ a1 >> reversed() };
+    auto e1{ a1 >> reverse() };
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, e1);
-    auto e2{ a1 >> reversed() >> reversed() };
+    auto e2{ a1 >> reverse() >> reverse() };
     LINQ_CHECK_EQUAL_COLLECTIONS(a1, e2);
     set<int> a3{ 1, 2, 3, 4, 5, 6 };
-    auto e3{ a3 >> reversed() };
+    auto e3{ a3 >> reverse() };
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, e3);
 }
 
@@ -147,7 +147,7 @@ BOOST_AUTO_TEST_CASE(find_default_test)
 {
     array<int, 0> empty{};
     int a1[]{ 0 };
-    auto e1{ empty >> default_if_empty<int>() };
+    auto e1{ empty >> default_if_empty() };
     LINQ_CHECK_EQUAL_COLLECTIONS(a1, e1);
     int a2[]{ 1 };
     auto e2{ empty >> default_if_empty(1) };

@@ -234,30 +234,38 @@ namespace linq
         };
     }
 
-    // Returns the elements of the specified enumerable or the specified value in a singleton collection if the enumerable is empty.
-    template <typename T>
-    struct default_if_empty
+    namespace impl
     {
-        T m_def;
-
-        default_if_empty(T&& def = {}) : m_def(std::forward<T>(def)) {}
-
-        template <impl::container Container>
-        auto operator()(Container container) const
+        template <impl::container Container, typename T>
+        auto default_if_empty(Container container, T def)
             -> generator<std::remove_cvref_t<std::common_type_t<typename impl::container_traits<Container>::value_type, T>>>
         {
             auto begin = std::begin(container);
             auto end = std::end(container);
-            if (begin == end) { co_yield m_def; }
+            if (begin == end) { co_yield def; }
             else
             {
                 for (; begin != end; ++begin) co_yield* begin;
             }
         }
-    };
+    } // namespace impl
 
+    // Returns the elements of the specified enumerable or the specified value in a singleton collection if the enumerable is empty.
     template <typename T>
-    default_if_empty(T &&) -> default_if_empty<T>;
+    auto default_if_empty(T&& def)
+    {
+        return [=]<impl::container Container>(Container&& container) {
+            return impl::default_if_empty<Container, T>(std::forward<Container>(container), impl::move_const(def));
+        };
+    }
+
+    inline auto default_if_empty()
+    {
+        return [=]<impl::container Container>(Container&& container) {
+            using value_type = typename impl::container_traits<Container>::value_type;
+            return impl::default_if_empty<Container, value_type>(std::forward<Container>(container), {});
+        };
+    }
 
     // Calculates the average value of the elements.
     constexpr auto average()
@@ -279,31 +287,39 @@ namespace linq
     }
 
     // Inverts the order of the elements.
-    struct reversed
+    namespace impl
     {
-        template <impl::container Container>
-        auto operator()(Container container) const
-            -> generator<typename impl::container_traits<Container>::value_type>
+        struct reverse
         {
-            if constexpr (impl::is_reversible_container_v<Container>)
+            template <impl::container Container>
+            auto operator()(Container container) const
+                -> generator<typename impl::container_traits<Container>::value_type>
             {
-                auto end = std::rend(container);
-                for (auto it = std::rbegin(container); it != end; ++it)
+                if constexpr (impl::is_reversible_container_v<Container>)
                 {
-                    co_yield* it;
+                    auto end = std::rend(container);
+                    for (auto it = std::rbegin(container); it != end; ++it)
+                    {
+                        co_yield* it;
+                    }
                 }
-            }
-            else
-            {
-                std::vector<typename impl::container_traits<Container>::value_type> vec(std::begin(container), std::end(container));
-                auto end = vec.rend();
-                for (auto it = vec.rbegin(); it != end; ++it)
+                else
                 {
-                    co_yield* it;
+                    std::vector<typename impl::container_traits<Container>::value_type> vec(std::begin(container), std::end(container));
+                    auto end = vec.rend();
+                    for (auto it = vec.rbegin(); it != end; ++it)
+                    {
+                        co_yield* it;
+                    }
                 }
             }
         };
-    };
+    } // namespace impl
+
+    inline auto reverse()
+    {
+        return impl::reverse();
+    }
 
     // Always returns the param itself.
     struct identity
@@ -516,148 +532,126 @@ namespace linq
     }
 
     // Returns distinct elements.
-    template <typename Comparer = std::less<void>>
-    struct distinct
-    {
-        template <impl::container Container>
-        auto operator()(Container container) const
-            -> generator<typename impl::container_traits<Container>::value_type>
-        {
-            std::set<typename impl::container_traits<Container>::value_type, Comparer> set;
-            for (auto&& item : container)
-            {
-                if (set.emplace(item).second) co_yield item;
-            }
-        }
-    };
-
     namespace impl
     {
-        template <typename Comparer, typename Container2>
-        struct union_set
+        template <typename Comparer = std::less<void>>
+        struct distinct
         {
-            impl::decay_container_t<Container2> m_c2;
-
-            union_set(Container2&& c2) : m_c2(impl::decay_container(std::forward<Container2>(c2))) {}
-
             template <impl::container Container>
             auto operator()(Container container) const
-                -> generator<std::remove_cvref_t<std::common_type_t<
-                    typename impl::container_traits<Container>::value_type,
-                    typename impl::container_traits<Container2>::value_type>>>
+                -> generator<typename impl::container_traits<Container>::value_type>
             {
                 std::set<typename impl::container_traits<Container>::value_type, Comparer> set;
                 for (auto&& item : container)
                 {
                     if (set.emplace(item).second) co_yield item;
                 }
-                for (auto&& item : m_c2)
-                {
-                    if (set.emplace(item).second) co_yield item;
-                }
             }
         };
     } // namespace impl
 
-    // Produces the set union of two enumerable.
-    template <typename Comparer = std::less<void>, typename C2>
-    auto union_set(C2&& c2)
+    inline auto distinct()
     {
-        return impl::union_set<Comparer, C2>(std::forward<C2>(c2));
+        return impl::distinct();
     }
 
     namespace impl
     {
-        template <typename Comparer, typename C2>
-        struct intersect
+        template <typename Comparer, impl::container Container, impl::container Container2>
+        auto union_set(Container container, Container2 c2)
+            -> generator<std::remove_cvref_t<std::common_type_t<
+                typename impl::container_traits<Container>::value_type,
+                typename impl::container_traits<Container2>::value_type>>>
         {
-            impl::decay_container_t<C2> m_c2;
+            std::set<typename impl::container_traits<Container>::value_type, Comparer> set;
+            for (auto&& item : container)
+            {
+                if (set.emplace(item).second) co_yield item;
+            }
+            for (auto&& item : c2)
+            {
+                if (set.emplace(item).second) co_yield item;
+            }
+        }
+    } // namespace impl
 
-            intersect(C2&& c2) : m_c2(impl::decay_container(std::forward<C2>(c2))) {}
+    // Produces the set union of two enumerable.
+    template <typename Comparer = std::less<void>, impl::container C2>
+    auto union_set(C2&& c2)
+    {
+        return [c2 = impl::decay_container(std::forward<C2>(c2))]<impl::container Container>(Container&& container) {
+            return impl::union_set<Comparer, Container, impl::decay_container_t<C2>>(std::forward<Container>(container), impl::move_const(c2));
+        };
+    }
 
-            template <impl::container Container>
-            auto operator()(Container container) const -> generator<std::remove_cvref_t<std::common_type_t<
+    namespace impl
+    {
+        template <typename Comparer, impl::container Container, impl::container C2>
+        auto intersect(Container container, C2 c2)
+            -> generator<std::remove_cvref_t<std::common_type_t<
                 typename impl::container_traits<Container>::value_type,
                 typename impl::container_traits<C2>::value_type>>>
+        {
+            std::set<typename impl::container_traits<Container>::value_type, Comparer> set(std::begin(container), std::end(container));
+            for (auto&& item : c2)
             {
-                std::set<typename impl::container_traits<Container>::value_type, Comparer> set(std::begin(container), std::end(container));
-                for (auto&& item : m_c2)
-                {
-                    if (set.erase(item)) co_yield item;
-                }
+                if (set.erase(item)) co_yield item;
             }
-        };
+        }
     } // namespace impl
 
     // Produces the set intersection of two enumerable.
     template <typename Comparer = std::less<void>, typename C2>
     auto intersect(C2&& c2)
     {
-        return impl::intersect<Comparer, C2>(std::forward<C2>(c2));
+        return [c2 = impl::decay_container(std::forward<C2>(c2))]<impl::container Container>(Container&& container) {
+            return impl::intersect<Comparer, Container, impl::decay_container_t<C2>>(std::forward<Container>(container), impl::move_const(c2));
+        };
     }
 
     namespace impl
     {
-        template <typename Comparer, typename C2>
-        struct except
+        template <typename Comparer, impl::container Container, impl::container C2>
+        auto except(Container container, C2 c2)
+            -> generator<std::remove_cvref_t<std::common_type_t<
+                typename impl::container_traits<Container>::value_type,
+                typename impl::container_traits<C2>::value_type>>>
         {
-            impl::decay_container_t<C2> m_c2;
-
-            except(C2&& c2) : m_c2(impl::decay_container(std::forward<C2>(c2))) {}
-
-            template <impl::container Container>
-            auto operator()(Container container) const
-                -> generator<std::remove_cvref_t<std::common_type_t<
-                    typename impl::container_traits<Container>::value_type,
-                    typename impl::container_traits<C2>::value_type>>>
+            std::set<typename impl::container_traits<C2>::value_type, Comparer> set(std::begin(c2), std::end(c2));
+            for (auto&& item : container)
             {
-                std::set<typename impl::container_traits<C2>::value_type, Comparer> set(std::begin(m_c2), std::end(m_c2));
-                for (auto&& item : container)
-                {
-                    if (set.emplace(item).second) co_yield item;
-                }
+                if (set.emplace(item).second) co_yield item;
             }
-        };
+        }
     } // namespace impl
 
     // Produces the set difference of two enumerable.
     template <typename Comparer = std::less<void>, typename C2>
     constexpr auto except(C2&& c2)
     {
-        return impl::except<Comparer, C2>(std::forward<C2>(c2));
+        return [c2 = impl::decay_container(std::forward<C2>(c2))]<impl::container Container>(Container&& container) {
+            return impl::except<Comparer, Container, impl::decay_container_t<C2>>(std::forward<Container>(container), impl::move_const(c2));
+        };
     }
 
     namespace impl
     {
-        template <typename Comparer, typename KeySelector, typename ElementSelector, typename ResultSelector>
-        struct group
+        template <typename Comparer, impl::container Container, typename KeySelector, typename ElementSelector, typename ResultSelector>
+        auto group(Container container, KeySelector keysel, ElementSelector elesel, ResultSelector rstsel)
+            -> generator<std::remove_cvref_t<decltype(rstsel(keysel(*std::begin(container)), std::declval<std::vector<std::remove_cvref_t<decltype(elesel(*std::begin(container)))>> const&>()))>>
         {
-            mutable KeySelector m_keysel;
-            mutable ElementSelector m_elesel;
-            mutable ResultSelector m_rstsel;
-
-            group(KeySelector&& keysel, ElementSelector&& elesel, ResultSelector&& rstsel)
-                : m_keysel(std::forward<KeySelector>(keysel)),
-                  m_elesel(std::forward<ElementSelector>(elesel)),
-                  m_rstsel(std::forward<ResultSelector>(rstsel)) {}
-
-            template <impl::container Container>
-            auto operator()(Container container) const
-                -> generator<std::remove_cvref_t<decltype(m_rstsel(m_keysel(*std::begin(container)), std::declval<std::vector<std::remove_cvref_t<decltype(m_elesel(*std::begin(container)))>> const&>()))>>
+            using key_t = std::remove_cvref_t<decltype(keysel(*std::begin(container)))>;
+            using element_t = std::remove_cvref_t<decltype(elesel(*std::begin(container)))>;
+            std::map<key_t, std::vector<element_t>, Comparer> lookup;
+            for (auto&& item : container)
             {
-                using key_t = std::remove_cvref_t<decltype(m_keysel(*std::begin(container)))>;
-                using element_t = std::remove_cvref_t<decltype(m_elesel(*std::begin(container)))>;
-                std::map<key_t, std::vector<element_t>, Comparer> lookup;
-                for (auto&& item : container)
-                {
-                    lookup[m_keysel(item)].emplace_back(m_elesel(item));
-                }
-                for (auto&& pair : lookup)
-                {
-                    co_yield m_rstsel(pair.first, pair.second);
-                }
+                lookup[keysel(item)].emplace_back(elesel(item));
             }
-        };
+            for (auto&& pair : lookup)
+            {
+                co_yield rstsel(pair.first, pair.second);
+            }
+        }
     } // namespace impl
 
     // Groups the elements according to a specified key selector function and creates a result value from each group and its key.
@@ -665,113 +659,86 @@ namespace linq
     template <typename Comparer = std::less<void>, typename KeySelector, typename ElementSelector, typename ResultSelector>
     auto group(KeySelector&& keysel, ElementSelector&& elesel, ResultSelector&& rstsel)
     {
-        return impl::group<Comparer, KeySelector, ElementSelector, ResultSelector>(
-            std::forward<KeySelector>(keysel),
-            std::forward<ElementSelector>(elesel),
-            std::forward<ResultSelector>(rstsel));
+        return [=]<impl::container Container>(Container&& container) {
+            return impl::group<Comparer, Container, KeySelector, ElementSelector, ResultSelector>(
+                std::forward<Container>(container),
+                impl::move_const(keysel),
+                impl::move_const(elesel),
+                impl::move_const(rstsel));
+        };
     }
 
     namespace impl
     {
-        template <typename Comparer, typename C2, typename KeySelector, typename KeySelector2, typename ElementSelector2, typename ResultSelector>
-        struct group_join
+        template <typename Comparer, impl::container Container, impl::container C2, typename KeySelector, typename KeySelector2, typename ElementSelector2, typename ResultSelector>
+        auto group_join(Container container, C2 c2, KeySelector keysel, KeySelector2 keysel2, ElementSelector2 elesel2, ResultSelector rstsel)
+            -> generator<std::remove_cvref_t<decltype(rstsel(*std::begin(container), std::declval<std::vector<std::remove_cvref_t<decltype(elesel2(*std::begin(c2)))>> const&>()))>>
         {
-            mutable KeySelector m_keysel;
-            mutable KeySelector2 m_keysel2;
-            mutable ElementSelector2 m_elesel2;
-            mutable ResultSelector m_rstsel;
-            impl::decay_container_t<C2> m_c2;
-
-            using key_t = std::remove_cvref_t<decltype(m_keysel2(*std::begin(m_c2)))>;
-            using element_t = std::remove_cvref_t<decltype(m_elesel2(*std::begin(m_c2)))>;
-
-            group_join(C2&& c2, KeySelector&& keysel, KeySelector2&& keysel2, ElementSelector2&& elesel2, ResultSelector&& rstsel)
-                : m_keysel(std::forward<KeySelector>(keysel)),
-                  m_keysel2(std::forward<KeySelector2>(keysel2)),
-                  m_elesel2(std::forward<ElementSelector2>(elesel2)),
-                  m_rstsel(std::forward<ResultSelector>(rstsel)),
-                  m_c2(impl::decay_container(std::forward<C2>(c2))) {}
-
-            template <impl::container Container>
-            auto operator()(Container container) const
-                -> generator<std::remove_cvref_t<decltype(m_rstsel(*std::begin(container), std::declval<std::vector<element_t> const&>()))>>
+            using key_t = std::remove_cvref_t<decltype(keysel2(*std::begin(c2)))>;
+            using element_t = std::remove_cvref_t<decltype(elesel2(*std::begin(c2)))>;
+            std::map<key_t, std::vector<element_t>, Comparer> lookup;
+            for (auto&& item : c2)
             {
-                std::map<key_t, std::vector<element_t>, Comparer> lookup;
-                for (auto&& item : m_c2)
-                {
-                    lookup[m_keysel2(item)].emplace_back(m_elesel2(item));
-                }
-                for (auto&& item : container)
-                {
-                    co_yield m_rstsel(item, lookup[m_keysel(item)]);
-                }
+                lookup[keysel2(item)].emplace_back(elesel2(item));
             }
-        };
+            for (auto&& item : container)
+            {
+                co_yield rstsel(item, lookup[keysel(item)]);
+            }
+        }
     } // namespace impl
 
     // Correlates the elements of two enumerable based on key comparer and groups the results.
     template <typename Comparer = std::less<void>, impl::container C2, typename KeySelector, typename KeySelector2, typename ElementSelector2, typename ResultSelector>
     constexpr auto group_join(C2&& c2, KeySelector&& keysel, KeySelector2&& keysel2, ElementSelector2&& elesel2, ResultSelector&& rstsel)
     {
-        return impl::group_join<Comparer, C2, KeySelector, KeySelector2, ElementSelector2, ResultSelector>(
-            std::forward<C2>(c2),
-            std::forward<KeySelector>(keysel),
-            std::forward<KeySelector2>(keysel2),
-            std::forward<ElementSelector2>(elesel2),
-            std::forward<ResultSelector>(rstsel));
+        return [=, c2 = impl::decay_container(std::forward<C2>(c2))]<impl::container Container>(Container&& container) {
+            return impl::group_join<Comparer, Container, impl::decay_container_t<C2>, KeySelector, KeySelector2, ElementSelector2, ResultSelector>(
+                std::forward<Container>(container),
+                impl::move_const(c2),
+                impl::move_const(keysel),
+                impl::move_const(keysel2),
+                impl::move_const(elesel2),
+                impl::move_const(rstsel));
+        };
     }
 
     namespace impl
     {
-        template <typename Comparer, typename C2, typename KeySelector, typename KeySelector2, typename ElementSelector2, typename ResultSelector>
-        struct join
+        template <typename Comparer, impl::container Container, impl::container C2, typename KeySelector, typename KeySelector2, typename ElementSelector2, typename ResultSelector>
+        auto join(Container container, C2 c2, KeySelector keysel, KeySelector2 keysel2, ElementSelector2 elesel2, ResultSelector rstsel)
+            -> generator<std::remove_cvref_t<decltype(rstsel(*std::begin(container), std::declval<std::remove_cvref_t<decltype(elesel2(*std::begin(c2)))> const&>()))>>
         {
-            mutable KeySelector m_keysel;
-            mutable KeySelector2 m_keysel2;
-            mutable ElementSelector2 m_elesel2;
-            mutable ResultSelector m_rstsel;
-            impl::decay_container_t<C2> m_c2;
-
-            using key_t = std::remove_cvref_t<decltype(m_keysel2(*std::begin(m_c2)))>;
-            using element_t = std::remove_cvref_t<decltype(m_elesel2(*std::begin(m_c2)))>;
-
-            join(C2&& c2, KeySelector&& keysel, KeySelector2&& keysel2, ElementSelector2&& elesel2, ResultSelector&& rstsel)
-                : m_keysel(std::forward<KeySelector>(keysel)),
-                  m_keysel2(std::forward<KeySelector2>(keysel2)),
-                  m_elesel2(std::forward<ElementSelector2>(elesel2)),
-                  m_rstsel(std::forward<ResultSelector>(rstsel)),
-                  m_c2(impl::decay_container(std::forward<C2>(c2))) {}
-
-            template <impl::container Container>
-            auto operator()(Container container) const
-                -> generator<std::remove_cvref_t<decltype(m_rstsel(*std::begin(container), std::declval<element_t const&>()))>>
+            using key_t = std::remove_cvref_t<decltype(keysel2(*std::begin(c2)))>;
+            using element_t = std::remove_cvref_t<decltype(elesel2(*std::begin(c2)))>;
+            std::map<key_t, std::vector<element_t>, Comparer> lookup;
+            for (auto&& item : c2)
             {
-                std::map<key_t, std::vector<element_t>, Comparer> lookup;
-                for (auto&& item : m_c2)
+                lookup[keysel2(item)].emplace_back(elesel2(item));
+            }
+            for (auto&& item : container)
+            {
+                for (auto&& item2 : lookup[keysel(item)])
                 {
-                    lookup[m_keysel2(item)].emplace_back(m_elesel2(item));
-                }
-                for (auto&& item : container)
-                {
-                    for (auto&& item2 : lookup[m_keysel(item)])
-                    {
-                        co_yield m_rstsel(item, item2);
-                    }
+                    co_yield rstsel(item, item2);
                 }
             }
-        };
+        }
     } // namespace impl
 
     // Correlates the elements of two enumerable based on matching keys.
     template <typename Comparer = std::less<void>, impl::container C2, typename KeySelector, typename KeySelector2, typename ElementSelector2, typename ResultSelector>
     constexpr auto join(C2&& c2, KeySelector&& keysel, KeySelector2&& keysel2, ElementSelector2&& elesel2, ResultSelector&& rstsel)
     {
-        return impl::join<Comparer, C2, KeySelector, KeySelector2, ElementSelector2, ResultSelector>(
-            std::forward<C2>(c2),
-            std::forward<KeySelector>(keysel),
-            std::forward<KeySelector2>(keysel2),
-            std::forward<ElementSelector2>(elesel2),
-            std::forward<ResultSelector>(rstsel));
+        return [=, c2 = impl::decay_container(std::forward<C2>(c2))]<impl::container Container>(Container&& container) {
+            return impl::join<Comparer, Container, impl::decay_container_t<C2>, KeySelector, KeySelector2, ElementSelector2, ResultSelector>(
+                std::forward<Container>(container),
+                impl::move_const(c2),
+                impl::move_const(keysel),
+                impl::move_const(keysel2),
+                impl::move_const(elesel2),
+                impl::move_const(rstsel));
+        };
     }
 } // namespace linq
 
