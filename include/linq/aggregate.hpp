@@ -39,10 +39,10 @@ namespace linq
     template <typename Action>
     constexpr auto for_each(Action&& action)
     {
-        return [=]<impl::container Container>(Container container) mutable {
+        return [=]<impl::container Container>(Container&& container) {
             for (auto&& item : container)
-                action(item);
-            return container;
+                impl::remove_const(action)(item);
+            return std::forward<Container>(container);
         };
     }
 
@@ -50,14 +50,14 @@ namespace linq
     template <typename Action>
     constexpr auto for_each_index(Action&& action)
     {
-        return [=]<impl::container Container>(Container container) mutable {
+        return [=]<impl::container Container>(Container&& container) {
             std::size_t i = 0;
             for (auto&& item : container)
             {
-                action(item, i);
+                impl::remove_const(action)(item, i);
                 i++;
             }
-            return container;
+            return std::forward<Container>(container);
         };
     }
 
@@ -76,11 +76,11 @@ namespace linq
     template <typename Pred = always_true>
     constexpr auto count(Pred&& pred = {})
     {
-        return [=]<impl::container Container>(Container container) mutable {
+        return [=]<impl::container Container>(Container&& container) {
             std::size_t result{ 0 };
-            for (auto& item : container)
+            for (auto&& item : container)
             {
-                if (pred(item))
+                if (impl::remove_const(pred)(item))
                     ++result;
             }
             return result;
@@ -91,10 +91,10 @@ namespace linq
     template <typename Pred>
     constexpr auto all(Pred&& pred)
     {
-        return [=]<impl::container Container>(Container container) mutable {
-            for (auto& item : container)
+        return [=]<impl::container Container>(Container&& container) {
+            for (auto&& item : container)
             {
-                if (!pred(item))
+                if (!impl::remove_const(pred)(item))
                     return false;
             }
             return true;
@@ -105,10 +105,10 @@ namespace linq
     template <typename Pred = always_true>
     constexpr auto any(Pred&& pred = {})
     {
-        return [=]<impl::container Container>(Container container) mutable {
-            for (auto& item : container)
+        return [=]<impl::container Container>(Container&& container) {
+            for (auto&& item : container)
             {
-                if (pred(item))
+                if (impl::remove_const(pred)(item))
                     return true;
             }
             return false;
@@ -117,7 +117,7 @@ namespace linq
 
     constexpr auto empty()
     {
-        return []<impl::container Container>(Container container) {
+        return []<impl::container Container>(Container&& container) {
             auto begin = std::begin(container);
             auto end = std::end(container);
             return begin == end;
@@ -127,18 +127,18 @@ namespace linq
     template <typename T, typename Comparer = std::equal_to<void>>
     constexpr auto contains(T&& value, Comparer&& comparer = {})
     {
-        return any([=](auto&& a) mutable { return comparer(a, value); });
+        return any([=](auto&& a) { return impl::remove_const(comparer)(a, value); });
     }
 
     // Applies an accumulator function over an enumerable.
     template <typename T, typename Func>
     constexpr auto aggregate(T&& seed, Func&& func)
     {
-        return [=]<impl::container Container>(Container container) mutable {
+        return [=]<impl::container Container>(Container&& container) {
             T result{ seed };
-            for (auto& item : container)
+            for (auto&& item : container)
             {
-                result = func(result, item);
+                result = impl::remove_const(func)(result, item);
             }
             return result;
         };
@@ -148,12 +148,12 @@ namespace linq
     template <typename Pred = always_true, typename T>
     constexpr auto front(Pred&& pred = {}, T&& def = {})
     {
-        return [=]<impl::container Container>(Container container) mutable {
-            for (auto& item : container)
+        return [=]<impl::container Container>(Container&& container) {
+            for (auto&& item : container)
             {
-                if (pred(item)) return item;
+                if (impl::remove_const(pred)(item)) return item;
             }
-            return std::forward<T>(def);
+            return impl::move_const(def);
         };
     }
 
@@ -161,9 +161,9 @@ namespace linq
     template <typename Pred = always_true>
     constexpr auto front(Pred&& pred = {})
     {
-        return [=]<impl::container Container>(Container container) mutable {
+        return [=]<impl::container Container>(Container&& container) {
             using T = typename impl::container_traits<Container>::value_type;
-            return front<Pred, T>(std::forward<Pred>(pred))(container);
+            return front<Pred, T>(impl::move_const(pred))(std::forward<Container>(container));
         };
     }
 
@@ -171,11 +171,11 @@ namespace linq
     template <typename Pred = always_true, typename T>
     constexpr auto back(Pred&& pred = {}, T&& def = {})
     {
-        return [=]<impl::container Container>(Container container) mutable {
-            T result{ std::forward<T>(def) };
+        return [=]<impl::container Container>(Container&& container) {
+            T result{ impl::move_const(def) };
             for (auto& item : container)
             {
-                if (pred(item)) result = item;
+                if (impl::remove_const(pred)(item)) result = item;
             }
             return result;
         };
@@ -185,9 +185,9 @@ namespace linq
     template <typename Pred = always_true>
     constexpr auto back(Pred&& pred = {})
     {
-        return [=]<impl::container Container>(Container container) mutable {
+        return [=]<impl::container Container>(Container&& container) {
             using T = typename impl::container_traits<Container>::value_type;
-            return back<Pred, T>(std::forward<Pred>(pred))(container);
+            return back<Pred, T>(impl::move_const(pred))(std::forward<Container>(container));
         };
     }
 
@@ -201,12 +201,12 @@ namespace linq
     template <typename Pred = always_true, typename T>
     constexpr auto single(Pred&& pred = {}, T&& def = {})
     {
-        return [=]<impl::container Container>(Container container) mutable {
-            T result{ std::forward<T>(def) };
+        return [=]<impl::container Container>(Container&& container) {
+            T result{ impl::move_const(def) };
             std::size_t num{ 0 };
-            for (auto& item : container)
+            for (auto&& item : container)
             {
-                if (pred(item))
+                if (impl::remove_const(pred)(item))
                 {
                     result = item;
                     ++num;
@@ -228,9 +228,9 @@ namespace linq
     template <typename Pred = always_true>
     constexpr auto single(Pred&& pred = {})
     {
-        return [=]<impl::container Container>(Container container) mutable {
+        return [=]<impl::container Container>(Container&& container) {
             using T = typename impl::container_traits<Container>::value_type;
-            return single<Pred, T>(std::forward<Pred>(pred))(container);
+            return single<Pred, T>(impl::move_const(pred))(std::forward<Container>(container));
         };
     }
 
@@ -270,19 +270,19 @@ namespace linq
     // Calculates the average value of the elements.
     constexpr auto average()
     {
-        return []<impl::container Container>(Container container) {
+        return []<impl::container Container>(Container&& container) {
             using T = typename impl::container_traits<Container>::value_type;
             std::size_t num{ 0 };
-            return aggregate<T>({}, [&num](auto& a, auto& b) { ++num; return a + b; })(container) / static_cast<T>(num);
+            return aggregate<T>({}, [&num](auto& a, auto& b) { ++num; return a + b; })(std::forward<Container>(container)) / static_cast<T>(num);
         };
     }
 
     // Calculates the sum of the elements.
     constexpr auto sum()
     {
-        return []<impl::container Container>(Container container) {
+        return []<impl::container Container>(Container&& container) {
             using T = typename impl::container_traits<Container>::value_type;
-            return aggregate<T>({}, [](auto& a, auto& b) { return a + b; })(container);
+            return aggregate<T>({}, [](auto& a, auto& b) { return a + b; })(std::forward<Container>(container));
         };
     }
 
@@ -385,8 +385,8 @@ namespace linq
     template <typename Selector = identity, typename Comparer = ascending>
     constexpr auto make_comparer(Selector&& selector = {}, Comparer&& comparer = {})
     {
-        return [=](auto&& t1, auto&& t2) mutable {
-            return comparer(selector(t1), selector(t2));
+        return [=](auto&& t1, auto&& t2) {
+            return comparer(impl::remove_const(selector)(t1), impl::remove_const(selector)(t2));
         };
     }
 
@@ -395,12 +395,12 @@ namespace linq
         template <typename C1, typename... Comparer>
         constexpr auto consume_comparer(C1&& c1, Comparer&&... comparer)
         {
-            return [=](auto&& t1, auto&& t2) mutable {
-                auto t{ std::forward<C1>(c1)(t1, t2) };
+            return [=](auto&& t1, auto&& t2) {
+                auto t{ impl::remove_const(c1)(t1, t2) };
                 if constexpr (sizeof...(Comparer))
                 {
                     if (t == 0)
-                        return consume_comparer<Comparer...>(std::forward<Comparer>(comparer)...)(t1, t2);
+                        return consume_comparer<Comparer...>(impl::move_const(comparer)...)(t1, t2);
                 }
                 return t < 0;
             };
@@ -425,10 +425,10 @@ namespace linq
     template <typename... Comparer>
     constexpr auto sort(Comparer&&... comparer)
     {
-        return [=]<impl::container Container>(Container container) mutable {
+        return [=]<impl::container Container>(Container&& container) {
             using T = typename impl::container_traits<Container>::value_type;
             std::vector<T> result(std::begin(container), std::end(container));
-            std::sort(result.begin(), result.end(), make_sorter<Comparer...>(std::forward<Comparer>(comparer)...));
+            std::sort(result.begin(), result.end(), make_sorter<Comparer...>(impl::move_const(comparer)...));
             return result;
         };
     }
@@ -437,7 +437,7 @@ namespace linq
     template <typename Comparer>
     constexpr auto limit(Comparer&& comparer)
     {
-        return [=]<impl::container Container>(Container container) mutable {
+        return [=]<impl::container Container>(Container&& container) {
             using T = typename impl::container_traits<Container>::value_type;
             auto begin = std::begin(container);
             auto end = std::end(container);
@@ -446,7 +446,7 @@ namespace linq
             T result = *begin;
             for (++begin; begin != end; ++begin)
             {
-                if (!comparer(result, *begin))
+                if (!impl::remove_const(comparer)(result, *begin))
                     result = *begin;
             }
             return result;
@@ -456,11 +456,11 @@ namespace linq
     template <typename Comparer, typename T>
     constexpr auto limit(Comparer&& comparer, T&& def)
     {
-        return [=]<impl::container Container>(Container container) mutable {
-            std::common_type_t<T, typename impl::container_traits<Container>::value_type> result{ std::forward<T>(def) };
+        return [=]<impl::container Container>(Container&& container) {
+            std::common_type_t<T, typename impl::container_traits<Container>::value_type> result{ impl::move_const(def) };
             for (auto&& item : container)
             {
-                if (!comparer(result, item))
+                if (!impl::remove_const(comparer)(result, item))
                     result = item;
             }
             return result;
@@ -493,13 +493,13 @@ namespace linq
     template <typename T>
     constexpr auto get_at(std::size_t index, T&& def)
     {
-        return [=, &def]<impl::container Container>(Container container) {
+        return [=]<impl::container Container>(Container&& container) {
             auto begin = std::begin(container);
             auto end = std::end(container);
             for (std::size_t i{ 0 }; begin != end && i < index; ++begin, ++i)
                 ;
             if (begin == end)
-                return std::forward<T>(def);
+                return impl::move_const(def);
             else
                 return *begin;
         };
@@ -508,9 +508,9 @@ namespace linq
     // Returns the element at a specified index.
     constexpr auto get_at(std::size_t index)
     {
-        return [=]<impl::container Container>(Container container) {
+        return [=]<impl::container Container>(Container&& container) {
             using T = typename impl::container_traits<Container>::value_type;
-            return get_at<T>(index, {})(container);
+            return get_at<T>(index, {})(std::forward<Container>(container));
         };
     }
 
@@ -518,11 +518,11 @@ namespace linq
     template <typename Pred>
     constexpr auto index_of(Pred&& pred)
     {
-        return [=]<impl::container Container>(Container container) mutable {
+        return [=]<impl::container Container>(Container&& container) {
             std::size_t index{ 0 };
             auto begin = std::begin(container);
             auto end = std::end(container);
-            for (; begin != end && !pred(*begin); ++begin, ++index)
+            for (; begin != end && !impl::remove_const(pred)(*begin); ++begin, ++index)
                 ;
             if (begin == end)
                 return static_cast<std::size_t>(-1);

@@ -313,6 +313,12 @@ namespace linq
         inline constexpr bool is_generator_v = is_generator<T>::value;
 
         template <typename T>
+        constexpr T& remove_const(T const& value) noexcept
+        {
+            return const_cast<T&>(value);
+        }
+
+        template <typename T>
         constexpr T&& move_const(T const& value) noexcept
         {
             return std::move(const_cast<T&>(value));
