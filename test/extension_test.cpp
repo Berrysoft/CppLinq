@@ -3,6 +3,7 @@
 #include "test_utility.hpp"
 #include <chrono>
 #include <linq/core.hpp>
+#include <linq/string.hpp>
 #include <optional>
 #include <random>
 #include <vector>
@@ -30,11 +31,6 @@ struct as_random
 
 BOOST_AUTO_TEST_CASE(extension_test)
 {
-    auto e{ range(0, 10) >> as_random() };
-    for (int i : e)
-    {
-        cout << i << ' ';
-    }
-    cout << endl;
+    cout << (range(0, 10) >> as_random() >> joinstr<char>(' ')) << endl;
     BOOST_CHECK(true);
 }

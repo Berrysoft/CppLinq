@@ -94,6 +94,6 @@ Like a diamond in the sky.
 )" };
     istringstream iss{ str };
     ostringstream oss;
-    oss << (iss >> read_lines<char>());
+    write_lines(oss, iss >> read_lines<char>());
     BOOST_CHECK_EQUAL(str, oss.str());
 }

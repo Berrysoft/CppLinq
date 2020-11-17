@@ -49,16 +49,10 @@ namespace linq
         }
     } // namespace impl
 
-    // Split the string into an enumerable of string_view by a char.
-    template <impl::character Char, typename Traits = std::char_traits<Char>>
-    struct split
+    namespace impl
     {
-        Char m_char;
-
-        constexpr split(Char split_char = (Char)' ') noexcept : m_char(split_char) {}
-
-        template <impl::container Container>
-        auto operator()(Container container) const
+        template <impl::container Container, impl::character Char, typename Traits>
+        auto split(Container container, Char split_char)
             -> generator<std::basic_string_view<Char, Traits>>
         {
             std::basic_string_view<Char, Traits> view = impl::get_string_view<Container, Char, Traits>(std::move(container));
@@ -71,7 +65,7 @@ namespace linq
                     offset = index + 1;
                     if ((std::size_t)offset < view.length())
                     {
-                        index = view.find(m_char, (std::size_t)offset);
+                        index = view.find(split_char, (std::size_t)offset);
                         if (index == std::basic_string_view<Char, Traits>::npos) index = view.length();
                         co_yield view.substr((std::size_t)offset, (std::size_t)(index - offset));
                     }
@@ -82,10 +76,16 @@ namespace linq
                 }
             }
         }
-    };
+    } // namespace impl
 
-    template <typename Char>
-    split(Char) -> split<Char>;
+    // Split the string into an enumerable of string_view by a char.
+    template <impl::character Char, typename Traits = std::char_traits<Char>>
+    auto split(Char split_char = (Char)' ')
+    {
+        return [=]<impl::container Container>(Container&& container) {
+            return impl::split<Container, Char, Traits>(std::forward<Container>(container), split_char);
+        };
+    }
 
     // Contacts the string elements into a new string.
     // Named join to distinguish from concat.
@@ -354,7 +354,7 @@ namespace linq
 
     // Write lines of string to a stream.
     template <impl::character Char, typename Traits = std::char_traits<Char>, impl::container C>
-    decltype(auto) operator<<(std::basic_ostream<Char, Traits>& stream, C&& c) requires requires(typename impl::container_traits<C>::value_type item)
+    decltype(auto) write_lines(std::basic_ostream<Char, Traits>& stream, C&& c) requires requires(typename impl::container_traits<C>::value_type item)
     {
         {
             stream << item
