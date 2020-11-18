@@ -354,13 +354,7 @@ namespace linq
 
     // Write lines of string to a stream.
     template <impl::character Char, typename Traits = std::char_traits<Char>, impl::container C>
-    decltype(auto) write_lines(std::basic_ostream<Char, Traits>& stream, C&& c) requires requires(typename impl::container_traits<C>::value_type item)
-    {
-        {
-            stream << item
-        }
-        ->std::convertible_to<decltype(stream)>;
-    }
+    decltype(auto) write_lines(std::basic_ostream<Char, Traits>& stream, C&& c)
     {
         for (auto&& item : c)
         {
