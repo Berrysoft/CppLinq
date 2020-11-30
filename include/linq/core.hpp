@@ -351,7 +351,7 @@ namespace linq
         template <typename T>
         using decay_container_t = decltype(decay_container(std::declval<T&&>()));
 
-        template <typename T>
+        template <container T>
         struct container_traits : public std::iterator_traits<decltype(std::begin(std::declval<T&>()))>
         {
             using iterator = decltype(std::begin(std::declval<T&>()));

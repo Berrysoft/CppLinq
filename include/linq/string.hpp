@@ -330,23 +330,12 @@ namespace linq
         };
     }
 
-    template <impl::character Char>
-    struct read_lines
-    {
-        Char m_delim;
-
-        constexpr read_lines(Char delim = (Char)'\n') noexcept : m_delim(delim) {}
-    };
-
-    template <typename Char>
-    read_lines(Char) -> read_lines<Char>;
-
     // Read lines of string from a stream.
     template <impl::character Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>>
-    generator<std::basic_string<Char, Traits, Allocator>> operator>>(std::basic_istream<Char, Traits>& stream, read_lines<Char> r)
+    generator<std::basic_string<Char, Traits, Allocator>> read_lines(std::basic_istream<Char, Traits>& stream, Char delim = (Char)'\n')
     {
         std::basic_string<Char, Traits, Allocator> str;
-        while (std::getline(stream, str, r.m_delim))
+        while (std::getline(stream, str, delim))
         {
             co_yield str;
         }
