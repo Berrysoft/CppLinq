@@ -42,8 +42,10 @@ namespace linq
 {
 #ifdef LINQ_USE_EXPERIMENTAL_COROUTINE
     using std::experimental::coroutine_handle;
+    using std::experimental::suspend_always;
 #else
     using std::coroutine_handle;
+    using std::suspend_always;
 #endif // LINQ_USE_EXPERIMENTAL_COROUTINE
 
     template <typename T>
@@ -55,11 +57,11 @@ namespace linq
 
             auto get_return_object() { return generator{ *this }; }
 
-            std::suspend_always initial_suspend() const noexcept { return {}; }
-            std::suspend_always final_suspend() const noexcept { return {}; }
+            suspend_always initial_suspend() const noexcept { return {}; }
+            suspend_always final_suspend() const noexcept { return {}; }
             void unhandled_exception() const { throw; }
 
-            std::suspend_always yield_value(T const& value)
+            suspend_always yield_value(T const& value)
             {
                 if constexpr (std::is_move_assignable_v<T>)
                 {
