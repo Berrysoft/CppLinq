@@ -34,16 +34,20 @@
 #if __cpp_lib_coroutine >= 201902L || __has_include(<coroutine>)
     #include <coroutine>
 #else
+    #define LINQ_USE_EXPERIMENTAL_COROUTINE
     #include <experimental/coroutine>
 #endif
 
-#if __has_include(<experimental/generator>)
-    #include <experimental/generator>
-#else
-namespace std::experimental
+namespace linq
 {
+#ifdef LINQ_USE_EXPERIMENTAL_COROUTINE
+    using std::experimental::coroutine_handle;
+#else
+    using std::coroutine_handle;
+#endif // LINQ_USE_EXPERIMENTAL_COROUTINE
+
     template <typename T>
-    struct generator
+    requires(std::is_move_assignable_v<T> || std::is_copy_assignable_v<T>) struct generator
     {
         struct promise_type
         {
@@ -51,18 +55,15 @@ namespace std::experimental
 
             auto get_return_object() { return generator{ *this }; }
 
-            suspend_always initial_suspend() noexcept { return {}; }
+            std::suspend_always initial_suspend() const noexcept { return {}; }
+            std::suspend_always final_suspend() const noexcept { return {}; }
+            void unhandled_exception() const { throw; }
 
-            suspend_always final_suspend() noexcept { return {}; }
-
-            void unhandled_exception() { throw; }
-
-            suspend_always yield_value(T const& value)
+            std::suspend_always yield_value(T const& value)
             {
-                static_assert(is_move_assignable_v<T> || is_copy_assignable_v<T>);
-                if constexpr (is_move_assignable_v<T>)
+                if constexpr (std::is_move_assignable_v<T>)
                 {
-                    m_current = move(value);
+                    m_current = std::move(value);
                 }
                 else
                 {
@@ -71,16 +72,16 @@ namespace std::experimental
                 return {};
             }
 
-            void return_void() {}
+            void return_void() const noexcept {}
 
             template <typename U>
-            U&& await_transform(U&&) = delete;
+            U&& await_transform(U&&) const noexcept = delete;
         };
 
         struct iterator
         {
-            using iterator_category = input_iterator_tag;
-            using difference_type = ptrdiff_t;
+            using iterator_category = std::input_iterator_tag;
+            using difference_type = std::ptrdiff_t;
             using value_type = T;
             using reference = T const&;
             using pointer = T const*;
@@ -88,7 +89,7 @@ namespace std::experimental
             coroutine_handle<promise_type> m_coro = nullptr;
 
             iterator() = default;
-            iterator(nullptr_t) : m_coro(nullptr) {}
+            iterator(std::nullptr_t) : m_coro(nullptr) {}
 
             iterator(coroutine_handle<promise_type> coro) : m_coro(coro) {}
 
@@ -153,7 +154,7 @@ namespace std::experimental
 
         generator& operator=(generator&& right)
         {
-            if (this != addressof(right))
+            if (this != std::addressof(right))
             {
                 m_coro = right.m_coro;
                 right.m_coro = nullptr;
@@ -172,12 +173,6 @@ namespace std::experimental
     private:
         coroutine_handle<promise_type> m_coro = nullptr;
     };
-} // namespace std::experimental
-#endif
-
-namespace linq
-{
-    using std::experimental::generator;
 
     namespace impl
     {
