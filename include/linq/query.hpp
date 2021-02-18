@@ -55,30 +55,6 @@ namespace linq
 
     namespace impl
     {
-        template <impl::container Container, typename Pred>
-        auto where_index(Container container, Pred pred)
-            -> generator<typename impl::container_traits<Container>::value_type>
-        {
-            std::size_t index{ 0 };
-            for (auto&& item : container)
-            {
-                if (pred(item, index)) co_yield item;
-                index++;
-            }
-        }
-    } // namespace impl
-
-    // Filters an enumerable based on a predicate.
-    template <typename Pred>
-    auto where_index(Pred&& pred)
-    {
-        return [=]<impl::container Container>(Container&& container) {
-            return impl::where_index<Container, Pred>(std::forward<Container>(container), impl::move_const(pred));
-        };
-    }
-
-    namespace impl
-    {
         template <impl::container Container, typename Selector>
         auto select(Container container, Selector selector)
             -> generator<std::remove_cvref_t<decltype(selector(*std::begin(container)))>>
@@ -96,30 +72,6 @@ namespace linq
     {
         return [=]<impl::container Container>(Container&& container) {
             return impl::select<Container, Selector>(std::forward<Container>(container), impl::move_const(selector));
-        };
-    }
-
-    namespace impl
-    {
-        template <impl::container Container, typename Selector>
-        auto select_index(Container container, Selector selector)
-            -> generator<std::remove_cvref_t<decltype(selector(*std::begin(container), std::size_t{}))>>
-        {
-            std::size_t index{ 0 };
-            for (auto&& item : container)
-            {
-                co_yield selector(item, index);
-                index++;
-            }
-        }
-    } // namespace impl
-
-    // Projects each element into a new form.
-    template <typename Selector>
-    auto select_index(Selector&& selector)
-    {
-        return [=]<impl::container Container>(Container&& container) {
-            return impl::select_index<Container, Selector>(std::forward<Container>(container), impl::move_const(selector));
         };
     }
 
@@ -145,33 +97,6 @@ namespace linq
     {
         return [=]<impl::container Container>(Container&& container) {
             return impl::select_many<Container, CSelector, RSelector>(std::forward<Container>(container), impl::move_const(cselector), impl::move_const(rselector));
-        };
-    }
-
-    namespace impl
-    {
-        template <impl::container Container, typename CSelector, typename RSelector>
-        auto select_many_index(Container container, CSelector cselector, RSelector rselector)
-            -> generator<std::remove_cvref_t<decltype(rselector(*std::begin(container), *std::begin(cselector(*std::begin(container), std::size_t{}))))>>
-        {
-            std::size_t index{ 0 };
-            for (auto&& c : container)
-            {
-                for (auto&& item : cselector(c, index))
-                {
-                    co_yield rselector(c, item);
-                }
-                index++;
-            }
-        }
-    } // namespace impl
-
-    // Projects each element, flattens the resulting sequences into one sequence, and invokes a result selector function on each element therein.
-    template <typename CSelector, typename RSelector>
-    auto select_many_index(CSelector&& cselector, RSelector&& rselector)
-    {
-        return [=]<impl::container Container>(Container&& container) {
-            return impl::select_many_index<Container, CSelector, RSelector>(std::forward<Container>(container), impl::move_const(cselector), impl::move_const(rselector));
         };
     }
 
@@ -228,32 +153,6 @@ namespace linq
 
     namespace impl
     {
-        template <impl::container Container, typename Pred>
-        auto skip_while_index(Container container, Pred pred)
-            -> generator<typename impl::container_traits<Container>::value_type>
-        {
-            auto begin = std::begin(container);
-            auto end = std::end(container);
-            for (std::size_t i{ 0 }; begin != end && pred(*begin, i); ++i, ++begin)
-                ;
-            for (; begin != end; ++begin)
-            {
-                co_yield* begin;
-            }
-        }
-    } // namespace impl
-
-    // Bypasses elements as long as a specified condition is true and then returns the remaining elements.
-    template <typename Pred>
-    auto skip_while_index(Pred&& pred)
-    {
-        return [=]<impl::container Container>(Container&& container) {
-            return impl::skip_while_index<Container, Pred>(std::forward<Container>(container), impl::move_const(pred));
-        };
-    }
-
-    namespace impl
-    {
         template <impl::container Container>
         auto take(Container container, std::size_t n)
             -> generator<typename impl::container_traits<Container>::value_type>
@@ -301,30 +200,6 @@ namespace linq
 
     namespace impl
     {
-        template <impl::container Container, typename Pred>
-        auto take_while_index(Container container, Pred pred)
-            -> generator<typename impl::container_traits<Container>::value_type>
-        {
-            auto begin = std::begin(container);
-            auto end = std::end(container);
-            for (std::size_t i{ 0 }; begin != end && pred(*begin, i); ++i, ++begin)
-            {
-                co_yield* begin;
-            }
-        }
-    } // namespace impl
-
-    // Returns elements as long as a specified condition is true.
-    template <typename Pred>
-    auto take_while_index(Pred&& pred)
-    {
-        return [=]<impl::container Container>(Container&& container) {
-            return impl::take_while_index<Container, Pred>(std::forward<Container>(container), impl::move_const(pred));
-        };
-    }
-
-    namespace impl
-    {
         template <typename E1, typename... Es>
         constexpr bool and_all(E1&& e1, Es&&... es)
         {
@@ -354,10 +229,7 @@ namespace linq
 
         template <typename It1, typename It2>
         iterator_pack(It1, It2) -> iterator_pack<It1, It2>;
-    } // namespace impl
 
-    namespace impl
-    {
         template <typename Selector, impl::container... Containers>
         auto zip(Selector selector, Containers... cs)
             -> generator<std::remove_cvref_t<decltype(selector(*std::begin(cs)...))>>
@@ -378,31 +250,6 @@ namespace linq
     {
         return [=, ... cs = impl::decay_container(std::forward<Containers>(cs))]<impl::container Container>(Container&& container) {
             return impl::zip<Selector, impl::decay_container_t<Container>, impl::decay_container_t<Containers>...>(impl::move_const(selector), std::forward<Container>(container), impl::move_const(cs)...);
-        };
-    }
-
-    namespace impl
-    {
-        template <typename Selector, impl::container... Containers>
-        auto zip_index(Selector selector, Containers... cs)
-            -> generator<std::remove_cvref_t<decltype(selector(*std::begin(cs)..., std::size_t{}))>>
-        {
-            auto its = std::make_tuple(impl::iterator_pack{ std::begin(cs), std::end(cs) }...);
-            for (std::size_t i{ 0 };
-                 std::apply([](auto&&... pack) { return impl::and_all((pack.m_begin != pack.m_end)...); }, its);
-                 ++i, std::apply([](auto&&... pack) { return impl::expand_tuple((++pack.m_begin)...); }, its))
-            {
-                co_yield std::apply([i, &selector](auto&&... pack) { return selector((*pack.m_begin)..., i); }, its);
-            }
-        }
-    } // namespace impl
-
-    // Applies a specified function to the corresponding elements of two enumerable, producing an enumerable of the results.
-    template <typename Selector, impl::container... Containers>
-    auto zip_index(Selector&& selector, Containers&&... cs)
-    {
-        return [=, ... cs = impl::decay_container(std::forward<Containers>(cs))]<impl::container Container>(Container&& container) {
-            return impl::zip_index<Selector, impl::decay_container_t<Container>, impl::decay_container_t<Containers>...>(impl::move_const(selector), std::forward<Container>(container), impl::move_const(cs)...);
         };
     }
 } // namespace linq

@@ -112,14 +112,6 @@ BOOST_AUTO_TEST_CASE(aggregate_for_each_test)
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, a1);
 }
 
-BOOST_AUTO_TEST_CASE(aggregate_for_each_index_test)
-{
-    int a1[]{ 1, 2, 3 };
-    int a2[]{ 0, 2, 6 };
-    a1 >> for_each_index([](int& i, size_t index) { i *= (int)index; });
-    LINQ_CHECK_EQUAL_COLLECTIONS(a2, a1);
-}
-
 BOOST_AUTO_TEST_CASE(find_get_at_test)
 {
     int a1[]{ 1, 2, 3, 4, 5, 6 };

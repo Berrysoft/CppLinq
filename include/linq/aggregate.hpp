@@ -46,21 +46,6 @@ namespace linq
         };
     }
 
-    // Applies an action to each element and return the enumerable.
-    template <typename Action>
-    constexpr auto for_each_index(Action&& action)
-    {
-        return [=]<impl::container Container>(Container&& container) {
-            std::size_t i = 0;
-            for (auto&& item : container)
-            {
-                impl::remove_const(action)(item, i);
-                i++;
-            }
-            return std::forward<Container>(container);
-        };
-    }
-
     // Always returns true.
     struct always_true
     {

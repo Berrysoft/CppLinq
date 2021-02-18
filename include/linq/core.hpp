@@ -29,6 +29,7 @@
 #include <iterator>
 #include <span>
 #include <string_view>
+#include <tuple>
 #include <version>
 
 #if __cpp_lib_coroutine >= 201902L || __has_include(<coroutine>)
@@ -470,6 +471,28 @@ namespace linq
     {
         return [container2 = impl::decay_container(std::forward<Container2>(container2))]<impl::container Container>(Container&& container) {
             return impl::concat<Container, impl::decay_container_t<Container2>>(std::forward<Container>(container), impl::move_const(container2));
+        };
+    }
+
+    namespace impl
+    {
+        template <impl::container Container>
+        auto with_index(Container container)
+            -> generator<std::tuple<std::size_t, typename impl::container_traits<Container>::value_type>>
+        {
+            std::size_t index{ 0 };
+            for (auto&& item : container)
+            {
+                co_yield std::make_tuple(index, item);
+                index++;
+            }
+        }
+    } // namespace impl
+
+    inline auto with_index()
+    {
+        return []<impl::container Container>(Container&& container) {
+            return impl::with_index<Container>(std::forward<Container>(container));
         };
     }
 } // namespace linq

@@ -42,3 +42,10 @@ BOOST_AUTO_TEST_CASE(calculate_pend_test)
     auto e{ a1 >> prepend(1) >> append(6) };
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 }
+
+BOOST_AUTO_TEST_CASE(index_test)
+{
+    int a[]{ 0, 1, 2, 3, 4, 5 };
+    auto e{ a >> with_index() >> select([](auto t) { auto [i, a] = t; return (int)i; }) };
+    LINQ_CHECK_EQUAL_COLLECTIONS(a, e);
+}
