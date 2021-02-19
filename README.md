@@ -23,19 +23,14 @@ For extension sample, see [extension_test.cpp](test/extension_test.cpp).
 * repeat
 ### Query
 * select
-* select_index
 * select_many
-* select_many_index
 * skip
 * skip_while
-* skip_while_index
 * take
 * take_while
-* take_while_index
 * where
-* where_index
+* where_select
 * zip
-* zip_index
 ### Aggregate
 * aggregate
 * all
@@ -49,7 +44,6 @@ For extension sample, see [extension_test.cpp](test/extension_test.cpp).
 * empty
 * except
 * for_each
-* for_each_index
 * front
 * get_at
 * group
@@ -60,8 +54,6 @@ For extension sample, see [extension_test.cpp](test/extension_test.cpp).
 * limit
 * max
 * min
-* peek
-* peek_index
 * reverse
 * single
 * sort

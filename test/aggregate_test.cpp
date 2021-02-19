@@ -46,6 +46,9 @@ BOOST_AUTO_TEST_CASE(aggregate_reverse_test)
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, e1);
     auto e2{ a1 >> reverse() >> reverse() };
     LINQ_CHECK_EQUAL_COLLECTIONS(a1, e2);
+    set<int> a3{ 1, 2, 3, 4, 5, 6 };
+    auto e3{ a3 >> reverse() };
+    LINQ_CHECK_EQUAL_COLLECTIONS(a2, e3);
 }
 
 BOOST_AUTO_TEST_CASE(aggregate_sort_test)
@@ -107,28 +110,6 @@ BOOST_AUTO_TEST_CASE(aggregate_for_each_test)
     int a2[]{ 2, 4, 6 };
     a1 >> for_each([](int& i) { i *= 2; });
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, a1);
-}
-
-BOOST_AUTO_TEST_CASE(aggregate_for_each_index_test)
-{
-    int a1[]{ 1, 2, 3 };
-    int a2[]{ 0, 2, 6 };
-    a1 >> for_each_index([](int& i, size_t index) { i *= (int)index; });
-    LINQ_CHECK_EQUAL_COLLECTIONS(a2, a1);
-}
-
-BOOST_AUTO_TEST_CASE(aggregate_peek_test)
-{
-    int a1[]{ 1, 2, 3 };
-    auto e{ a1 >> peek([](int i) { i *= 2; }) };
-    LINQ_CHECK_EQUAL_COLLECTIONS(a1, e);
-}
-
-BOOST_AUTO_TEST_CASE(aggregate_peek_index_test)
-{
-    int a1[]{ 1, 2, 3 };
-    auto e{ a1 >> peek_index([](int i, size_t index) { i *= (int)index; }) };
-    LINQ_CHECK_EQUAL_COLLECTIONS(a1, e);
 }
 
 BOOST_AUTO_TEST_CASE(find_get_at_test)
