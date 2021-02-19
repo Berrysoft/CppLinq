@@ -3,6 +3,7 @@
 #include "test_utility.hpp"
 #include <cmath>
 #include <linq/query.hpp>
+#include <optional>
 
 using namespace std;
 using namespace linq;
@@ -31,19 +32,15 @@ BOOST_AUTO_TEST_CASE(where_select_where_test)
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 }
 
-BOOST_AUTO_TEST_CASE(where_select_where_index_test)
+BOOST_AUTO_TEST_CASE(where_select_test)
 {
     int a1[]{ 1, 1, 2, 4, 4, 5 };
     int a2[]{ 1, 2, 4, 5 };
     auto e{ a1 >>
             with_index() >>
-            where([](auto t) {
+            where_select([](auto t) {
                 auto [i, a] = t;
-                return a == (int)i;
-            }) >>
-            select([](auto t) {
-                auto [i, a] = t;
-                return a;
+                return a == (int)i ? make_optional(a) : nullopt;
             }) };
     LINQ_CHECK_EQUAL_COLLECTIONS(a2, e);
 }

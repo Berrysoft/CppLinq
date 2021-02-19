@@ -29,6 +29,7 @@ For extension sample, see [extension_test.cpp](test/extension_test.cpp).
 * take
 * take_while
 * where
+* where_select
 * zip
 ### Aggregate
 * aggregate

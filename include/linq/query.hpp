@@ -56,6 +56,29 @@ namespace linq
     namespace impl
     {
         template <impl::container Container, typename Selector>
+        auto where_select(Container container, Selector selector)
+            -> generator<std::remove_cvref_t<decltype(*selector(*std::begin(container)))>>
+        {
+            for (auto&& item : container)
+            {
+                auto res = selector(item);
+                if ((bool)res) co_yield* res;
+            }
+        }
+    } // namespace impl
+
+    // Filters and projects an enumerable.
+    template <typename Selector>
+    auto where_select(Selector&& selector)
+    {
+        return [=]<impl::container Container>(Container&& container) {
+            return impl::where_select<Container, Selector>(std::forward<Container>(container), impl::move_const(selector));
+        };
+    }
+
+    namespace impl
+    {
+        template <impl::container Container, typename Selector>
         auto select(Container container, Selector selector)
             -> generator<std::remove_cvref_t<decltype(selector(*std::begin(container)))>>
         {

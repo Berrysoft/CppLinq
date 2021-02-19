@@ -489,6 +489,7 @@ namespace linq
         }
     } // namespace impl
 
+    // Zip with index.
     inline auto with_index()
     {
         return []<impl::container Container>(Container&& container) {
