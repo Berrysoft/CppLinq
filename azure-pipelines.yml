@@ -76,7 +76,7 @@ jobs:
   - script: |
       call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" $(arch)
       mkdir build & cd build
-      cmake .. -GNinja -DCMAKE_CXX_COMPILER=cl -DCMAKE_BUILD_TYPE=Release -DLINQ_BUILD_TESTS=on
+      cmake .. -GNinja -DCMAKE_CXX_COMPILER=cl -DCMAKE_BUILD_TYPE=Release -DLINQ_BUILD_TESTS=on -DCMAKE_TOOLCHAIN_FILE="$(VCPKG_INSTALLATION_ROOT)/scripts/buildsystems/vcpkg.cmake"
     displayName: 'Configure all projects'
     condition: eq(variables.rid, 'win')
 
