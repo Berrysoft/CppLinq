@@ -55,6 +55,11 @@ jobs:
     env:
       MSYSTEM: $(msystem)
 
+  - pwsh: |
+      vcpkg install boost-test:$(arch)-windows
+    displayName: 'Install boost test'
+    condition: eq(variables.rid, 'win')
+
   - script: |
       sudo add-apt-repository ppa:ubuntu-toolchain-r/ppa
       sudo add-apt-repository ppa:mhier/libboost-latest
