@@ -1,19 +1,19 @@
 /**CppLinq core.hpp
- * 
+ *
  * MIT License
- * 
+ *
  * Copyright (c) 2019-2020 Berrysoft
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -21,11 +21,12 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- * 
+ *
  */
 #ifndef LINQ_CORE_HPP
 #define LINQ_CORE_HPP
 
+#include <exception>
 #include <iterator>
 #include <span>
 #include <string_view>
@@ -55,12 +56,22 @@ namespace linq
         struct promise_type
         {
             T m_current;
+            std::exception_ptr m_exception;
 
             auto get_return_object() { return generator{ *this }; }
 
             suspend_always initial_suspend() const noexcept { return {}; }
             suspend_always final_suspend() const noexcept { return {}; }
-            void unhandled_exception() const { throw; }
+
+            void unhandled_exception() noexcept { m_exception = std::current_exception(); }
+
+            void rethrow_if_exception() const
+            {
+                if (m_exception)
+                {
+                    std::rethrow_exception(m_exception);
+                }
+            }
 
             suspend_always yield_value(T const& value)
             {
@@ -101,6 +112,7 @@ namespace linq
                 m_coro.resume();
                 if (m_coro.done())
                 {
+                    m_coro.promise().rethrow_if_exception();
                     m_coro = nullptr;
                 }
                 return *this;
@@ -110,7 +122,7 @@ namespace linq
 
             [[nodiscard]] operator bool() const { return m_coro && !m_coro.done(); }
 
-            [[nodiscard]] bool operator==(iterator const& right) const
+            [[nodiscard]] bool operator==(iterator const& right) const noexcept
             {
                 return m_coro == right.m_coro;
             }
@@ -133,6 +145,7 @@ namespace linq
                 m_coro.resume();
                 if (m_coro.done())
                 {
+                    m_coro.promise().rethrow_if_exception();
                     return { nullptr };
                 }
             }
@@ -150,20 +163,18 @@ namespace linq
         generator(generator const&) = delete;
         generator& operator=(generator const&) = delete;
 
-        generator(generator&& right) : m_coro(right.m_coro)
-        {
-            right.m_coro = nullptr;
-        }
+        generator(generator&& right) noexcept : m_coro(std::exchange(right.m_coro, nullptr)) {}
 
-        generator& operator=(generator&& right)
+        generator& operator=(generator&& right) noexcept
         {
             if (this != std::addressof(right))
             {
-                m_coro = right.m_coro;
-                right.m_coro = nullptr;
+                swap(right);
             }
             return *this;
         }
+
+        void swap(generator& other) noexcept { std::swap(m_coro, other.m_coro); }
 
         ~generator()
         {
@@ -240,7 +251,7 @@ namespace linq
         inline constexpr bool is_container_v = is_container<T>::value;
 
         template <typename T>
-        concept reversible_container = container<T>&& requires(T&& t)
+        concept reversible_container = container<T> && requires(T&& t)
         {
             std::rbegin(t);
             std::rend(t);
@@ -384,7 +395,8 @@ namespace linq
     template <typename T>
     auto range(T begin, T end, T step)
     {
-        return range<T>(std::move(begin), std::move(end), [step = std::move(step)](const T& value) { return value + step; });
+        return range<T>(std::move(begin), std::move(end), [step = std::move(step)](const T& value)
+                        { return value + step; });
     }
 
     template <typename T>
@@ -416,7 +428,8 @@ namespace linq
     template <typename T>
     auto append(T&& value)
     {
-        return [=]<impl::container Container>(Container&& container) {
+        return [=]<impl::container Container>(Container&& container)
+        {
             return impl::append<Container, T>(std::forward<Container>(container), std::move(value));
         };
     }
@@ -441,7 +454,8 @@ namespace linq
     template <typename T>
     auto prepend(T&& value)
     {
-        return [=]<impl::container Container>(Container&& container) {
+        return [=]<impl::container Container>(Container&& container)
+        {
             return impl::prepend<Container, T>(std::forward<Container>(container), std::move(value));
         };
     }
@@ -469,7 +483,8 @@ namespace linq
     template <impl::container Container2>
     auto concat(Container2&& container2)
     {
-        return [container2 = impl::decay_container(std::forward<Container2>(container2))]<impl::container Container>(Container&& container) {
+        return [container2 = impl::decay_container(std::forward<Container2>(container2))]<impl::container Container>(Container&& container)
+        {
             return impl::concat<Container, impl::decay_container_t<Container2>>(std::forward<Container>(container), impl::move_const(container2));
         };
     }
@@ -492,7 +507,8 @@ namespace linq
     // Zip with index.
     inline auto with_index()
     {
-        return []<impl::container Container>(Container&& container) {
+        return []<impl::container Container>(Container&& container)
+        {
             return impl::with_index<Container>(std::forward<Container>(container));
         };
     }
