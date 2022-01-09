@@ -1,19 +1,19 @@
 /**CppLinq string.hpp
- * 
+ *
  * MIT License
- * 
- * Copyright (c) 2019-2020 Berrysoft
- * 
+ *
+ * Copyright (c) 2019-2022 Berrysoft
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -21,7 +21,7 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- * 
+ *
  */
 #ifndef LINQ_STRING_HPP
 #define LINQ_STRING_HPP
@@ -82,7 +82,8 @@ namespace linq
     template <impl::character Char, typename Traits = std::char_traits<Char>>
     auto split(Char split_char = (Char)' ')
     {
-        return [=]<impl::container Container>(Container&& container) {
+        return [=]<impl::container Container>(Container&& container)
+        {
             return impl::split<Container, Char, Traits>(std::forward<Container>(container), split_char);
         };
     }
@@ -92,7 +93,8 @@ namespace linq
     template <impl::character Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>>
     constexpr auto joinstr()
     {
-        return []<impl::container Container>(Container container) {
+        return []<impl::container Container>(Container container)
+        {
             std::basic_ostringstream<Char, Traits, Allocator> oss;
             for (auto&& item : container)
             {
@@ -106,7 +108,8 @@ namespace linq
     template <impl::character Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>, typename T>
     constexpr auto joinstr(T&& value)
     {
-        return [=]<impl::container Container>(Container container) {
+        return [=]<impl::container Container>(Container container)
+        {
             std::basic_ostringstream<Char, Traits, Allocator> oss;
             auto begin = std::begin(container);
             auto end = std::end(container);
@@ -127,7 +130,8 @@ namespace linq
     template <impl::character Char, typename Traits = std::char_traits<Char>>
     constexpr auto instr(Char t)
     {
-        return [=]<impl::container Container>(Container&& container) {
+        return [=]<impl::container Container>(Container&& container)
+        {
             std::basic_string_view<Char, Traits> view = impl::get_string_view<Container, Char, Traits>(std::forward<Container>(container));
             return view.find(t) != std::basic_string_view<Char, Traits>::npos;
         };
@@ -138,7 +142,8 @@ namespace linq
     template <impl::character Char, typename Traits = std::char_traits<Char>, typename T>
     constexpr auto instr(T&& t) requires(!impl::is_char_v<std::remove_cvref_t<T>>)
     {
-        return [&]<impl::container Container>(Container&& container) {
+        return [&]<impl::container Container>(Container&& container)
+        {
             std::basic_string_view<Char, Traits> view = impl::get_string_view<Container, Char, Traits>(std::forward<Container>(container));
             std::basic_string_view<Char, Traits> tview = impl::get_string_view<T, Char, Traits>(std::forward<T>(t));
             return view.find(tview) != std::basic_string_view<Char, Traits>::npos;
@@ -149,7 +154,8 @@ namespace linq
     template <impl::character Char, typename Traits = std::char_traits<Char>>
     constexpr auto starts_with(Char value)
     {
-        return [=]<impl::container Container>(Container&& container) {
+        return [=]<impl::container Container>(Container&& container)
+        {
             std::basic_string_view<Char, Traits> view = impl::get_string_view<Container, Char, Traits>(std::forward<Container>(container));
             return view.front() == value;
         };
@@ -159,7 +165,8 @@ namespace linq
     template <impl::character Char, typename Traits = std::char_traits<Char>, typename T>
     constexpr auto starts_with(T&& t) requires(!impl::is_char_v<std::remove_cvref_t<T>>)
     {
-        return [&]<impl::container Container>(Container&& container) {
+        return [&]<impl::container Container>(Container&& container)
+        {
             std::basic_string_view<Char, Traits> view = impl::get_string_view<Container, Char, Traits>(std::forward<Container>(container));
             std::basic_string_view<Char, Traits> value = impl::get_string_view<T, Char, Traits>(std::forward<T>(t));
             if (view.length() < value.length())
@@ -172,7 +179,8 @@ namespace linq
     template <impl::character Char, typename Traits = std::char_traits<Char>>
     constexpr auto ends_with(Char value)
     {
-        return [=]<impl::container Container>(Container&& container) {
+        return [=]<impl::container Container>(Container&& container)
+        {
             std::basic_string_view<Char, Traits> view = impl::get_string_view<Container, Char, Traits>(std::forward<Container>(container));
             return view.back() == value;
         };
@@ -182,7 +190,8 @@ namespace linq
     template <impl::character Char, typename Traits = std::char_traits<Char>, typename T>
     constexpr auto ends_with(T&& t) requires(!impl::is_char_v<std::remove_cvref_t<T>>)
     {
-        return [&]<impl::container Container>(Container&& container) {
+        return [&]<impl::container Container>(Container&& container)
+        {
             std::basic_string_view<Char, Traits> view = impl::get_string_view<Container, Char, Traits>(std::forward<Container>(container));
             std::basic_string_view<Char, Traits> value = impl::get_string_view<T, Char, Traits>(std::forward<T>(t));
             if (view.length() < value.length())
@@ -195,7 +204,8 @@ namespace linq
     template <impl::character Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>>
     constexpr auto remove(Char value)
     {
-        return [=]<impl::container Container>(Container&& container) {
+        return [=]<impl::container Container>(Container&& container)
+        {
             std::basic_string_view<Char, Traits> view = impl::get_string_view<Container, Char, Traits>(std::forward<Container>(container));
             std::basic_ostringstream<Char, Traits, Allocator> oss;
             std::size_t offset{ 0 };
@@ -219,7 +229,8 @@ namespace linq
     template <impl::character Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>, typename T>
     constexpr auto remove(T&& t) requires(!impl::is_char_v<std::remove_cvref_t<T>>)
     {
-        return [&]<impl::container Container>(Container&& container) {
+        return [&]<impl::container Container>(Container&& container)
+        {
             std::basic_string_view<Char, Traits> view = impl::get_string_view<Container, Char, Traits>(std::forward<Container>(container));
             std::basic_string_view<Char, Traits> value = impl::get_string_view<T, Char, Traits>(std::forward<T>(t));
             std::basic_ostringstream<Char, Traits, Allocator> oss;
@@ -244,7 +255,8 @@ namespace linq
     template <impl::character Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>, typename TNew>
     constexpr auto replace(Char oldc, TNew&& news)
     {
-        return [=]<impl::container Container>(Container&& container) {
+        return [=]<impl::container Container>(Container&& container)
+        {
             std::basic_string_view<Char, Traits> view = impl::get_string_view<Container, Char, Traits>(std::forward<Container>(container));
             std::basic_ostringstream<Char, Traits, Allocator> oss;
             std::size_t offset{ 0 };
@@ -268,7 +280,8 @@ namespace linq
     template <impl::character Char, typename Traits = std::char_traits<Char>, typename Allocator = std::allocator<Char>, typename TOld, typename TNew>
     constexpr auto replace(TOld&& olds, TNew&& news) requires(!impl::is_char_v<std::remove_cvref_t<TOld>>)
     {
-        return [&]<impl::container Container>(Container&& container) {
+        return [&]<impl::container Container>(Container&& container)
+        {
             std::basic_string_view<Char, Traits> view = impl::get_string_view<Container, Char, Traits>(std::forward<Container>(container));
             std::basic_string_view<Char, Traits> value = impl::get_string_view<TOld, Char, Traits>(std::forward<TOld>(olds));
             std::basic_ostringstream<Char, Traits, Allocator> oss;
@@ -293,7 +306,8 @@ namespace linq
     template <impl::character Char, typename Traits = std::char_traits<Char>>
     constexpr auto trim(Char value = (Char)' ')
     {
-        return [=]<impl::container Container>(Container&& container) {
+        return [=]<impl::container Container>(Container&& container)
+        {
             std::basic_string_view<Char, Traits> view = impl::get_string_view<Container, Char, Traits>(std::forward<Container>(container));
             auto begin{ view.find_first_not_of(value) };
             auto end{ view.find_last_not_of(value) };
@@ -307,7 +321,8 @@ namespace linq
     template <impl::character Char, typename Traits = std::char_traits<Char>>
     constexpr auto trim_left(Char value = (Char)' ')
     {
-        return [=]<impl::container Container>(Container&& container) {
+        return [=]<impl::container Container>(Container&& container)
+        {
             std::basic_string_view<Char, Traits> view = impl::get_string_view<Container, Char, Traits>(std::forward<Container>(container));
             auto begin{ view.find_first_not_of(value) };
             if (begin == std::basic_string_view<Char, Traits>::npos)
@@ -320,7 +335,8 @@ namespace linq
     template <impl::character Char, typename Traits = std::char_traits<Char>>
     constexpr auto trim_right(Char value = (Char)' ')
     {
-        return [=]<impl::container Container>(Container&& container) {
+        return [=]<impl::container Container>(Container&& container)
+        {
             std::basic_string_view<Char, Traits> view = impl::get_string_view<Container, Char, Traits>(std::forward<Container>(container));
             auto end{ view.find_last_not_of(value) };
             if (end == std::basic_string_view<Char, Traits>::npos)

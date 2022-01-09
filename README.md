@@ -1,5 +1,5 @@
 # CppLinq
-A simple LINQ library for C++.
+A simple LINQ library for C++ 20.
 ## Usage
 To find the square root of the non-negative even numbers less than 10:
 ``` c++

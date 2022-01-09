@@ -1,19 +1,19 @@
 /**CppLinq query.hpp
- * 
+ *
  * MIT License
- * 
- * Copyright (c) 2019-2020 Berrysoft
- * 
+ *
+ * Copyright (c) 2019-2022 Berrysoft
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -21,7 +21,7 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- * 
+ *
  */
 #ifndef LINQ_QUERY_HPP
 #define LINQ_QUERY_HPP
@@ -48,7 +48,8 @@ namespace linq
     template <typename Pred>
     auto where(Pred&& pred)
     {
-        return [=]<impl::container Container>(Container&& container) {
+        return [=]<impl::container Container>(Container&& container)
+        {
             return impl::where<Container, Pred>(std::forward<Container>(container), impl::move_const(pred));
         };
     }
@@ -62,7 +63,7 @@ namespace linq
             for (auto&& item : container)
             {
                 auto res = selector(item);
-                if ((bool)res) co_yield* res;
+                if ((bool)res) co_yield *res;
             }
         }
     } // namespace impl
@@ -71,7 +72,8 @@ namespace linq
     template <typename Selector>
     auto where_select(Selector&& selector)
     {
-        return [=]<impl::container Container>(Container&& container) {
+        return [=]<impl::container Container>(Container&& container)
+        {
             return impl::where_select<Container, Selector>(std::forward<Container>(container), impl::move_const(selector));
         };
     }
@@ -93,7 +95,8 @@ namespace linq
     template <typename Selector>
     auto select(Selector&& selector)
     {
-        return [=]<impl::container Container>(Container&& container) {
+        return [=]<impl::container Container>(Container&& container)
+        {
             return impl::select<Container, Selector>(std::forward<Container>(container), impl::move_const(selector));
         };
     }
@@ -118,7 +121,8 @@ namespace linq
     template <typename CSelector, typename RSelector>
     auto select_many(CSelector&& cselector, RSelector&& rselector)
     {
-        return [=]<impl::container Container>(Container&& container) {
+        return [=]<impl::container Container>(Container&& container)
+        {
             return impl::select_many<Container, CSelector, RSelector>(std::forward<Container>(container), impl::move_const(cselector), impl::move_const(rselector));
         };
     }
@@ -135,7 +139,7 @@ namespace linq
                 ;
             for (; begin != end; ++begin)
             {
-                co_yield* begin;
+                co_yield *begin;
             }
         }
     } // namespace impl
@@ -143,7 +147,8 @@ namespace linq
     // Bypasses a specified number of elements and then returns the remaining elements.
     inline auto skip(std::size_t skipn)
     {
-        return [=]<impl::container Container>(Container&& container) {
+        return [=]<impl::container Container>(Container&& container)
+        {
             return impl::skip<Container>(std::forward<Container>(container), skipn);
         };
     }
@@ -160,7 +165,7 @@ namespace linq
                 ;
             for (; begin != end; ++begin)
             {
-                co_yield* begin;
+                co_yield *begin;
             }
         }
     } // namespace impl
@@ -169,7 +174,8 @@ namespace linq
     template <typename Pred>
     auto skip_while(Pred&& pred)
     {
-        return [=]<impl::container Container>(Container&& container) {
+        return [=]<impl::container Container>(Container&& container)
+        {
             return impl::skip_while<Container, Pred>(std::forward<Container>(container), impl::move_const(pred));
         };
     }
@@ -184,7 +190,7 @@ namespace linq
             auto end = std::end(container);
             for (; begin != end && n--; ++begin)
             {
-                co_yield* begin;
+                co_yield *begin;
             }
         }
     } // namespace impl
@@ -192,7 +198,8 @@ namespace linq
     // Returns a specified number of contiguous elements from the start.
     inline auto take(std::size_t taken)
     {
-        return [=]<impl::container Container>(Container&& container) {
+        return [=]<impl::container Container>(Container&& container)
+        {
             return impl::take<Container>(std::forward<Container>(container), taken);
         };
     }
@@ -207,7 +214,7 @@ namespace linq
             auto end = std::end(container);
             for (; begin != end && pred(*begin); ++begin)
             {
-                co_yield* begin;
+                co_yield *begin;
             }
         }
     } // namespace impl
@@ -216,7 +223,8 @@ namespace linq
     template <typename Pred>
     auto take_while(Pred&& pred)
     {
-        return [=]<impl::container Container>(Container&& container) {
+        return [=]<impl::container Container>(Container&& container)
+        {
             return impl::take_while<Container, Pred>(std::forward<Container>(container), impl::move_const(pred));
         };
     }
@@ -259,10 +267,16 @@ namespace linq
         {
             auto its = std::make_tuple(impl::iterator_pack{ std::begin(cs), std::end(cs) }...);
             for (;
-                 std::apply([](auto&&... pack) { return impl::and_all((pack.m_begin != pack.m_end)...); }, its);
-                 std::apply([](auto&&... pack) { return impl::expand_tuple((++pack.m_begin)...); }, its))
+                 std::apply([](auto&&... pack)
+                            { return impl::and_all((pack.m_begin != pack.m_end)...); },
+                            its);
+                 std::apply([](auto&&... pack)
+                            { return impl::expand_tuple((++pack.m_begin)...); },
+                            its))
             {
-                co_yield std::apply([&selector](auto&&... pack) { return selector((*pack.m_begin)...); }, its);
+                co_yield std::apply([&selector](auto&&... pack)
+                                    { return selector((*pack.m_begin)...); },
+                                    its);
             }
         }
     } // namespace impl
@@ -271,7 +285,8 @@ namespace linq
     template <typename Selector, impl::container... Containers>
     auto zip(Selector&& selector, Containers&&... cs)
     {
-        return [=, ... cs = impl::decay_container(std::forward<Containers>(cs))]<impl::container Container>(Container&& container) {
+        return [=, ... cs = impl::decay_container(std::forward<Containers>(cs))]<impl::container Container>(Container&& container)
+        {
             return impl::zip<Selector, impl::decay_container_t<Container>, impl::decay_container_t<Containers>...>(impl::move_const(selector), std::forward<Container>(container), impl::move_const(cs)...);
         };
     }
