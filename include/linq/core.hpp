@@ -1,19 +1,19 @@
 /**CppLinq core.hpp
- * 
+ *
  * MIT License
- * 
- * Copyright (c) 2019-2020 Berrysoft
- * 
+ *
+ * Copyright (c) 2019-2022 Berrysoft
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -21,105 +21,356 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- * 
+ *
  */
 #ifndef LINQ_CORE_HPP
 #define LINQ_CORE_HPP
 
+#include <exception>
 #include <iterator>
-#include <memory>
-#include <optional>
+#include <span>
+#include <string_view>
+#include <tuple>
+#include <version>
+
+#if __cpp_lib_coroutine >= 201902L || __has_include(<coroutine>)
+    #include <coroutine>
+#else
+    #define LINQ_USE_EXPERIMENTAL_COROUTINE
+    #include <experimental/coroutine>
+#endif
 
 namespace linq
 {
-    namespace impl
+#ifdef LINQ_USE_EXPERIMENTAL_COROUTINE
+    using std::experimental::coroutine_handle;
+    using std::experimental::suspend_always;
+#else
+    using std::coroutine_handle;
+    using std::suspend_always;
+#endif // LINQ_USE_EXPERIMENTAL_COROUTINE
+
+    template <typename T>
+    requires(std::is_move_assignable_v<T> || std::is_copy_assignable_v<T>) struct generator
     {
-        template <typename T, typename Ref = const T&, typename Ptr = const T*>
-        struct iterator_impl_traits
+        struct promise_type
         {
-            using value_type = T;
-            using reference = Ref;
-            using pointer = Ptr;
+            T m_current;
+            std::exception_ptr m_exception;
+
+            auto get_return_object() { return generator{ *this }; }
+
+            suspend_always initial_suspend() const noexcept { return {}; }
+            suspend_always final_suspend() const noexcept { return {}; }
+
+            void unhandled_exception() noexcept { m_exception = std::current_exception(); }
+
+            void rethrow_if_exception() const
+            {
+                if (m_exception)
+                {
+                    std::rethrow_exception(m_exception);
+                }
+            }
+
+            suspend_always yield_value(T const& value)
+            {
+                if constexpr (std::is_move_assignable_v<T>)
+                {
+                    m_current = std::move(value);
+                }
+                else
+                {
+                    m_current = value;
+                }
+                return {};
+            }
+
+            void return_void() const noexcept {}
+
+            template <typename U>
+            U&& await_transform(U&&) const noexcept = delete;
         };
 
-        struct iterator_ctor_t
+        struct iterator
         {
-        };
-
-        inline constexpr iterator_ctor_t iterator_ctor{};
-
-        template <typename Impl>
-        class iterator_base
-        {
-        private:
-            std::shared_ptr<Impl> m_impl{};
-
-        public:
             using iterator_category = std::input_iterator_tag;
             using difference_type = std::ptrdiff_t;
-            using __traits_type = typename Impl::traits_type;
-            using value_type = typename __traits_type::value_type;
-            using pointer = typename __traits_type::pointer;
-            using reference = typename __traits_type::reference;
+            using value_type = T;
+            using reference = T const&;
+            using pointer = T const*;
 
-            iterator_base() noexcept = default;
-            template <typename... Args>
-            iterator_base(iterator_ctor_t, Args&&... args) : m_impl(std::make_shared<Impl>(std::forward<Args>(args)...))
+            coroutine_handle<promise_type> m_coro = nullptr;
+
+            iterator() = default;
+            iterator(std::nullptr_t) : m_coro(nullptr) {}
+
+            iterator(coroutine_handle<promise_type> coro) : m_coro(coro) {}
+
+            iterator& operator++()
             {
-                if (!(m_impl->is_valid())) m_impl = nullptr;
-            }
-            iterator_base(const iterator_base&) noexcept(std::is_nothrow_copy_constructible_v<std::shared_ptr<Impl>>) = default;
-            iterator_base& operator=(const iterator_base&) noexcept(std::is_nothrow_copy_assignable_v<std::shared_ptr<Impl>>) = default;
-
-            reference operator*() const { return m_impl->value(); }
-            pointer operator->() const { return std::pointer_traits<pointer>::pointer_to(m_impl->value()); }
-
-            constexpr operator bool() const noexcept { return static_cast<bool>(m_impl); }
-
-            bool operator==(const iterator_base& it) const noexcept
-            {
-                return this == std::addressof(it) || (!m_impl && !it.m_impl);
-            }
-            bool operator!=(const iterator_base& it) const noexcept { return !operator==(it); }
-
-            iterator_base& operator++()
-            {
-                m_impl->move_next();
-                if (!(m_impl->is_valid())) m_impl = nullptr;
+                m_coro.resume();
+                if (m_coro.done())
+                {
+                    m_coro.promise().rethrow_if_exception();
+                    m_coro = nullptr;
+                }
                 return *this;
             }
-            iterator_base operator++(int)
+
+            void operator++(int) { ++*this; }
+
+            [[nodiscard]] operator bool() const { return m_coro && !m_coro.done(); }
+
+            [[nodiscard]] bool operator==(iterator const& right) const noexcept
             {
-                iterator_base it = this;
-                operator++();
-                return it;
+                return m_coro == right.m_coro;
+            }
+
+            [[nodiscard]] reference operator*() const
+            {
+                return m_coro.promise().m_current;
+            }
+
+            [[nodiscard]] pointer operator->() const
+            {
+                return &m_coro.promise().m_current;
             }
         };
 
-        template <typename It>
-        class iterable
+        [[nodiscard]] iterator begin()
+        {
+            if (m_coro)
+            {
+                m_coro.resume();
+                if (m_coro.done())
+                {
+                    m_coro.promise().rethrow_if_exception();
+                    return { nullptr };
+                }
+            }
+            return { m_coro };
+        }
+
+        [[nodiscard]] iterator end()
+        {
+            return { nullptr };
+        }
+
+        explicit generator(promise_type& prom) : m_coro(coroutine_handle<promise_type>::from_promise(prom)) {}
+
+        generator() = default;
+        generator(generator const&) = delete;
+        generator& operator=(generator const&) = delete;
+
+        generator(generator&& right) noexcept : m_coro(std::exchange(right.m_coro, nullptr)) {}
+
+        generator& operator=(generator&& right) noexcept
+        {
+            if (this != std::addressof(right))
+            {
+                swap(right);
+            }
+            return *this;
+        }
+
+        void swap(generator& other) noexcept { std::swap(m_coro, other.m_coro); }
+
+        ~generator()
+        {
+            if (m_coro)
+            {
+                m_coro.destroy();
+            }
+        }
+
+    private:
+        coroutine_handle<promise_type> m_coro = nullptr;
+    };
+
+    namespace impl
+    {
+
+        // SFINAE for character type
+        template <typename Char>
+        struct is_char : std::false_type
+        {
+        };
+
+        template <>
+        struct is_char<char> : std::true_type
+        {
+        };
+
+        template <>
+        struct is_char<wchar_t> : std::true_type
+        {
+        };
+
+#ifdef __cpp_char8_t
+        template <>
+        struct is_char<char8_t> : std::true_type
+        {
+        };
+#endif // __cpp_char8_t
+
+        template <>
+        struct is_char<char16_t> : std::true_type
+        {
+        };
+
+        template <>
+        struct is_char<char32_t> : std::true_type
+        {
+        };
+
+        template <typename Char>
+        inline constexpr bool is_char_v = is_char<Char>::value;
+
+        template <typename Char>
+        concept character = is_char_v<Char>;
+
+        template <typename T>
+        concept container = requires(T&& t)
+        {
+            std::begin(t);
+            std::end(t);
+        };
+
+        template <typename T>
+        struct is_container : std::false_type
+        {
+        };
+
+        template <container T>
+        struct is_container<T> : std::true_type
+        {
+        };
+
+        template <typename T>
+        inline constexpr bool is_container_v = is_container<T>::value;
+
+        template <typename T>
+        concept reversible_container = container<T> && requires(T&& t)
+        {
+            std::rbegin(t);
+            std::rend(t);
+        };
+
+        template <typename T>
+        struct is_reversible_container : std::false_type
+        {
+        };
+
+        template <reversible_container T>
+        struct is_reversible_container<T> : std::true_type
+        {
+        };
+
+        template <typename T>
+        inline constexpr bool is_reversible_container_v = is_reversible_container<T>::value;
+
+        template <typename T>
+        class container_view_base
         {
         private:
-            It m_begin{}, m_end{};
+            T* m_container_ptr;
 
         public:
-            iterable(It&& begin) noexcept(std::is_nothrow_move_constructible_v<It>&& std::is_nothrow_constructible_v<It>)
-                : m_begin(std::move(begin)), m_end()
-            {
-            }
+            container_view_base(T& container) : m_container_ptr(std::addressof(container)) {}
 
-            It begin() const noexcept(std::is_nothrow_copy_constructible_v<It>) { return m_begin; }
-            It end() const noexcept(std::is_nothrow_copy_constructible_v<It>) { return m_end; }
+            constexpr T& base() const noexcept { return *m_container_ptr; }
+
+            auto begin() const noexcept(noexcept(std::begin(this->base()))) { return std::begin(this->base()); }
+            auto end() const noexcept(noexcept(std::end(this->base()))) { return std::end(this->base()); }
         };
 
-        template <typename It>
-        iterable(It &&) -> iterable<It>;
+        template <typename T>
+        class container_view;
+
+        template <container T>
+        class container_view<T> : public container_view_base<T>
+        {
+        public:
+            using container_view_base<T>::container_view_base;
+        };
+
+        template <reversible_container T>
+        class container_view<T> : public container_view_base<T>
+        {
+        public:
+            using container_view_base<T>::container_view_base;
+
+            auto rbegin() const noexcept(noexcept(std::rbegin(this->base()))) { return std::rbegin(this->base()); }
+            auto rend() const noexcept(noexcept(std::rend(this->base()))) { return std::rend(this->base()); }
+        };
+
+        template <typename T>
+        container_view(T&) -> container_view<T>;
+
+        template <typename T>
+        struct is_generator : std::false_type
+        {
+        };
+
+        template <typename T>
+        struct is_generator<generator<T>> : std::true_type
+        {
+        };
+
+        template <typename T>
+        inline constexpr bool is_generator_v = is_generator<T>::value;
+
+        template <typename T>
+        constexpr T& remove_const(T const& value) noexcept
+        {
+            return const_cast<T&>(value);
+        }
+
+        template <typename T>
+        constexpr T&& move_const(T const& value) noexcept
+        {
+            return std::move(const_cast<T&>(value));
+        }
+
+        template <container T>
+        auto decay_container(T&& c)
+        {
+            if constexpr (std::is_lvalue_reference_v<T&&>)
+            {
+                if constexpr (is_char_v<typename std::iterator_traits<decltype(std::begin(c))>::value_type>)
+                {
+                    return std::string_view(c);
+                }
+                else if constexpr (std::is_base_of_v<std::random_access_iterator_tag, typename std::iterator_traits<decltype(std::begin(c))>::iterator_category>)
+                {
+                    return std::span<typename std::iterator_traits<decltype(std::begin(c))>::value_type>(c);
+                }
+                else
+                {
+                    return container_view(c);
+                }
+            }
+            else
+            {
+                return std::forward<T>(c);
+            }
+        }
+
+        template <typename T>
+        using decay_container_t = decltype(decay_container(std::declval<T&&>()));
+
+        template <container T>
+        struct container_traits : public std::iterator_traits<decltype(std::begin(std::declval<T&>()))>
+        {
+            using iterator = decltype(std::begin(std::declval<T&>()));
+        };
     } // namespace impl
 
-    template <typename Container, typename Query, typename = decltype(std::begin(std::declval<Container>())), typename = decltype(std::end(std::declval<Container>()))>
-    constexpr decltype(auto) operator>>(Container&& container, Query&& query)
+    template <impl::container Container, typename Query>
+    decltype(auto) operator>>(Container&& container, Query&& query)
     {
-        return std::forward<Query>(query)(std::forward<Container>(container));
+        return std::forward<Query>(query)(impl::decay_container<Container>(std::forward<Container>(container)));
     }
 
     namespace impl
@@ -129,218 +380,136 @@ namespace linq
         {
             constexpr T operator()(T value) noexcept(noexcept(++value)) { return ++value; }
         };
-
-        template <typename T, typename Func>
-        class range_iterator_impl
-        {
-        private:
-            T m_current{}, m_end{};
-            std::decay_t<Func> m_func;
-
-        public:
-            using traits_type = iterator_impl_traits<T>;
-
-            range_iterator_impl(T&& begin, T&& end, Func&& func) noexcept(std::is_nothrow_move_constructible_v<T>&& std::is_nothrow_move_constructible_v<Func>)
-                : m_current(std::move(begin)), m_end(std::move(end)), m_func(std::forward<Func>(func)) {}
-
-            typename traits_type::reference value() const noexcept { return m_current; }
-
-            void move_next() { m_current = m_func(m_current); }
-
-            bool is_valid() const noexcept { return m_current < m_end; }
-        };
-
-        template <typename T, typename Func>
-        using range_iterator = iterator_base<range_iterator_impl<T, Func>>;
     } // namespace impl
 
     template <typename T, typename Func = impl::increase<T>>
-    constexpr auto range(T begin, T end, Func&& func = {})
+    generator<T> range(T begin, T end, Func func = {})
     {
-        return impl::iterable{ impl::range_iterator<T, Func>{ impl::iterator_ctor, std::move(begin), std::move(end), std::forward<Func>(func) } };
+        while (begin != end)
+        {
+            co_yield begin;
+            begin = func(begin);
+        }
     }
 
     template <typename T>
-    constexpr auto range(T begin, T end, T step)
+    auto range(T begin, T end, T step)
     {
-        return range<T>(std::move(begin), std::move(end), [step = std::move(step)](const T& value) { return value + step; });
+        return range<T>(std::move(begin), std::move(end), [step = std::move(step)](const T& value)
+                        { return value + step; });
+    }
+
+    template <typename T>
+    generator<T> repeat(T value, std::size_t count)
+    {
+        while (count--)
+        {
+            co_yield value;
+        }
     }
 
     namespace impl
     {
-        template <typename T>
-        class repeat_iterator_impl
+        template <impl::container Container, typename T>
+        auto append(Container container, T value)
+            -> generator<std::remove_cvref_t<std::common_type_t<
+                typename impl::container_traits<Container>::value_type,
+                T>>>
         {
-        private:
-            T m_value;
-            std::size_t m_count{ 0 };
-
-        public:
-            using traits_type = iterator_impl_traits<T>;
-
-            constexpr repeat_iterator_impl(T&& value, std::size_t count) noexcept(std::is_nothrow_move_constructible_v<T>)
-                : m_value(std::move(value)), m_count(count) {}
-
-            typename traits_type::reference value() const noexcept { return m_value; }
-
-            void move_next() { --m_count; }
-
-            bool is_valid() const noexcept { return m_count > 0; }
-        };
-
-        template <typename T>
-        using repeat_iterator = iterator_base<repeat_iterator_impl<T>>;
-    } // namespace impl
-
-    template <typename T>
-    constexpr auto repeat(T value, std::size_t count)
-    {
-        return impl::iterable{ impl::repeat_iterator<T>{ impl::iterator_ctor, std::move(value), count } };
-    }
-
-    namespace impl
-    {
-        template <typename T, typename It>
-        class append_iterator_impl
-        {
-        private:
-            std::optional<T> m_value;
-            It m_begin, m_end;
-
-        public:
-            using traits_type = iterator_impl_traits<std::common_type_t<T, typename std::iterator_traits<It>::value_type>>;
-
-            append_iterator_impl(T value, It begin, It end) : m_value(std::move(value)), m_begin(begin), m_end(end) {}
-
-            typename traits_type::reference value() const noexcept
+            for (auto&& item : container)
             {
-                if (m_begin != m_end)
-                    return *m_begin;
-                else
-                    return *m_value;
+                co_yield item;
             }
-
-            void move_next()
-            {
-                if (m_begin != m_end)
-                    ++m_begin;
-                else
-                    m_value = std::nullopt;
-            }
-
-            bool is_valid() const { return m_begin != m_end || m_value; }
-        };
-
-        template <typename T, typename It>
-        using append_iterator = iterator_base<append_iterator_impl<T, It>>;
+            co_yield value;
+        }
     } // namespace impl
 
     // Appends an element to the enumerable.
     template <typename T>
-    constexpr auto append(T&& value)
+    auto append(T&& value)
     {
-        return [&](auto&& container) {
-            using It = decltype(std::begin(container));
-            return impl::iterable{ impl::append_iterator<std::remove_reference_t<T>, It>{ impl::iterator_ctor, std::forward<T>(value), std::begin(container), std::end(container) } };
+        return [=]<impl::container Container>(Container&& container)
+        {
+            return impl::append<Container, T>(std::forward<Container>(container), std::move(value));
         };
     }
 
     namespace impl
     {
-        template <typename T, typename It>
-        class prepend_iterator_impl
+        template <impl::container Container, typename T>
+        auto prepend(Container container, T value)
+            -> generator<std::remove_cvref_t<std::common_type_t<
+                typename impl::container_traits<Container>::value_type,
+                T>>>
         {
-        private:
-            std::optional<T> m_value;
-            It m_begin, m_end;
-
-        public:
-            using traits_type = iterator_impl_traits<std::common_type_t<T, typename std::iterator_traits<It>::value_type>>;
-
-            prepend_iterator_impl(T value, It begin, It end) : m_value(std::move(value)), m_begin(begin), m_end(end) {}
-
-            typename traits_type::reference value() const noexcept
+            co_yield value;
+            for (auto&& item : container)
             {
-                if (m_value)
-                    return *m_value;
-                else
-                    return *m_begin;
+                co_yield item;
             }
-
-            void move_next()
-            {
-                if (m_value)
-                    m_value = std::nullopt;
-                else
-                    ++m_begin;
-            }
-
-            bool is_valid() const { return m_value || m_begin != m_end; }
-        };
-
-        template <typename T, typename It>
-        using prepend_iterator = iterator_base<prepend_iterator_impl<T, It>>;
+        }
     } // namespace impl
 
     // Prepends an element to the enumerable.
     template <typename T>
-    constexpr auto prepend(T&& value)
+    auto prepend(T&& value)
     {
-        return [&](auto&& container) {
-            using It = decltype(std::begin(container));
-            return impl::iterable{ impl::prepend_iterator<std::remove_reference_t<T>, It>{ impl::iterator_ctor, std::forward<T>(value), std::begin(container), std::end(container) } };
+        return [=]<impl::container Container>(Container&& container)
+        {
+            return impl::prepend<Container, T>(std::forward<Container>(container), std::move(value));
         };
     }
 
     namespace impl
     {
-        template <typename It1, typename It2>
-        class concat_iterator_impl
+        template <impl::container Container, container Container2>
+        auto concat(Container container, Container2 container2)
+            -> generator<std::remove_cvref_t<std::common_type_t<
+                typename impl::container_traits<Container>::value_type,
+                typename impl::container_traits<Container2>::value_type>>>
         {
-        private:
-            It1 m_begin1, m_end1;
-            It2 m_begin2, m_end2;
-
-        public:
-            using traits_type = iterator_impl_traits<std::common_type_t<
-                typename std::iterator_traits<It1>::value_type,
-                typename std::iterator_traits<It2>::value_type>>;
-
-            concat_iterator_impl(It1 begin1, It1 end1, It2 begin2, It2 end2)
-                : m_begin1(begin1), m_end1(end1), m_begin2(begin2), m_end2(end2) {}
-
-            typename traits_type::reference value() const noexcept
+            for (auto&& item : container)
             {
-                if (m_begin1 != m_end1)
-                    return *m_begin1;
-                else
-                    return *m_begin2;
+                co_yield item;
             }
-
-            void move_next()
+            for (auto&& item : container2)
             {
-                if (m_begin1 != m_end1)
-                    ++m_begin1;
-                else
-                    ++m_begin2;
+                co_yield item;
             }
-
-            bool is_valid() const { return m_begin1 != m_end1 || m_begin2 != m_end2; }
-        };
-
-        template <typename It1, typename It2>
-        using concat_iterator = iterator_base<concat_iterator_impl<It1, It2>>;
+        }
     } // namespace impl
 
     // Concatenates two enumerable.
-    template <typename Container2>
-    constexpr auto concat(Container2&& container2)
+    template <impl::container Container2>
+    auto concat(Container2&& container2)
     {
-        return [&](auto&& container) {
-            using It1 = decltype(std::begin(container));
-            using It2 = decltype(std::begin(container2));
-            return impl::iterable{ impl::concat_iterator<It1, It2>{
-                impl::iterator_ctor, std::begin(container), std::end(container), std::begin(container2), std::end(container2) } };
+        return [container2 = impl::decay_container(std::forward<Container2>(container2))]<impl::container Container>(Container&& container)
+        {
+            return impl::concat<Container, impl::decay_container_t<Container2>>(std::forward<Container>(container), impl::move_const(container2));
+        };
+    }
+
+    namespace impl
+    {
+        template <impl::container Container>
+        auto with_index(Container container)
+            -> generator<std::tuple<std::size_t, typename impl::container_traits<Container>::value_type>>
+        {
+            std::size_t index{ 0 };
+            for (auto&& item : container)
+            {
+                co_yield std::make_tuple(index, item);
+                index++;
+            }
+        }
+    } // namespace impl
+
+    // Zip with index.
+    inline auto with_index()
+    {
+        return []<impl::container Container>(Container&& container)
+        {
+            return impl::with_index<Container>(std::forward<Container>(container));
         };
     }
 } // namespace linq

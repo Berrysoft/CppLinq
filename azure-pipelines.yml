@@ -55,11 +55,16 @@ jobs:
     env:
       MSYSTEM: $(msystem)
 
+  - pwsh: |
+      vcpkg install boost-test:$(arch)-windows
+    displayName: 'Install boost test'
+    condition: eq(variables.rid, 'win')
+
   - script: |
       sudo add-apt-repository ppa:ubuntu-toolchain-r/ppa
       sudo add-apt-repository ppa:mhier/libboost-latest
-      sudo apt-get install gcc-10 g++-10 libgtk-3-dev ninja-build libboost1.70-dev
-      sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100 --slave /usr/bin/g++ g++ /usr/bin/g++-10 --slave /usr/bin/gcov gcov /usr/bin/gcov-10
+      sudo apt-get install gcc-11 g++-11 ninja-build libboost-all-dev
+      sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100 --slave /usr/bin/g++ g++ /usr/bin/g++-11 --slave /usr/bin/gcov gcov /usr/bin/gcov-11
     displayName: 'Install linux dependencies'
     condition: eq(variables.rid, 'linux')
 
@@ -71,11 +76,9 @@ jobs:
   - script: |
       call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" $(arch)
       mkdir build & cd build
-      cmake .. -GNinja -DCMAKE_CXX_COMPILER=cl -DCMAKE_BUILD_TYPE=Release -DLINQ_BUILD_TESTS=on
+      cmake .. -GNinja -DCMAKE_CXX_COMPILER=cl -DCMAKE_BUILD_TYPE=Release -DLINQ_BUILD_TESTS=on -DCMAKE_TOOLCHAIN_FILE="$(VCPKG_INSTALLATION_ROOT)/scripts/buildsystems/vcpkg.cmake"
     displayName: 'Configure all projects'
     condition: eq(variables.rid, 'win')
-    env:
-      BOOST_ROOT: $(BOOST_ROOT_1_72_0)
 
   - script: |
       call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" $(arch)
