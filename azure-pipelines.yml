@@ -58,7 +58,7 @@ jobs:
   - script: |
       sudo add-apt-repository ppa:ubuntu-toolchain-r/ppa
       sudo add-apt-repository ppa:mhier/libboost-latest
-      sudo apt-get install gcc-12 g++-12 ninja-build libboost1.75-dev
+      sudo apt-get install gcc-12 g++-12 ninja-build libboost-all-dev
       sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 100 --slave /usr/bin/g++ g++ /usr/bin/g++-12 --slave /usr/bin/gcov gcov /usr/bin/gcov-12
     displayName: 'Install linux dependencies'
     condition: eq(variables.rid, 'linux')
@@ -74,8 +74,6 @@ jobs:
       cmake .. -GNinja -DCMAKE_CXX_COMPILER=cl -DCMAKE_BUILD_TYPE=Release -DLINQ_BUILD_TESTS=on
     displayName: 'Configure all projects'
     condition: eq(variables.rid, 'win')
-    env:
-      BOOST_ROOT: $(BOOST_ROOT_1_72_0)
 
   - script: |
       call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" $(arch)
